@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "process-logic"
 version = "0.1.0"
 description = "Zero One Hack_01 — Industrial AI (Infineon) track. Process-sequence modeling."
@@ -31,6 +31,18 @@ tqdm = ">=4.66"
 rich = ">=13.7"
 matplotlib = ">=3.8"
 seaborn = ">=0.13"
+
+# Provide a modern libstdc++ to the pixi env so numpy / torch wheels load
+# correctly on Leonardo's older base system (which only has up to GLIBCXX_3.4.28).
+# Linux-only; a no-op on macOS.
+[target.linux-64.dependencies]
+libstdcxx-ng = ">=13"
+
+# Make sure the pixi env's libstdc++ is preferred over the system one at
+# runtime. Pixi doesn't always set LD_LIBRARY_PATH from conda activate
+# scripts, so we do it explicitly via activation.env.
+[target.linux-64.activation.env]
+LD_LIBRARY_PATH = "$PIXI_PROJECT_ROOT/.pixi/envs/default/lib"
 
 [pypi-dependencies]
 # torch is heavy; rely on Leonardo's CUDA install via pixi pypi
