@@ -1,0 +1,180 @@
+{
+  "seed": 42,
+  "test_fraction": 0.2,
+  "eda_reproduction": {
+    "n": 382294,
+    "top1": 0.7220176094838004,
+    "top3": 0.9679121304545716,
+    "top5": 0.9930210780184884,
+    "mrr": 0.8441228914570084
+  },
+  "id_holdout_overall": {
+    "n": 76438,
+    "top1": 0.7173133781626939,
+    "top3": 0.9674638268923834,
+    "top5": 0.9931055234307543,
+    "mrr": 0.8415644051388472
+  },
+  "id_holdout_per_family": {
+    "mosfet": {
+      "n": 24651,
+      "top1": 0.7499898584235933,
+      "top3": 0.9737941665652509,
+      "top5": 0.9973226238286479,
+      "mrr": 0.8620975484429295
+    },
+    "igbt": {
+      "n": 29202,
+      "top1": 0.7139579480857475,
+      "top3": 0.9624683240873912,
+      "top5": 0.9866447503595644,
+      "mrr": 0.8371099011483192
+    },
+    "ic": {
+      "n": 22585,
+      "top1": 0.685986274075714,
+      "top3": 0.9670135045384104,
+      "top5": 0.9968563205667479,
+      "mrr": 0.8249125525791506
+    }
+  },
+  "truncation": {
+    "0.6": {
+      "mosfet": {
+        "n": 200,
+        "top1_at_cut": 0.875,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.9350000000000002,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.8700434559233529
+      },
+      "igbt": {
+        "n": 200,
+        "top1_at_cut": 0.67,
+        "top3_at_cut": 0.965,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8211666666666667,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.9084731393986673
+      },
+      "ic": {
+        "n": 200,
+        "top1_at_cut": 0.72,
+        "top3_at_cut": 0.975,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8504166666666666,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.8801695395975057
+      }
+    },
+    "0.8": {
+      "mosfet": {
+        "n": 200,
+        "top1_at_cut": 0.515,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.7575,
+        "completion_exact_match": 0.025,
+        "completion_normalized_edit_distance": 0.12604664224664225
+      },
+      "igbt": {
+        "n": 200,
+        "top1_at_cut": 0.665,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8316666666666666,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.2711133868503415
+      },
+      "ic": {
+        "n": 200,
+        "top1_at_cut": 0.52,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.76,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.5010945936697812
+      }
+    }
+  },
+  "lofo": {
+    "mosfet": {
+      "n": 123260,
+      "top1": 0.5024257666720753,
+      "top3": 0.6790929742008762,
+      "top5": 0.7278841473308454,
+      "mrr": 0.5975957325977509
+    },
+    "igbt": {
+      "n": 145959,
+      "top1": 0.48060756787865083,
+      "top3": 0.6603772292219048,
+      "top5": 0.7066367952644236,
+      "mrr": 0.5768794661514288
+    },
+    "ic": {
+      "n": 113075,
+      "top1": 0.4314746849436215,
+      "top3": 0.6244439531284546,
+      "top5": 0.6439442847667477,
+      "mrr": 0.5283491782740242
+    }
+  },
+  "lofo_truncation": {
+    "mosfet_0.6": {
+      "n": 1000,
+      "top1_at_cut": 0.799,
+      "top3_at_cut": 0.994,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.8963333333333335,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.8924974990063531
+    },
+    "mosfet_0.8": {
+      "n": 1000,
+      "top1_at_cut": 0.562,
+      "top3_at_cut": 1.0,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.781,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.2059964023269192
+    },
+    "igbt_0.6": {
+      "n": 1000,
+      "top1_at_cut": 0.679,
+      "top3_at_cut": 0.95,
+      "top5_at_cut": 0.95,
+      "mrr_at_cut": 0.8145,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.9045259453737217
+    },
+    "igbt_0.8": {
+      "n": 1000,
+      "top1_at_cut": 0.696,
+      "top3_at_cut": 1.0,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.844,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.2711703867250713
+    },
+    "ic_0.6": {
+      "n": 1000,
+      "top1_at_cut": 0.729,
+      "top3_at_cut": 0.924,
+      "top5_at_cut": 0.952,
+      "mrr_at_cut": 0.8296666666666669,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.8866175690441085
+    },
+    "ic_0.8": {
+      "n": 1000,
+      "top1_at_cut": 0.517,
+      "top3_at_cut": 1.0,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.7585,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.5192136406110273
+    }
+  }
+}
