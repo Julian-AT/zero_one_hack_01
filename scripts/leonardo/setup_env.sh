@@ -22,6 +22,9 @@ fi
 export PATH="${SCRATCH}/.pixi/bin:${PATH}"
 
 # 2. Install dependencies (downloads happen on login node where internet works)
+# Leonardo login nodes have no GPU so pixi's resolver can't auto-detect CUDA.
+# Pretend CUDA 12.0 is present so conda-forge picks the GPU build of pytorch.
+export CONDA_OVERRIDE_CUDA="12.0"
 echo "[setup] resolving + installing dependencies (pixi.toml)..."
 pixi install --manifest-path "$REPO_ROOT/pixi.toml"
 

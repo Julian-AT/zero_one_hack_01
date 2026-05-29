@@ -102,20 +102,22 @@ class CausalSelfAttention(nn.Module):
             cos, sin = rope
             q, k = apply_rope(q, k, cos[:L], sin[:L])
 
-        # Build key_padding-aware mask: True positions are allowed to attend.
-        # attn_mask: [B, L] with 1=real, 0=pad
+        # Recent PyTorch refuses both attn_mask and is_causal=True. Combine
+        # the causal triangle with the key-padding mask ourselves when there
+        # is padding; otherwise let SDPA do its own causal fast path.
+        dropout_p = self.drop.p if self.training else 0.0
         if attn_mask is not None:
-            key_pad = attn_mask[:, None, None, :].bool()   # [B,1,1,L]
+            # attn_mask: [B, L] with 1=real, 0=pad
+            causal = torch.tril(torch.ones(L, L, dtype=torch.bool, device=x.device))
+            key_pad = attn_mask[:, None, None, :].bool()      # [B, 1, 1, L]
+            combined = causal[None, None, :, :] & key_pad     # [B, 1, L, L]
+            out = F.scaled_dot_product_attention(
+                q, k, v, attn_mask=combined, is_causal=False, dropout_p=dropout_p,
+            )
         else:
-            key_pad = None
-
-        # F.scaled_dot_product_attention handles causal + key padding.
-        out = F.scaled_dot_product_attention(
-            q, k, v,
-            attn_mask=key_pad,
-            is_causal=True,
-            dropout_p=self.drop.p if self.training else 0.0,
-        )                                                  # [B, H, L, D_head]
+            out = F.scaled_dot_product_attention(
+                q, k, v, is_causal=True, dropout_p=dropout_p,
+            )                                                  # [B, H, L, D_head]
         out = out.transpose(1, 2).contiguous().view(B, L, self.d_model)
         return self.out_proj(out)
 

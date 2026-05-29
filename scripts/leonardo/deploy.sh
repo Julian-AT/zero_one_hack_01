@@ -203,6 +203,13 @@ tail_cmd() {
     leo "cd \"\$SCRATCH/zero_one_hack_01\" && tail -n 200 extras/logs/slurm-${jobid}.out 2>/dev/null || tail -n 200 extras/logs/grid-*_${jobid}.out 2>/dev/null"
 }
 
+run_cmd() {
+    # Run an arbitrary command on Leonardo. Useful for ad-hoc queries.
+    #   deploy.sh run 'sacctmgr show association where user=$USER ...'
+    [ "$#" -lt 1 ] && { echo "usage: deploy.sh run 'command'" >&2; exit 1; }
+    leo "$*"
+}
+
 # ---------- 5. Dispatch -------------------------------------------------
 
 case "${1:-default}" in
@@ -212,6 +219,7 @@ case "${1:-default}" in
     grid)       grid_cmd ;;
     status)     status_cmd ;;
     tail)       shift; tail_cmd "$@" ;;
+    run)        shift; run_cmd "$@" ;;
     default|"") probe_cmd; bootstrap_cmd ;;
     *)
         echo "Unknown command: $1" >&2

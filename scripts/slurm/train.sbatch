@@ -6,6 +6,7 @@
 #
 # For a 4-GPU job, change --gpus-per-task=4 (and bump --mem/--cpus accordingly).
 
+#SBATCH --account=euhpc_d30_031
 #SBATCH --partition=boost_usr_prod
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1

@@ -6,6 +6,7 @@
 # Submit:
 #   sbatch scripts/slurm/grid.sbatch
 
+#SBATCH --account=euhpc_d30_031
 #SBATCH --partition=boost_usr_prod
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --array=0-6
