@@ -256,7 +256,62 @@ zero_one_hack_01/
 
 ---
 
-## 10. Open decisions for the team (not locked unilaterally)
+## 10. Leonardo cluster workflow (locked from the onboarding deck)
+
+From the `Z10_compressed.pdf` onboarding deck (CINECA Leonardo, Italy — #10 globally per Top 500):
+
+### Access
+- 4 login nodes: `login0{1,2,5,7}-ext.leonardo.cineca.it`
+- SSH only. 2FA is **disabled** for the hackathon.
+- 4 A100s per node. Each team has **1 node reserved** via reservation `s_tra_ncc`. More than 1 node = drop the reservation (queue depends on cluster load).
+
+### Compute discipline
+- Compute nodes have **no internet**. Use proxy for low-bandwidth (set `HTTP_PROXY=http://proxyuser:5dd1d2bd00@10.99.0.1:38425` in SLURM script). Download all data / model weights / pip wheels from the **login node** beforehand.
+- Login node CPU time limit: **10 min**. For longer interactive work: `srun --partition=lrd_all_serial --time 04:00:00 --gres=tmpfs:100G --mem=16G --pty bash`.
+- Filesystems: `$HOME` (50 GB hard limit), `$SCRATCH` (large, deleted after 40 days — use this for checkpoints, generated data), `$PUBLIC` (50 GB, can share between users), `$FAST`/`$WORK` (don't use).
+
+### Package + environment workflow
+- **Pixi** is the recommended package manager (faster + reproducible). Commit `pixi.toml` + `pixi.lock` alongside `requirements.txt` for portability.
+- Bootstrap on login node:
+  ```
+  curl -fsSL https://pixi.sh/install.sh | bash
+  cd $SCRATCH/zero_one_hack_01
+  pixi add python torch numpy pandas pyyaml omegaconf tensorboard tqdm einops
+  pixi add --pypi xlstm wandb
+  ```
+- Optional: Singularity container for reproducibility (Docker → `singularity pull mycontainer.sif docker://...`).
+
+### Standard 1-GPU training job
+```bash
+#!/bin/bash
+#SBATCH --partition=boost_usr_prod
+#SBATCH --reservation=s_tra_ncc
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-task=1          # up to 4 per node
+#SBATCH --mem=120GB                 # fair share = 120GB × gpus-per-task
+#SBATCH --cpus-per-task=8           # fair share = 8 × gpus-per-task
+#SBATCH --time=02:00:00             # max 24:00:00
+export HTTP_PROXY=http://proxyuser:5dd1d2bd00@10.99.0.1:38425
+export HTTPS_PROXY=$HTTP_PROXY
+$SCRATCH/pixi/bin/pixi run --manifest-path $SCRATCH/zero_one_hack_01/pixi.toml \
+    python -m src.train.launch --config configs/arch/transformer_small.yaml
+```
+
+### Compute budget math
+- 4 A100s × 24 h × team = **96 A100-hours per team**
+- Our 7-cell scaling grid at ~1–3 GPU-hours per cell = ~14 A100-hours
+- 4 cells can run in parallel on the 4 A100s → grid finishes in ~4 wall hours
+- Leaves **~80 A100-hours** for the chain (PRM + RFT), contrastive encoder, final long run, and stretch GRPO
+
+### Coordination among our 4 teammates
+- Single team account on Leonardo → coordinate `$SCRATCH` paths so we don't clobber each other (`$SCRATCH/abb/`, `$SCRATCH/<name>/`).
+- One person at a time submits the scaling grid (uses all 4 GPUs in parallel).
+- Other teammates work on Tier 1/Tier 4 (no GPU needed) during grid runs.
+
+---
+
+## 11. Open decisions for the team (not locked unilaterally)
 
 1. **Owner split:** roughly — one person on Tier 0 baselines + report scaffolding; one on Tier 2 chain (SFT + PRM + RFT); one on Tier 3 cluster runs + automation; one on Tier 4 contrastive + dashboard + demo.
 2. **Whether to add Mamba/SSM** as a third architecture (currently dropped from the grid; could re-add if xLSTM fails).

@@ -1,0 +1,3 @@
+# Step-as-token (baseline tokenization)
+tokenization:
+  mode: step

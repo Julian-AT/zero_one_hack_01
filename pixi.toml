@@ -1,0 +1,49 @@
+[project]
+name = "process-logic"
+version = "0.1.0"
+description = "Zero One Hack_01 — Industrial AI (Infineon) track. Process-sequence modeling."
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[tasks]
+# Verify install
+smoke = "python -c 'import torch; print(torch.__version__, torch.cuda.is_available())'"
+
+# Build tokenizer
+tokenize-step = "python -m src.data.tokenizer --mode step"
+tokenize-comp = "python -m src.data.tokenizer --mode compositional"
+
+# Data smoke test
+data-smoke = "python -m src.data.load"
+
+# Trigram baseline
+trigram = "python extras/baselines/trigram_baseline.py"
+
+# Launch single training cell
+train = "python -m src.train.launch --config configs/arch/transformer_small.yaml"
+
+[dependencies]
+python = ">=3.10,<3.13"
+numpy = ">=1.26"
+pandas = ">=2.2"
+pyyaml = ">=6.0"
+tqdm = ">=4.66"
+rich = ">=13.7"
+matplotlib = ">=3.8"
+seaborn = ">=0.13"
+
+[pypi-dependencies]
+# torch is heavy; rely on Leonardo's CUDA install via pixi pypi
+torch = ">=2.3"
+einops = ">=0.7"
+omegaconf = ">=2.3"
+tensorboard = ">=2.16"
+
+# Optional: xLSTM only on Linux + CUDA; pixi will skip on macOS
+[target.linux-64.pypi-dependencies]
+xlstm = ">=1.0.7"
+wandb = ">=0.17"
+
+[target.osx-arm64.pypi-dependencies]
+# Mac dev: skip xlstm (needs CUDA); wandb still useful
+wandb = ">=0.17"
