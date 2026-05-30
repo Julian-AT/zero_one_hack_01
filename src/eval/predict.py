@@ -74,9 +74,10 @@ def encode_prefix(tokenizer: BaseTokenizer, family: str,
 
 def _step_topk_logits(model: torch.nn.Module, tokenizer: BaseTokenizer,
                       family: str, prefix_steps: list[str], k_pool: int,
-                      device: torch.device) -> list[tuple[str, float]]:
+                      device: torch.device, ctx_max: int = 256
+                      ) -> list[tuple[str, float]]:
     """Return [(step_string, logit/score)] ranked from highest to lowest."""
-    input_ids = encode_prefix(tokenizer, family, prefix_steps).to(device)
+    input_ids = encode_prefix(tokenizer, family, prefix_steps, max_len=ctx_max).to(device)
     with torch.no_grad():
         out = model(input_ids.unsqueeze(0))
     next_logits = out["lm_logits"][0, -1]  # last position
@@ -92,35 +93,43 @@ def _step_topk_logits(model: torch.nn.Module, tokenizer: BaseTokenizer,
         return candidates
     # Compositional: a step is W word-tokens followed by <STEP>. We greedy-decode
     # candidates by sampling beams of word tokens until <STEP> appears.
-    return _compositional_topk(model, tokenizer, family, prefix_steps, k_pool, device)
+    return _compositional_topk(model, tokenizer, family, prefix_steps, k_pool,
+                                device, ctx_max=ctx_max)
 
 
 def _compositional_topk(model: torch.nn.Module, tokenizer: BaseTokenizer,
                         family: str, prefix_steps: list[str], k_pool: int,
-                        device: torch.device, max_words: int = 8,
-                        beam_width: int = 12) -> list[tuple[str, float]]:
+                        device: torch.device, max_words: int = 6,
+                        beam_width: int = 5,
+                        ctx_max: int = 256) -> list[tuple[str, float]]:
     """For compositional models: beam search until <STEP> delimiter to assemble
-    next-step candidates as strings."""
+    next-step candidates as strings.
+
+    `ctx_max` is the hard upper bound on input length the model was trained
+    with (max_seq_len). We left-truncate any beam that would exceed it,
+    preserving BOS + FAMILY tokens at positions 0–1.
+    """
     step_id = tokenizer.step_id
     eos_id = tokenizer.eos_id
-    base = encode_prefix(tokenizer, family, prefix_steps)
+    base = encode_prefix(tokenizer, family, prefix_steps, max_len=ctx_max)
     base_list = base.tolist()
     # Each beam: (token_ids_appended_after_base, logprob)
     beams: list[tuple[list[int], float]] = [([], 0.0)]
     completed: list[tuple[list[int], float]] = []
+    pad_id = tokenizer.pad_id
     for _ in range(max_words):
-        # Batch all beams that aren't completed yet.
         if not beams:
             break
-        # Build batched input
-        max_added = max(len(b[0]) for b in beams) if beams else 0
-        seqs = []
+        seqs: list[list[int]] = []
         for ids, _ in beams:
             seq = base_list + ids
+            # Hard truncate from the left, but keep BOS + FAMILY at positions 0–1.
+            if len(seq) > ctx_max:
+                head = seq[:2]
+                tail = seq[-(ctx_max - 2):]
+                seq = head + tail
             seqs.append(seq)
-        # Right-pad
         max_len = max(len(s) for s in seqs)
-        pad_id = tokenizer.pad_id
         x = torch.full((len(seqs), max_len), pad_id, dtype=torch.long, device=device)
         for i, s in enumerate(seqs):
             x[i, :len(s)] = torch.tensor(s, dtype=torch.long)
@@ -191,8 +200,10 @@ def topk_next_step(lm: LoadedModel, family: str, prefix_steps: list[str],
                    k: int = 5, k_pool: int = 30, grammar: bool = True
                    ) -> list[str]:
     """Top-K next-step prediction with optional grammar mask."""
+    ctx_max = int(lm.cfg.get("train", {}).get("max_len", 256))
     pool = _step_topk_logits(lm.model, lm.tokenizer, family,
-                              prefix_steps, k_pool, lm.device)
+                              prefix_steps, k_pool, lm.device,
+                              ctx_max=ctx_max)
     if not grammar:
         return [s for s, _ in pool[:k]]
     kept: list[str] = []
@@ -258,7 +269,10 @@ def anomaly_ensemble(lm: LoadedModel, family: str, full_sequence: list[str]
             "PREDICTED_RULE": violations[0].rule,
         }
     # Symbolic says valid. Cross-check with the learned head if present.
-    input_ids = encode_prefix(lm.tokenizer, family, full_sequence).to(lm.device)
+    ctx_max = int(lm.cfg.get("train", {}).get("max_len", 256))
+    # Leave room for <EOS> at the end.
+    input_ids = encode_prefix(lm.tokenizer, family, full_sequence,
+                                max_len=ctx_max - 1).to(lm.device)
     # Append <EOS> so the pooled rep sees the end.
     input_ids = torch.cat([input_ids, torch.tensor([lm.tokenizer.eos_id], device=lm.device)])
     attn = torch.ones_like(input_ids)

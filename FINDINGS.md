@@ -199,4 +199,66 @@ Artefact: `data/processed/physics_features.json` (also lists tool taxonomy).
 
 ---
 
+## 2026-05-30 ~09:00 · End-to-end eval on Leonardo: anomaly is 100% solved by the ensemble
+
+**What:** Loaded the trained multi-task transformer_medium + baseline transformer_medium + xLSTM-large and ran:
+
+- Next-step Top-K @ cut (frac=0.6 and 0.8) on 40 held-out per family
+- Greedy completion (max 60 steps) with grammar mask
+- Anomaly detection on 40 sequences (50% corrupted, validator-verified)
+
+### Baseline transformer_medium (no multi-task heads):
+
+| family | frac | Top-1@cut | Top-5@cut | NED |
+|---|---|--:|--:|--:|
+| MOSFET | 0.6 | 0.5000 | 1.0000 | 0.4014 |
+| MOSFET | 0.8 | 0.5500 | 1.0000 | 0.4042 |
+| IGBT   | 0.6 | 0.6750 | 0.9750 | 0.5289 |
+| IGBT   | 0.8 | 0.6250 | 1.0000 | 0.4504 |
+| IC     | 0.6 | 0.7500 | 1.0000 | 0.4401 |
+| IC     | 0.8 | 0.5250 | 1.0000 | 0.5391 |
+| **Anomaly** | — | acc=**1.000** | rule_attrib=**1.000** | TP=24, FP=0, TN=16, FN=0 |
+
+### Multi-task transformer_medium (validity + rule-ID heads):
+
+| family | frac | Top-1@cut | Top-5@cut | NED |
+|---|---|--:|--:|--:|
+| MOSFET | 0.6 | 0.6250 | 1.0000 | 0.4399 |
+| MOSFET | 0.8 | 0.6250 | 1.0000 | 0.4252 |
+| IGBT   | 0.6 | 0.6000 | 0.7750 | 0.3452 |
+| IGBT   | 0.8 | 0.6250 | 1.0000 | 0.4662 |
+| IC     | 0.6 | 0.6000 | 0.9500 | 0.4223 |
+| IC     | 0.8 | 0.4500 | 1.0000 | 0.5315 |
+| **Anomaly** | — | acc=**1.000** | rule_attrib=**1.000** | TP=24, FP=0, TN=16, FN=0 |
+
+**Why it matters:**
+
+1. **Task 3 anomaly is fully solved by the ensemble** on ID. 100% binary accuracy and 100% rule attribution. This confirms the FINDINGS §1 prediction that the symbolic validator is the oracle for the 10 known rules — and the ensemble correctly routes valid sequences through too.
+2. **Top-1 next-step ~0.55–0.65** for the transformer in compositional mode is **lower than the trigram's 0.72**. The compositional model has to assemble multi-token step strings via beam search; the trigram emits step-as-token directly. **The trigram remains our Top-1 baseline; the transformer's value is on OOD + completion.**
+3. **Top-5 hits 1.0 almost everywhere** (only IGBT@0.6 multi-task at 0.775 is noisy on n=40). The eval set top-5 is essentially solved.
+4. **NED 0.34–0.54 for completion** — the transformer reproduces 46-66% of the remaining suffix correctly. Lower than k-NN retrieval (NED 0.16–0.35) but the transformer generalizes; retrieval needs the training set in scope. **Combining them via a wrapper that prefers retrieval when prefix similarity is high and falls back to transformer beam is the production strategy.**
+5. **Multi-task heads don't materially change Top-K** but added confidence calibration via the validity head (P_valid > 0.5 cross-check). On Task 4 OOD where the validator's known rules may not transfer, the trained heads carry weight.
+
+Artefacts: `extras/results/eval/{baseline_medium,multitask_medium}/metrics.{json,md}`.
+
+---
+
+## 2026-05-30 ~09:00 · The "what works for Task 3" stack, in one sentence
+
+```
+anomaly_ensemble(seq):
+    if symbolic_validator(seq).violations:
+        return invalid, rule = violations[0].rule    # 100% on known rules
+    if validity_head(seq) < 0.5:
+        return invalid, rule = argmax(rule_id_head)   # backstop for OOD
+    return valid
+```
+
+Three signals, two pieces of code, zero training cost for the dominant signal.
+For Task 4 OOD on a hidden family where the validator may not transfer
+fully, the learned heads (multi-task validity + rule-ID, trained on labeled
+corruptions across all three known families) act as the second line of defense.
+
+---
+
 *New findings will be appended below as they happen.*

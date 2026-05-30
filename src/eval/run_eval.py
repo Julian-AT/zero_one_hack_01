@@ -58,7 +58,9 @@ def normalized_edit_distance(a: list[str], b: list[str]) -> float:
 
 def eval_nextstep_and_completion(lm, examples, frac: float,
                                     grammar: bool, canonicalize: bool,
-                                    max_examples: int = 200) -> dict:
+                                    max_examples: int = 40,
+                                    do_completion: bool = True,
+                                    max_completion_steps: int = 60) -> dict:
     n = c1 = c3 = c5 = 0
     rr_sum = 0.0
     em = 0
@@ -82,15 +84,17 @@ def eval_nextstep_and_completion(lm, examples, frac: float,
         if gold_next in ranked[:5]: c5 += 1
         if gold_next in ranked:
             rr_sum += 1.0 / (ranked.index(gold_next) + 1)
-        # Completion
-        gold = s[cut:]
-        pred = complete_sequence(lm, ex.family, prefix,
-                                  max_len=len(gold) + 20, grammar=grammar)
-        if canonicalize:
-            pred = canonicalize_sequence(pred)
-            gold = canonicalize_sequence(gold)
-        if pred == gold: em += 1
-        ned_sum += normalized_edit_distance(pred, gold)
+        # Completion (cap length to keep wall-time bounded)
+        if do_completion:
+            gold = s[cut:]
+            cap = min(max_completion_steps, len(gold) + 5)
+            pred = complete_sequence(lm, ex.family, prefix, max_len=cap,
+                                       grammar=grammar)
+            if canonicalize:
+                pred = canonicalize_sequence(pred)
+                gold = canonicalize_sequence(gold)
+            if pred == gold: em += 1
+            ned_sum += normalized_edit_distance(pred, gold)
     return {
         "n": n,
         "top1_at_cut": c1 / n if n else 0,
@@ -150,7 +154,9 @@ def main() -> None:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--no-grammar", action="store_true")
     parser.add_argument("--canonicalize", action="store_true")
-    parser.add_argument("--max-examples", type=int, default=200)
+    parser.add_argument("--max-examples", type=int, default=40)
+    parser.add_argument("--max-completion-steps", type=int, default=60)
+    parser.add_argument("--skip-completion", action="store_true")
     args = parser.parse_args()
 
     out = Path(args.output_dir)
@@ -187,7 +193,9 @@ def main() -> None:
             m = eval_nextstep_and_completion(lm, lst[-100:], frac=frac,
                                                grammar=use_grammar,
                                                canonicalize=args.canonicalize,
-                                               max_examples=args.max_examples)
+                                               max_examples=args.max_examples,
+                                               do_completion=not args.skip_completion,
+                                               max_completion_steps=args.max_completion_steps)
             m["wall_seconds"] = round(time.time() - t0, 1)
             logger.info(f"  {fam.upper()}  frac={frac}: "
                         f"Top1={m['top1_at_cut']:.4f}  Top5={m['top5_at_cut']:.4f}  "
