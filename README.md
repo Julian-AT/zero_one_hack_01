@@ -1,82 +1,107 @@
-# Zero One Hack_01
+# Process-Logic — Semiconductor Process-Sequence Modeling
 
-**36 hours. Real infrastructure. European AI sovereignty.**
+Learning the *grammar* of semiconductor fabrication flows: given partial MOSFET/IGBT/IC
+process sequences, predict the next step, complete the sequence, and flag sequences that
+violate process rules. Built for the Industrial AI (Infineon) track of Zero One Hack_01.
 
-Welcome to the central repository for Zero One Hack_01, hosted by [Lumos Consulting](https://lumos-consulting.at) at [AI Factory Austria](https://aifactory.at) in Vienna, with compute provided by CINECA on the Leonardo GPU Cluster.
+The core question: does a model learn real process logic, or just memorize? The pipeline
+generates its own synthetic training data from a rule-based process simulator, trains a
+decoder Transformer (optionally xLSTM) on it, and emits organizer-format predictions.
 
----
+## The four tasks
 
-## Quick links
+1. **Next-step prediction** — given a partial sequence, rank the 5 most likely next steps.
+2. **Sequence completion** — given a partial sequence, generate the remaining suffix.
+3. **Anomaly detection** — given a full sequence, classify valid vs. invalid.
+4. **Rule attribution** — given an invalid sequence, identify which of the 10 process
+   rules was violated.
 
-- 🌐 **Docs**: [docs.zero-one.lumos-consulting.at](https://docs.zero-one.lumos-consulting.at/)
-- 💬 **Discord**: https://discord.gg/e6rrVbcD5
-- 📍 **Venue**: AI Factory Austria (AI:AT), Vienna
+## Repository layout
 
----
+```text
+src/                    # the library — clean, typed, tested
+  data/                 #   tokenizers, validator adapter, corrupters, CSV/sequence I/O
+  model/                #   decoder Transformer, xLSTM, heads, build_model registry
+  train/                #   launch CLI, training loop, losses, tracking
+  eval/                 #   predict, run_eval CLI, metrics, submission writer
+  utils/                #   paths, seeding
+configs/                # OmegaConf YAML: arch/ token/ train/ (nothing hardcoded)
+tests/                  # pure-logic pytest suite (tokenizer, validator, corrupt, metrics, io)
+baselines (extras/)     # trigram, grammar-decoder, retrieval reference baselines
+participant_files/      # competition submission pipeline (hybrid model + rerankers)
+tracks/industrial-infineon/   # organizer data + the canonical generate_sequences.py grammar
+docs/                   # results.md (full results narrative), leonardo.md (HPC guide)
+```
 
-## The three tracks
+## Setup
 
-| Track                | Partner  | What you'll build                                                                                                               |
-| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 🧾 **Insurance AI**   | UNIQA    | An AI-guided conversion flow that replaces a static form-based insurance calculator. Persona-based simulations on Leonardo.     |
-| ⚙️ **Industrial AI**  | Infineon | Train and benchmark sequence models on semiconductor process flows. Does your model learn real process logic, or just memorize? |
-| 📈 **Forecasting AI** | Sybilion | Build a decision agent on top of a probabilistic forecasting API. Live mid-run plot twist on Sunday.                            |
+The environment is managed with [pixi](https://pixi.sh). It pins the platform-specific
+install — conda `pytorch-gpu` on Linux (Leonardo's CUDA-12 driver), CPU/MPS torch on
+macOS — and is the source of truth for the cluster environment.
 
-Each track's full briefing, data, and starter materials live in [`/tracks/`](./tracks/). 
+```bash
+pixi install
+pixi run smoke        # prints torch version + CUDA availability
+```
 
----
+For a plain virtualenv (CPU, no cluster specifics), the abstract dependencies are also
+declared in `pyproject.toml`:
 
-## What's provided
+```bash
+pip install -e .          # runtime deps
+pip install -e ".[dev]"   # + pytest, ruff
+```
 
-- **Compute**: Leonardo GPU Cluster (A100s). 
-- **Workspace**: Power, fast WiFi, monitors on request, breakout rooms for team calls.
-- **Mentors**: Domain experts from each partner company, plus ML/infra mentors from Lumos and HPE.
-- **API credits and tokens**: Track-specific, documented in each track's README.
+## Train
 
+Training streams freshly generated sequences from the rule-based simulator (with on-the-fly
+corruption); no static training CSV is loaded. Configs are merged at launch via OmegaConf.
 
----
-## How submissions work
+```bash
+python -m src.train.launch \
+    --arch-config  configs/arch/transformer_small.yaml \
+    --train-config configs/train/default.yaml \
+    --token-config configs/token/compositional.yaml \
+    --run-name     my-run-001
+```
 
-1. **Fill out the Tally submission form** by Sunday 10:00 — link will be shared in `#announcements`
-2. The form takes four fields: team name, repository URL, slides (PDF), and demo video (file or link, max 2 minutes)
-3. The Tally form timestamp is your official submission time
-4. After 10:00 the form closes. No late submissions.
+Override any config value inline:
 
-Full submission details, requirements, and the pre-submission checklist live in [`/submission/SUBMISSION.md`](./submission/SUBMISSION.md).
+```bash
+python -m src.train.launch ... --override train.max_steps=100 train.batch_size=16
+```
 
----
+Checkpoints are written to `extras/checkpoints/<run-name>/` (gitignored; only `summary.json`
+is committed). On Leonardo, submit via `scripts/slurm/train.sbatch`.
 
-## Judging
+## Evaluate
 
-Each track has its own rubric in [`/judging/rubrics.md`](./judging/rubrics.md). All tracks share these baseline expectations:
+Run the internal metric suite against a checkpoint (next-step top-k / MRR, completion
+EM / normalized edit distance, anomaly precision/recall):
 
-- **Working artifact** — not a slideware demo, something that actually runs
-- **Reproducibility** — your repo should let someone else re-run your work
-- **Honest evaluation** — show what worked, show what didn't, show what you measured
-- **Visible reasoning** — explain *why* you made the technical choices you did
+```bash
+python -m src.eval.run_eval \
+    --checkpoint extras/checkpoints/my-run-001/final.pt \
+    --output-dir extras/results/eval/my-run-001
+```
 
----
+This writes `metrics.json` + `metrics.md`. The official organizer eval inputs are
+unlabeled, so final official accuracy can only be computed by the organizers — we generate
+official-format prediction CSVs from them.
 
-## Code of conduct & house rules
+## Develop
 
-- Be kind. Be useful. Be honest about your work.
-- AI Factory Austria is a working facility — respect equipment, doors, quiet hours.
-- Mentors are here to unblock you, not to write your code. Use them well.
-- The Leonardo cluster is shared infrastructure. No cryptomining, no training on copyrighted data, no abuse of compute. Violations = disqualification.
-- See [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) for the full version.
+```bash
+pixi run lint          # ruff check .
+pixi run format        # ruff format .
+pixi run test          # pytest
+```
 
----
+## Further reading
 
-## Get help
-
-| Channel                                    | Use for                             |
-| ------------------------------------------ | ----------------------------------- |
-| `#announcements`                           | Schedule changes, important updates |
-| `#industrial`,`#insurance`, `#forecasting` | Track-specific questions            |
-| `#infra`                                   | Leonardo, GPU quota, WiFi, hardware |
-| `#general`                                 | Everything else                     |
-| In-person Lumos desk (lobby)               | Anything urgent                     |
-
----
-
-*Looking forward to seeing what you build.* 🚀
+- [`docs/results.md`](docs/results.md) — full pipeline writeup, model comparison, and an
+  honest account of what the results can and cannot claim.
+- [`docs/leonardo.md`](docs/leonardo.md) — authenticating, environment setup, and SLURM job
+  submission on the Leonardo cluster.
+- [`tracks/industrial-infineon/`](tracks/industrial-infineon/) — the organizer briefing,
+  reference data, and `generate_sequences.py` (the canonical grammar and validator).
