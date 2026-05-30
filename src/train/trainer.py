@@ -169,6 +169,42 @@ def train(cfg: dict[str, Any]) -> dict[str, float]:
     val_metrics = evaluate(model, val_loader, weights, device, amp_dtype, use_amp)
     tracker.log_metrics({f"val/{k}": v for k, v in val_metrics.items()}, step)
     save_checkpoint(model, optimizer, step, ckpt_dir / "final.pt", cfg)
+
+    # Write a lightweight summary alongside the checkpoint. This is what we
+    # commit to git as the official record; the heavy .pt stays on $SCRATCH
+    # and gets rsynced down on demand.
+    summary = {
+        "run_name": run_name,
+        "arch": cfg["arch"],
+        "tokenization": cfg["tokenization"]["mode"],
+        "model_params": n_params,
+        "vocab_size": tokenizer.vocab_size,
+        "max_steps": cfg["train"]["max_steps"],
+        "final_step": step,
+        "wall_seconds": time.time() - t0,
+        "device": str(device),
+        "precision": cfg["train"]["precision"],
+        "final_metrics": val_metrics,
+        "config": cfg,
+    }
+    with (ckpt_dir / "summary.json").open("w") as f:
+        json.dump(summary, f, indent=2, default=str)
+    logger.info(f"summary written → {ckpt_dir / 'summary.json'}")
+
+    # Belt-and-braces redundancy: copy final.pt + summary.json to $HOME so
+    # we still have the checkpoint if $SCRATCH ever has an issue.
+    # $HOME has 50GB; 7 cells × ~600MB max well under quota.
+    try:
+        import os, shutil
+        home_backup = Path(os.path.expanduser("~")) / "zero_one_hack_01_backup" / run_name
+        home_backup.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ckpt_dir / "final.pt", home_backup / "final.pt")
+        shutil.copy2(ckpt_dir / "summary.json", home_backup / "summary.json")
+        logger.info(f"$HOME backup → {home_backup}")
+    except OSError as e:
+        # E.g. quota exceeded; not fatal.
+        logger.warning(f"$HOME backup skipped: {e}")
+
     final_metrics = val_metrics
 
     tracker.close()

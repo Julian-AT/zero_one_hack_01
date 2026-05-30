@@ -1,0 +1,42 @@
+# Multi-task training: LM + validity + rule-ID.
+# Used to fine-tune (or train from scratch) the best architecture once the
+# scaling-grid pick is made.
+train:
+  batch_size: 32
+  grad_accum: 1
+  max_steps: 8000              # longer than the grid; multi-task heads need budget
+  warmup_steps: 300
+  lr: 2.0e-4                   # slightly lower than grid (3e-4) — heads are sensitive
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  precision: bf16
+  log_every: 25
+  eval_every: 500
+  save_every: 2000
+  seed: 42
+  family_dropout: 0.2
+  max_len: 256
+
+data:
+  use_online_generator: true
+  families: [mosfet, igbt, ic]
+  corrupt_fraction: 0.40        # higher corruption rate to give heads more signal
+  canonicalize: false
+  num_workers: 2
+
+# Multi-task heads enabled.
+loss:
+  lm_weight: 1.0
+  validity_weight: 0.5
+  rule_id_weight: 0.3
+
+tracking:
+  tensorboard_dir: extras/logs/tb
+  wandb_project: zero-one-process-logic
+  wandb_entity: null
+  wandb_mode: opportunistic
+
+out:
+  checkpoint_dir: extras/checkpoints

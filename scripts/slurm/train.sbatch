@@ -6,6 +6,7 @@
 #
 # For a 4-GPU job, change --gpus-per-task=4 (and bump --mem/--cpus accordingly).
 
+#SBATCH --account=euhpc_d30_031
 #SBATCH --partition=boost_usr_prod
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
@@ -20,6 +21,14 @@
 
 set -euo pipefail
 cd "${SCRATCH}/zero_one_hack_01"
+
+# Load CUDA toolkit so xLSTM's sLSTM block can JIT-compile its kernels.
+source /etc/profile.d/modules.sh 2>/dev/null || \
+    source /usr/share/Modules/init/bash 2>/dev/null || true
+module load gcc/12.2.0 2>&1 || true
+module load cuda/12.6 2>&1 || true
+echo "[slurm] gcc=$(gcc --version 2>/dev/null | head -1)"
+echo "[slurm] CUDA_HOME=${CUDA_HOME:-unset}  nvcc=$(which nvcc 2>/dev/null || echo unset)"
 
 # Compute-node proxy (no direct internet on compute nodes)
 export HTTP_PROXY="http://proxyuser:5dd1d2bd00@10.99.0.1:38425"
