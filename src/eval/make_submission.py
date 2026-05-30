@@ -19,12 +19,99 @@ import time
 from pathlib import Path
 
 from src.data.canonicalize import canonicalize_sequence
+from src.data.load import load_all_families
+from src.data.validator import validate_sequence
 from src.eval.predict import (
     anomaly_ensemble,
     complete_sequence,
     load_model,
     topk_next_step,
 )
+
+
+# --------------------------------------------------------------------------- #
+# Trigram fallback — guarantees we fill all 5 RANK_* slots                    #
+# --------------------------------------------------------------------------- #
+
+_TRIGRAM = None
+
+
+def _load_trigram():
+    """Lazy-build the same trigram-with-backoff used in extras/baselines."""
+    global _TRIGRAM
+    if _TRIGRAM is not None:
+        return _TRIGRAM
+    from collections import Counter, defaultdict
+
+    class _Trigram:
+        def __init__(self):
+            self.tri = defaultdict(Counter)
+            self.bi = defaultdict(Counter)
+            self.uni = Counter()
+
+        def fit(self, sequences):
+            for s in sequences:
+                for i, w in enumerate(s):
+                    self.uni[w] += 1
+                    if i >= 1: self.bi[s[i-1]][w] += 1
+                    if i >= 2: self.tri[(s[i-2], s[i-1])][w] += 1
+
+        def rank(self, prefix, k=20):
+            ctx2 = prefix[-2] if len(prefix) >= 2 else None
+            ctx1 = prefix[-1] if len(prefix) >= 1 else None
+            out, seen = [], set()
+            def add_from(counter):
+                for w, _ in counter.most_common():
+                    if w in seen: continue
+                    out.append(w); seen.add(w)
+                    if len(out) >= k: return True
+                return False
+            if ctx2 is not None and ctx1 is not None and (ctx2, ctx1) in self.tri:
+                if add_from(self.tri[(ctx2, ctx1)]): return out
+            if ctx1 is not None and ctx1 in self.bi:
+                if add_from(self.bi[ctx1]): return out
+            add_from(self.uni)
+            return out
+
+    t = _Trigram()
+    t.fit([ex.steps for ex in load_all_families()])
+    _TRIGRAM = t
+    return t
+
+
+def _candidate_violates(prefix: list[str], candidate: str) -> bool:
+    new_prefix = prefix + [candidate]
+    new_idx = len(prefix)
+    return any(v.step_index == new_idx for v in validate_sequence(new_prefix))
+
+
+def _pad_with_trigram(ranked: list[str], prefix: list[str], k: int = 5) -> list[str]:
+    """Fill the rank list to k entries using grammar-trigram fallback.
+
+    Compositional beam search often returns <5 distinct step strings;
+    leaving RANK_4 / RANK_5 empty costs Top-5 score on the official scorer.
+    Trigram-with-backoff has Top-5 = 0.993 on ID — perfect filler.
+    """
+    if len(ranked) >= k:
+        return ranked[:k]
+    trigram = _load_trigram()
+    pool = trigram.rank(prefix, k=k * 4)   # broader pool
+    # Grammar mask the fallback too
+    for cand in pool:
+        if cand in ranked:
+            continue
+        if _candidate_violates(prefix, cand):
+            continue
+        ranked.append(cand)
+        if len(ranked) >= k:
+            break
+    # If grammar mask was too aggressive, fall back to raw trigram pool
+    for cand in pool:
+        if len(ranked) >= k:
+            break
+        if cand not in ranked:
+            ranked.append(cand)
+    return ranked[:k]
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s — %(message)s",
@@ -45,6 +132,10 @@ def make_nextstep(lm, valid_input_path: Path, output_path: Path,
             fam = row["FAMILY"].strip().lower()
             partial = row["PARTIAL_SEQUENCE"].split("|")
             ranked = topk_next_step(lm, fam, partial, k=5, grammar=grammar)
+            # Pad with trigram-grammar fallback to guarantee all 5 ranks filled
+            # (compositional beam search often returns <5 distinct step strings).
+            if len(ranked) < 5:
+                ranked = _pad_with_trigram(ranked, partial, k=5)
             if canonicalize:
                 ranked = canonicalize_sequence(ranked)
             while len(ranked) < 5:
