@@ -56,6 +56,61 @@ def normalized_edit_distance(a: list[str], b: list[str]) -> float:
     return prev[lb] / max(la, lb)
 
 
+def token_accuracy(pred: list[str], ref: list[str]) -> float:
+    """Fraction of positions (up to min length) where pred == ref.
+
+    Matches eval_metrics.py:token_accuracy."""
+    n = min(len(pred), len(ref))
+    if n == 0:
+        return 0.0
+    return sum(p == r for p, r in zip(pred, ref)) / n
+
+
+# Major-process-block taxonomy — duplicated from eval_metrics.py:_major_block
+# so we report the same Block-level Accuracy the organizers' script computes.
+def _major_block(step: str) -> str:
+    s = step.upper()
+    if "LITHO" in s or s.startswith("SPIN COAT PHOTORESIST") or "MASK LEVEL" in s:
+        return "LITHO"
+    if "ETCH" in s or s.startswith("OPEN PAD WINDOW"):
+        return "ETCH"
+    if "IMPLANT" in s or "ANNEAL" in s or "DIFFUSION" in s:
+        return "DOPING_THERMAL"
+    if s.startswith("DEPOSIT") or "OXIDATION" in s or "GROWTH" in s:
+        return "DEPOSITION"
+    if s.startswith("CMP") or "PLANAR" in s:
+        return "PLANARIZATION"
+    if "VIA" in s:
+        return "VIA"
+    if "PASSIVATION" in s:
+        return "PASSIVATION"
+    if "BACKSIDE" in s or "GRIND" in s:
+        return "BACKSIDE"
+    if "TEST" in s or "MEASURE" in s or "INSPECT" in s or "ANALYSIS" in s:
+        return "METROLOGY_TEST"
+    if "LOT" in s or "RELEASE" in s or "SHIP" in s:
+        return "LOGISTICS"
+    return "OTHER"
+
+
+def _block_signature(seq: list[str]) -> list[str]:
+    sig: list[str] = []
+    prev: str | None = None
+    for step in seq:
+        b = _major_block(step)
+        if b != prev:
+            sig.append(b)
+            prev = b
+    return sig
+
+
+def block_level_accuracy(pred: list[str], ref: list[str]) -> float:
+    """Position-wise accuracy over the coarse 10-block signatures.
+
+    Matches eval_metrics.py:block_level_accuracy."""
+    return token_accuracy(_block_signature(pred), _block_signature(ref))
+
+
 def eval_nextstep_and_completion(lm, examples, frac: float,
                                     grammar: bool, canonicalize: bool,
                                     max_examples: int = 40,
@@ -65,6 +120,8 @@ def eval_nextstep_and_completion(lm, examples, frac: float,
     rr_sum = 0.0
     em = 0
     ned_sum = 0.0
+    tacc_sum = 0.0
+    bacc_sum = 0.0
     rng = random.Random(0)
     sample = rng.sample(examples, min(max_examples, len(examples)))
     for ex in sample:
@@ -84,7 +141,6 @@ def eval_nextstep_and_completion(lm, examples, frac: float,
         if gold_next in ranked[:5]: c5 += 1
         if gold_next in ranked:
             rr_sum += 1.0 / (ranked.index(gold_next) + 1)
-        # Completion (cap length to keep wall-time bounded)
         if do_completion:
             gold = s[cut:]
             cap = min(max_completion_steps, len(gold) + 5)
@@ -95,14 +151,18 @@ def eval_nextstep_and_completion(lm, examples, frac: float,
                 gold = canonicalize_sequence(gold)
             if pred == gold: em += 1
             ned_sum += normalized_edit_distance(pred, gold)
+            tacc_sum += token_accuracy(pred, gold)
+            bacc_sum += block_level_accuracy(pred, gold)
     return {
         "n": n,
         "top1_at_cut": c1 / n if n else 0,
         "top3_at_cut": c3 / n if n else 0,
         "top5_at_cut": c5 / n if n else 0,
         "mrr_at_cut":  rr_sum / n if n else 0,
-        "completion_exact_match": em / n if n else 0,
-        "completion_ned":         ned_sum / n if n else 0,
+        "completion_exact_match":   em / n if n else 0,
+        "completion_ned":           ned_sum / n if n else 0,
+        "completion_token_acc":     tacc_sum / n if n else 0,
+        "completion_block_acc":     bacc_sum / n if n else 0,
     }
 
 
@@ -131,9 +191,21 @@ def _anomaly_metrics_from_items(lm, items) -> dict:
                 rule_correct += 1
     n = len(items)
     acc = (tp + tn) / n if n else 0
+    # Convention matches eval_metrics.py: "invalid" is the positive class.
+    # In our internal variables we have invalid_tp = tn here (and vice versa),
+    # so we expose BOTH framings.
     precision_valid = tp / (tp + fp) if (tp + fp) else 0
     recall_valid    = tp / (tp + fn) if (tp + fn) else 0
-    # ROC-AUC via rank statistic (Mann–Whitney U), no sklearn dependency.
+    f1_valid = (2 * precision_valid * recall_valid
+                / (precision_valid + recall_valid)) if (precision_valid + recall_valid) else 0
+    # Invalid-as-positive (official Task 3 reporting class)
+    inv_tp = tn   # correctly detected invalid
+    inv_fp = fn   # predicted invalid but actually valid
+    inv_fn = fp   # missed invalid (said valid)
+    precision_invalid = inv_tp / (inv_tp + inv_fp) if (inv_tp + inv_fp) else 0
+    recall_invalid    = inv_tp / (inv_tp + inv_fn) if (inv_tp + inv_fn) else 0
+    f1_invalid = (2 * precision_invalid * recall_invalid
+                  / (precision_invalid + recall_invalid)) if (precision_invalid + recall_invalid) else 0
     pos = [s for s, g in zip(scores, golds) if g == 1]
     neg = [s for s, g in zip(scores, golds) if g == 0]
     auc = _roc_auc(pos, neg)
@@ -142,6 +214,10 @@ def _anomaly_metrics_from_items(lm, items) -> dict:
         "binary_accuracy": acc,
         "precision_valid": precision_valid,
         "recall_valid": recall_valid,
+        "f1_valid": f1_valid,
+        "precision_invalid": precision_invalid,
+        "recall_invalid": recall_invalid,
+        "f1_invalid": f1_invalid,
         "tp": tp, "fp": fp, "tn": tn, "fn": fn,
         "roc_auc": auc,
         "rule_attribution_accuracy": (rule_correct / rule_total) if rule_total else 0,
@@ -270,20 +346,33 @@ def main() -> None:
 
     md = ["# Eval — " + args.checkpoint, ""]
     md.append("## Next-step + completion (held-out per family)")
-    md.append("| family | frac | Top-1@cut | Top-5@cut | ExactMatch | NED |")
-    md.append("|---|---|--:|--:|--:|--:|")
+    md.append("| family | frac | Top-1 | Top-3 | Top-5 | MRR | ExactMatch | NED | TokenAcc | BlockAcc |")
+    md.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|")
     for fam, fracs in results["per_family"].items():
         for frac, m in fracs.items():
-            md.append(f"| {fam.upper()} | {frac} | {m['top1_at_cut']:.4f} | "
-                      f"{m['top5_at_cut']:.4f} | {m['completion_exact_match']:.4f} | "
-                      f"{m['completion_ned']:.4f} |")
+            md.append(f"| {fam.upper()} | {frac} | "
+                      f"{m['top1_at_cut']:.4f} | {m['top3_at_cut']:.4f} | "
+                      f"{m['top5_at_cut']:.4f} | {m['mrr_at_cut']:.4f} | "
+                      f"{m['completion_exact_match']:.4f} | "
+                      f"{m['completion_ned']:.4f} | "
+                      f"{m.get('completion_token_acc', 0):.4f} | "
+                      f"{m.get('completion_block_acc', 0):.4f} |")
     md.append("")
     md.append("## Anomaly detection")
     md.append(f"- n = {a['n']}, binary acc = {a['binary_accuracy']:.4f}, "
               f"AUC = {a['roc_auc']:.4f}")
-    md.append(f"- precision(valid) = {a['precision_valid']:.4f}, "
-              f"recall(valid) = {a['recall_valid']:.4f}")
-    md.append(f"- TP/FP/TN/FN = {a['tp']}/{a['fp']}/{a['tn']}/{a['fn']}")
+    md.append(f"- invalid class (Task-3 reporting): "
+              f"P = {a.get('precision_invalid', 0):.4f}, "
+              f"R = {a.get('recall_invalid', 0):.4f}, "
+              f"F1 = {a.get('f1_invalid', 0):.4f}")
+    md.append(f"- valid class: P = {a['precision_valid']:.4f}, "
+              f"R = {a['recall_valid']:.4f}, "
+              f"F1 = {a.get('f1_valid', 0):.4f}")
+    md.append("- confusion matrix (invalid = positive):")
+    md.append(f"    | | pred invalid | pred valid |")
+    md.append(f"    |---|--:|--:|")
+    md.append(f"    | actual invalid | {a['tn']} | {a['fp']} |")
+    md.append(f"    | actual valid   | {a['fn']} | {a['tp']} |")
     md.append(f"- rule attribution accuracy = "
               f"{a['rule_attribution_accuracy']:.4f} (n_invalid={a['rule_attribution_n']})")
     if a.get("per_family"):
