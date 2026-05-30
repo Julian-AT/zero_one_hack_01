@@ -10,6 +10,57 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 readme = "README.md"
 
+# Abstract runtime deps for `pip install -e .`. The concrete, platform-specific
+# install (conda pytorch-gpu, CUDA index, libstdc++) is pinned in pixi.toml,
+# which stays the source of truth for the Leonardo cluster environment.
+dependencies = [
+    "torch>=2.4",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "einops>=0.7",
+    "omegaconf>=2.3",
+    "tensorboard>=2.16",
+    "wandb>=0.17",
+    "tqdm>=4.66",
+    "rich>=13.7",
+    "xlstm>=1.0.7; platform_system != 'Darwin'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+viz = ["matplotlib>=3.8", "seaborn>=0.13"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    # Organizer-provided; keep diffable against upstream.
+    "tracks/industrial-infineon/training_data/generate_sequences.py",
+    "participant_files/eval_metrics.py",
+    "tracks/industrial-infineon/scripts/eval_metrics.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Peripheral data-generation and EDA scripts: long lines are markdown-table
+# builders, CLI examples in docstrings, and f-strings that don't split cleanly.
+# Hold src/ to the full standard, but don't churn these for E501.
+"tracks/**" = ["E501"]
+"extras/**" = ["E501"]
+# Standalone prediction/reranking scripts: they prepend repo root to sys.path
+# before importing `src` (E402), their report builders use long f-strings
+# (E501), and the SVG plotters use %-format string templates (UP031). All are
+# intentional for scripts run as `python participant_files/x.py`.
+"participant_files/**" = ["E402", "E501", "UP031"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# Make `src` importable under bare `pytest` (not just `python -m pytest`).
+pythonpath = ["."]

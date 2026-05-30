@@ -25,7 +25,13 @@ data-smoke = "python -m src.data.load"
 trigram = "python extras/baselines/trigram_baseline.py"
 
 # Launch single training run
-train = "python -m src.train.launch --config configs/arch/transformer_small.yaml"
+train = "python -m src.train.launch --arch-config configs/arch/transformer_small.yaml --train-config configs/train/default.yaml --token-config configs/token/compositional.yaml --run-name dev-run"
+
+# Lint / format / test
+lint = "ruff check ."
+format = "ruff format ."
+format-check = "ruff format --check ."
+test = "pytest"
 
 [dependencies]
 python = ">=3.10,<3.13"
@@ -33,22 +39,6 @@ pandas = ">=2.2"          # pulls in a compatible numpy automatically
 pyyaml = ">=6.0"
 tqdm = ">=4.66"
 rich = ">=13.7"
-matplotlib = ">=3.8"
-seaborn = ">=0.13"
-
-# Linux-only deps: modern libstdc++ + a CUDA-12-compatible PyTorch build.
-# Leonardo has CUDA 12.2 driver; conda-forge `pytorch-gpu` meta-package
-# pulls a torch built against a compatible CUDA runtime. Using PyPI torch
-# was selecting cu130 wheels which fail on Leonardo's driver.
-[target.linux-64.dependencies]
-libstdcxx-ng = ">=13"
-pytorch-gpu = ">=2.4,<2.6"
-
-# Make sure the pixi env's libstdc++ is preferred over the system one at
-# runtime. Pixi doesn't always set LD_LIBRARY_PATH from conda activate
-# scripts, so we do it explicitly via activation.env.
-[target.linux-64.activation.env]
-LD_LIBRARY_PATH = "$PIXI_PROJECT_ROOT/.pixi/envs/default/lib"
 
 [pypi-dependencies]
 # Cross-platform pure-Python deps
@@ -56,18 +46,21 @@ einops = ">=0.7"
 omegaconf = ">=2.3"
 tensorboard = ">=2.16"
 
-# --- Linux-only conda deps ---------------------------------------------------
-# Modern libstdc++ (GLIBCXX_3.4.29+) inside the env so the PyPI torch/numpy
-# wheels don't fall back to Leonardo's older system /lib64/libstdc++.so.6.
-# (No such package on macOS, hence Linux-scoped.)
-[target.linux-64.dependencies]
-libstdcxx-ng = ">=12"
-
 # --- Linux (Leonardo Booster: A100, driver 535.x => CUDA 12.2 ceiling) -------
-# Pin torch to the CUDA 12.1 build: needs driver >= 525, so it runs on 535.
-# Cap at < 2.6 because PyTorch stopped publishing cu121 wheels from 2.6 on.
+# Torch comes from conda-forge `pytorch-gpu` (not PyPI): the PyPI wheels were
+# resolving to cu130, which fails on Leonardo's driver. The conda metapackage
+# pulls a torch built against a compatible CUDA runtime. Keep libstdcxx-ng here
+# so the env ships a modern GLIBCXX instead of falling back to the system one.
+[target.linux-64.dependencies]
+libstdcxx-ng = ">=13"
+pytorch-gpu = ">=2.4,<2.6"
+
+# Pixi doesn't always export LD_LIBRARY_PATH from conda activation scripts, so
+# set it explicitly to prefer the env's libstdc++ at runtime.
+[target.linux-64.activation.env]
+LD_LIBRARY_PATH = "$PIXI_PROJECT_ROOT/.pixi/envs/default/lib"
+
 [target.linux-64.pypi-dependencies]
-torch = { version = ">=2.4,<2.6", index = "https://download.pytorch.org/whl/cu121" }
 xlstm = ">=1.0.7"
 wandb = ">=0.17"
 
@@ -75,3 +68,12 @@ wandb = ">=0.17"
 [target.osx-arm64.pypi-dependencies]
 torch = ">=2.4,<2.6"
 wandb = ">=0.17"
+
+# Optional visualization deps (EDA + result plots). Install with:
+#   pixi add --feature viz matplotlib seaborn   (or `pip install -e .[viz]`)
+[feature.viz.dependencies]
+matplotlib = ">=3.8"
+seaborn = ">=0.13"
+
+[environments]
+viz = ["viz"]
