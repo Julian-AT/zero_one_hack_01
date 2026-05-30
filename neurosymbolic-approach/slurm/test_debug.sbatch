@@ -25,7 +25,12 @@
 set -euo pipefail
 
 cd "$HOME/zero_one_hack_01"
-export PATH="$HOME/.pixi/bin:$PATH"
+# Use the pre-installed pixi env directly: pixi.toml has a duplicate
+# [target.linux-64.dependencies] table that breaks `pixi run`, and compute nodes
+# have no internet to re-solve. The env in .pixi/envs/default is already built.
+export PXENV="$HOME/zero_one_hack_01/.pixi/envs/default"
+export LD_LIBRARY_PATH="$PXENV/lib:${LD_LIBRARY_PATH:-}"
+pixi() { shift 2; "$PXENV/bin/python" "$@"; }   # shim: `pixi run python ...` -> env python
 export PYTHONPATH="$PWD/neurosymbolic-approach:${PYTHONPATH:-}"
 export NSPE_OUT="$SCRATCH/nspe_outputs"
 mkdir -p "$NSPE_OUT"
