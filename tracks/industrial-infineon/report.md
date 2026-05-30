@@ -1,28 +1,49 @@
-# Self-Supervised Process Transformer
+# Self-Supervised Process Transformer: Current Plan
 
 ## Overview
 
-This model is a self-supervised Transformer trained on synthetic semiconductor process sequences. The goal is to learn the structure of valid industrial process flows for the three product families **MOSFET**, **IGBT**, and **IC**. Each process step is treated as a discrete token, and each full wafer process route is modeled as an ordered token sequence.
+We train a self-supervised Transformer on synthetic semiconductor process sequences. Each process step is treated as a discrete token, and each full wafer route is modeled as an ordered token sequence. The model learns valid process-flow structure by predicting the next process step from the previous steps.
 
-The model is trained only on **valid sequences** and learns to predict the next process step from the previous steps. This makes the pretraining objective directly aligned with the hackathon tasks of **next-step prediction** and **sequence completion**. The learned checkpoint can later be reused for supervised fine-tuning on anomaly detection and rule attribution using the generated valid/invalid dataset.
+The main motivation is to learn reusable **industrial process grammar** across semiconductor-like product families. The pretrained model is intended for:
 
-## Data
+* next-step prediction,
+* sequence completion,
+* process-flow representation learning,
+* later fine-tuning for anomaly detection and rule attribution.
 
-The model is trained on:
+## Current Data Setup
+
+The generated data is stored in:
+
+```text
+data/generated/
+```
+
+Important files:
+
+```text
+data/generated/valid_long.csv
+data/generated/ood_valid_long.csv
+data/generated/valid_long_augmented.csv
+data/generated/sequences.csv
+data/generated/summary.csv
+```
+
+### Original Valid Data
 
 ```text
 data/generated/valid_long.csv
 ```
 
-This file contains valid process sequences in long format:
+Contains valid generated process sequences for the original three families:
 
 ```text
-SEQUENCE_ID,FAMILY,STEP
+MOSFET
+IGBT
+IC
 ```
 
-Each `SEQUENCE_ID` corresponds to one complete process flow. The `FAMILY` column identifies the product family, and the `STEP` column contains the process step token.
-
-The current generated dataset contains approximately:
+Approximate size:
 
 ```text
 150,000 valid sequences
@@ -31,17 +52,70 @@ The current generated dataset contains approximately:
 50,000 IC
 ```
 
-The vocabulary in the smoke test contained **203 tokens including special tokens**.
+### OOD Family Augmentation
 
-## Objective
+To reduce overfitting to the original MOSFET/IGBT/IC distribution, we generated additional valid synthetic families:
 
-The model is trained with a causal next-step prediction objective:
+```text
+DIODE
+SCHOTTKY
+SIC_MOSFET
+```
+
+These are stored in:
+
+```text
+data/generated/ood_valid_long.csv
+```
+
+They are generated using a separate OOD-family generator while reusing the official process-rule validator from `training_data/generate_sequences.py`.
+
+The combined SSL pretraining file is:
+
+```text
+data/generated/valid_long_augmented.csv
+```
+
+This file contains:
+
+```text
+MOSFET
+IGBT
+IC
+DIODE
+SCHOTTKY
+SIC_MOSFET
+```
+
+This is now the preferred input file for broader self-supervised pretraining.
+
+### Valid + Invalid Data
+
+```text
+data/generated/sequences.csv
+```
+
+Contains valid and invalid full sequences for anomaly detection and rule attribution. Invalid examples were created by applying controlled rule-violation corruptions to valid sequences.
+
+Approximate size:
+
+```text
+238,000 total examples
+150,000 valid
+88,000 invalid
+```
+
+This file is not used for the current SSL pretraining stage. It will be used later for supervised fine-tuning.
+
+## Model Objective
+
+The current model is trained with a causal next-step prediction objective:
 
 ```text
 <BOS>, step_1, step_2, ..., step_t  →  step_{t+1}
 ```
 
-For each position in the sequence, the model predicts the next process step. This is equivalent to language modeling over semiconductor process tokens.
+For every position in a valid process sequence, the model predicts the next process step.
 
 Special tokens:
 
@@ -55,9 +129,9 @@ Special tokens:
 
 ## Architecture
 
-The model is a small causal Transformer implemented using a Transformer encoder with a causal attention mask.
+The model is a causal Transformer implemented with a Transformer encoder and a causal attention mask.
 
-Main components:
+Architecture:
 
 ```text
 step embedding
@@ -69,7 +143,9 @@ step embedding
 → next-step logits
 ```
 
-The default full-scale configuration is:
+The output projection shares weights with the step embedding matrix.
+
+Default full-scale configuration:
 
 ```text
 d_model: 256
@@ -80,7 +156,7 @@ dropout: 0.15
 max sequence length: 192
 ```
 
-The smoke-test configuration was smaller:
+Smoke/medium configuration:
 
 ```text
 d_model: 128
@@ -89,22 +165,20 @@ attention heads: 4
 parameters: ~646k
 ```
 
-The output head shares weights with the step embedding matrix. This weight tying is common in language models and reduces the number of parameters while improving consistency between input and output token representations.
+## Regularization
 
-## Regularization and OOD Motivation
-
-The dataset is synthetic and grammar-generated, so the model could overfit to family-specific shortcuts or frequent process-step patterns. To reduce this risk, the training script includes several regularization mechanisms.
+The dataset is synthetic and grammar-generated, so the model could overfit to frequent transitions or family-specific shortcuts. The training script includes the following regularizers.
 
 ### Family Dropout
 
-During training, the product-family label is randomly hidden with probability `family_dropout`.
+During training, the family embedding is randomly replaced with `<FAM_UNKNOWN>`.
 
 Purpose:
 
 ```text
-prevent the model from relying too strongly on MOSFET/IGBT/IC labels
-encourage learning shared process grammar
-improve robustness to hidden or unseen product families
+reduce over-reliance on family labels
+encourage shared process-grammar learning
+improve robustness to unseen product families
 ```
 
 Default:
@@ -115,13 +189,13 @@ family_dropout = 0.25
 
 ### Input Step Masking
 
-A small fraction of input steps is randomly replaced with `<MASK>` during training.
+A small fraction of input steps is replaced with `<MASK>` during training.
 
 Purpose:
 
 ```text
-make the model robust to partial or noisy prefixes
-encourage contextual process understanding
+increase robustness to partial/noisy process prefixes
+encourage contextual understanding
 support sequence-completion behavior
 ```
 
@@ -139,8 +213,8 @@ Purpose:
 
 ```text
 avoid overconfident predictions
+handle ambiguity where several next steps may be plausible
 improve generalization
-handle ambiguity where multiple next steps may be valid
 ```
 
 Default:
@@ -149,38 +223,19 @@ Default:
 label_smoothing = 0.05
 ```
 
-### Optional Class Reweighting
+### Class Weighting
 
-The script supports inverse-square-root class weighting for step tokens. This can help rare process steps, but the current stable smoke test used:
+The script supports inverse-square-root token reweighting. However, the current stable runs use:
 
 ```text
 class_weight = none
 ```
 
-## Training
+This performed well in the smoke and medium experiments.
 
-The model is trained with:
+## Local Smoke Test
 
-```text
-optimizer: AdamW
-learning-rate schedule: warmup + cosine decay
-gradient clipping: enabled
-mixed precision: enabled automatically on CUDA
-checkpointing: best and last checkpoint
-```
-
-Outputs are written to the run directory:
-
-```text
-checkpoint_best.pt
-checkpoint_last.pt
-vocab.json
-metrics.csv
-```
-
-## Smoke-Test Result
-
-A local CPU smoke test was run on 3,000 valid sequences for 3 epochs:
+Command:
 
 ```bash
 python scripts/train_ssl_process_transformer.py \
@@ -205,16 +260,55 @@ Epoch 3: val loss 4.5316, top1 0.1800, top5 0.4521, MRR 0.3144
 Test:    loss 4.5330, top1 0.1791, top5 0.4526, MRR 0.3139
 ```
 
-This confirms that the model is learning meaningful process-sequence structure. The initial loss is close to `log(vocab_size)`, as expected for a randomly initialized model, and decreases substantially within only three epochs.
+This confirmed that the initialization and training loop work correctly.
 
-## Full-Scale Training Command
+## Medium Local Run
 
-For the full dataset, the planned training command is:
+Command:
 
 ```bash
 python scripts/train_ssl_process_transformer.py \
   --data data/generated/valid_long.csv \
-  --out-dir runs/ssl_process_transformer_full \
+  --out-dir runs/ssl_medium \
+  --max-sequences 10000 \
+  --epochs 5 \
+  --batch-size 128 \
+  --d-model 128 \
+  --layers 3 \
+  --heads 4 \
+  --class-weight none
+```
+
+Result:
+
+```text
+Epoch 1: val loss 5.0258, top1 0.0560, top5 0.1878, MRR 0.1354
+Epoch 2: val loss 4.2819, top1 0.2986, top5 0.6088, MRR 0.4402
+Epoch 3: val loss 3.2669, top1 0.5589, top5 0.8906, MRR 0.7024
+Epoch 4: val loss 2.2235, top1 0.6672, top5 0.9748, MRR 0.8023
+Epoch 5: val loss 1.3813, top1 0.7599, top5 0.9957, MRR 0.8693
+
+Test:    loss 1.3801, top1 0.7591, top5 0.9958, MRR 0.8688
+```
+
+This shows that the self-supervised Transformer clearly learns the generated process grammar. After only 10,000 sequences and 5 epochs on CPU, the correct next step is in the Top-5 predictions for almost all positions.
+
+Important limitation: this is still in-distribution evaluation on generated valid sequences. OOD generalization and anomaly detection require additional evaluation.
+
+## Recommended Full-Scale Run
+
+For the supercomputer run, use the augmented valid data:
+
+```text
+data/generated/valid_long_augmented.csv
+```
+
+Recommended command:
+
+```bash
+python scripts/train_ssl_process_transformer.py \
+  --data data/generated/valid_long_augmented.csv \
+  --out-dir runs/ssl_process_transformer_augmented_full \
   --epochs 30 \
   --batch-size 512 \
   --d-model 256 \
@@ -226,53 +320,92 @@ python scripts/train_ssl_process_transformer.py \
   --class-weight none
 ```
 
-## Intended Use
+This run trains on both the original three product families and the three synthetic OOD-style auxiliary families.
 
-The pretrained model can be used for:
+## Outputs
 
-1. **Next-step prediction**
-   Predict the most likely next valid semiconductor process step.
-
-2. **Sequence completion**
-   Autoregressively complete a partial process sequence.
-
-3. **Representation learning**
-   Use hidden states as learned embeddings of process prefixes or full routes.
-
-4. **Initialization for supervised fine-tuning**
-   Fine-tune the pretrained model on valid/invalid examples for anomaly detection and rule attribution.
-
-## Next Steps
-
-The next planned stage is supervised fine-tuning on:
+Each run writes:
 
 ```text
-data/generated/sequences.csv
+checkpoint_best.pt
+checkpoint_last.pt
+vocab.json
+metrics.csv
 ```
 
-This file contains both valid and invalid sequences, including rule labels and corruption metadata. The fine-tuning model should add classification heads for:
+The most important files to preserve are:
 
 ```text
-valid vs invalid
-violated process rule
+runs/.../checkpoint_best.pt
+runs/.../vocab.json
+runs/.../metrics.csv
 ```
 
-The final benchmark should compare:
+These are required for later evaluation and plotting.
+
+## Current Metrics Available
+
+The SSL script already logs:
 
 ```text
-Markov / n-gram baseline
-symbolic validator baseline
-self-supervised Transformer
-fine-tuned Transformer
-```
-
-Evaluation should include:
-
-```text
-Top-1 / Top-3 / Top-5 accuracy
+loss
+perplexity
+Top-1 accuracy
+Top-3 accuracy
+Top-5 accuracy
 MRR
-sequence-completion accuracy
-binary anomaly classification
-rule-attribution accuracy
-leave-one-family-out generalization
+token count
 ```
+
+These metrics cover next-step prediction.
+
+## Evaluation Still Needed
+
+The following metrics should be added after pretraining by loading the saved checkpoint:
+
+```text
+sequence completion exact match
+sequence completion edit distance
+token-level completion accuracy
+anomaly detection via sequence likelihood
+ROC-AUC / F1 for valid vs invalid classification
+leave-one-family-out evaluation
+```
+
+Rule-attribution accuracy will likely require supervised fine-tuning on `data/generated/sequences.csv`.
+
+## Planned Next Stage
+
+After SSL pretraining, we will train or evaluate:
+
+1. **Markov / n-gram baseline**
+   Simple next-step baseline using transition statistics.
+
+2. **Self-supervised Transformer**
+   Current pretrained model.
+
+3. **Likelihood-based anomaly detector**
+   Use sequence negative log-likelihood to distinguish valid vs invalid flows.
+
+4. **Supervised fine-tuned Transformer**
+   Add classification heads for:
+
+   * valid vs invalid,
+   * violated process rule.
+
+5. **OOD evaluation**
+   Compare models on:
+
+   * original families,
+   * synthetic OOD families,
+   * leave-one-family-out splits.
+
+## Current Recommendation
+
+Use the augmented dataset for the main full-scale SSL run:
+
+```text
+data/generated/valid_long_augmented.csv
+```
+
+This is preferred over `valid_long.csv` because it should reduce overfitting to the original MOSFET/IGBT/IC distribution and encourage learning more general semiconductor process logic.
