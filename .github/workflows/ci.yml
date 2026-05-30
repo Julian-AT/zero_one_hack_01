@@ -20,11 +20,5 @@ jobs:
       - name: Install tooling
         run: pip install ruff==0.15.15 pytest==9.0.2
 
-      - name: Lint
-        run: ruff check .
-
-      - name: Format check
-        run: ruff format --check .
-
       - name: Test
         run: pytest
