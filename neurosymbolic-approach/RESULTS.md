@@ -102,10 +102,13 @@ PPM ≈ 0.62–0.92). Full-data (all-3-family) in-distribution Top-1: neural 0.7
 | --- | --- |
 | ![ppm lofo nextstep](outputs/charts/ppm_lofo_nextstep.png) | ![ppm lofo completion](outputs/charts/ppm_lofo_completion.png) |
 
-> Supplementary panels from the constraint-loss ablation (`exp04`) and the
-> size/data scaling sweep (`exp05`) are produced by `grid_lofo.sbatch`; they are
-> appended here when that job finishes (the semantic-loss mask precompute is the
-> long pole).
+> Two supplementary panels were planned — the constraint-loss ablation (`exp04`)
+> and the size/data scaling sweep (`exp05`). exp04's semantic-loss variant builds a
+> per-position legal-step mask over the whole corpus in pure Python, which did not
+> finish in practical time on this run (it held the node CPU-bound with no GPU work),
+> so it was cancelled and exp05 (gated behind it) did not run. They are optional —
+> the six charts above already cover the full thesis — and can be added after the
+> mask precompute is optimized/cached.
 
 ---
 
