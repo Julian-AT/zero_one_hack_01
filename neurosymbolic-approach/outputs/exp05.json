@@ -1,0 +1,230 @@
+{
+  "experiment": "exp05_scaling",
+  "device": "cuda",
+  "smoke": false,
+  "base_config": {
+    "d_model": 128,
+    "layers": 3,
+    "heads": 4,
+    "steps": 2000,
+    "epochs": 8,
+    "batch": 32,
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "role_w": 0.3,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "max_len": 256,
+    "warmup": 50,
+    "seed": 0
+  },
+  "d_models": [
+    64,
+    128,
+    256
+  ],
+  "data_axes": [
+    [
+      "mosfet",
+      "igbt"
+    ],
+    [
+      "mosfet",
+      "igbt",
+      "ic"
+    ]
+  ],
+  "n_per_family": 60,
+  "cells": [
+    {
+      "d_model": 64,
+      "train_families": [
+        "mosfet",
+        "igbt"
+      ],
+      "n_train_families": 2,
+      "ood_family": "ic",
+      "n_params": 191102,
+      "train_wall_sec": 6.75,
+      "steps_run": 504,
+      "final_loss": 0.6280046105384827,
+      "id_next_step": {
+        "top1": 0.6875,
+        "top3": 1.0,
+        "top5": 1.0,
+        "mrr": 0.8424
+      },
+      "ood_next_step": {
+        "top1": 0.5417,
+        "top3": 0.9667,
+        "top5": 0.975,
+        "mrr": 0.7507
+      },
+      "drop_next_step": {
+        "top1": 0.14580000000000004,
+        "top3": 0.033299999999999996,
+        "top5": 0.025000000000000022,
+        "mrr": 0.0917
+      }
+    },
+    {
+      "d_model": 128,
+      "train_families": [
+        "mosfet",
+        "igbt"
+      ],
+      "n_train_families": 2,
+      "ood_family": "ic",
+      "n_params": 676926,
+      "train_wall_sec": 6.3,
+      "steps_run": 504,
+      "final_loss": 0.3951316177845001,
+      "id_next_step": {
+        "top1": 0.7583,
+        "top3": 1.0,
+        "top5": 1.0,
+        "mrr": 0.8792
+      },
+      "ood_next_step": {
+        "top1": 0.6333,
+        "top3": 0.95,
+        "top5": 0.975,
+        "mrr": 0.7979
+      },
+      "drop_next_step": {
+        "top1": 0.125,
+        "top3": 0.050000000000000044,
+        "top5": 0.025000000000000022,
+        "mrr": 0.08129999999999993
+      }
+    },
+    {
+      "d_model": 256,
+      "train_families": [
+        "mosfet",
+        "igbt"
+      ],
+      "n_train_families": 2,
+      "ood_family": "ic",
+      "n_params": 2533310,
+      "train_wall_sec": 6.87,
+      "steps_run": 504,
+      "final_loss": 0.36023080348968506,
+      "id_next_step": {
+        "top1": 0.7167,
+        "top3": 1.0,
+        "top5": 1.0,
+        "mrr": 0.8583
+      },
+      "ood_next_step": {
+        "top1": 0.6,
+        "top3": 0.975,
+        "top5": 0.975,
+        "mrr": 0.7847
+      },
+      "drop_next_step": {
+        "top1": 0.11670000000000003,
+        "top3": 0.025000000000000022,
+        "top5": 0.025000000000000022,
+        "mrr": 0.0736
+      }
+    },
+    {
+      "d_model": 64,
+      "train_families": [
+        "mosfet",
+        "igbt",
+        "ic"
+      ],
+      "n_train_families": 3,
+      "ood_family": "diode",
+      "n_params": 194907,
+      "train_wall_sec": 9.32,
+      "steps_run": 752,
+      "final_loss": 0.4809935688972473,
+      "id_next_step": {
+        "top1": 0.7111,
+        "top3": 0.9972,
+        "top5": 1.0,
+        "mrr": 0.8544
+      },
+      "ood_next_step": {
+        "top1": 0.775,
+        "top3": 0.875,
+        "top5": 0.875,
+        "mrr": 0.8222
+      },
+      "drop_next_step": {
+        "top1": -0.06390000000000007,
+        "top3": 0.12219999999999998,
+        "top5": 0.125,
+        "mrr": 0.032200000000000006
+      }
+    },
+    {
+      "d_model": 128,
+      "train_families": [
+        "mosfet",
+        "igbt",
+        "ic"
+      ],
+      "n_train_families": 3,
+      "ood_family": "diode",
+      "n_params": 684507,
+      "train_wall_sec": 9.37,
+      "steps_run": 752,
+      "final_loss": 0.3729933202266693,
+      "id_next_step": {
+        "top1": 0.7222,
+        "top3": 0.9972,
+        "top5": 1.0,
+        "mrr": 0.8595
+      },
+      "ood_next_step": {
+        "top1": 0.9167,
+        "top3": 1.0,
+        "top5": 1.0,
+        "mrr": 0.9556
+      },
+      "drop_next_step": {
+        "top1": -0.1945,
+        "top3": -0.0028000000000000247,
+        "top5": 0.0,
+        "mrr": -0.09609999999999996
+      }
+    },
+    {
+      "d_model": 256,
+      "train_families": [
+        "mosfet",
+        "igbt",
+        "ic"
+      ],
+      "n_train_families": 3,
+      "ood_family": "diode",
+      "n_params": 2548443,
+      "train_wall_sec": 10.29,
+      "steps_run": 752,
+      "final_loss": 0.3485363721847534,
+      "id_next_step": {
+        "top1": 0.7167,
+        "top3": 0.9972,
+        "top5": 1.0,
+        "mrr": 0.8576
+      },
+      "ood_next_step": {
+        "top1": 0.8333,
+        "top3": 1.0,
+        "top5": 1.0,
+        "mrr": 0.9153
+      },
+      "drop_next_step": {
+        "top1": -0.11660000000000004,
+        "top3": -0.0028000000000000247,
+        "top5": 0.0,
+        "mrr": -0.057699999999999974
+      }
+    }
+  ],
+  "wall_sec": 69.24
+}
