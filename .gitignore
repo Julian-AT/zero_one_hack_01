@@ -64,3 +64,18 @@ tracks/industrial-infineon/data/**/*.csv
 tracks/industrial-infineon/data/**/*.json
 tracks/industrial-infineon/data/**/*.md
 !tracks/industrial-infineon/data/plan.md
+
+# Leonardo / Slurm runtime artifacts
+participant_files/eval_preds_*.out
+participant_files/eval_preds_*.err
+tracks/industrial-infineon/jobs/
+tracks/industrial-infineon/logs/
+tracks/industrial-infineon/saved_models/
+
+# Large generated industrial data
+tracks/industrial-infineon/data/coverage_guided_*/
+tracks/industrial-infineon/data/easy_invalid_*/
+tracks/industrial-infineon/data/hard_invalid_*/
+tracks/industrial-infineon/data/task_datasets_*/
+tracks/industrial-infineon/data/generated/
+tracks/industrial-infineon/runs/*/checkpoint_*.pt
