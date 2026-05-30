@@ -50,3 +50,16 @@ dist/
 # Misc
 *.log
 *.tmp
+
+# Industrial Infineon generated datasets / reports
+tracks/industrial-infineon/data/coverage_guided_*/
+tracks/industrial-infineon/data/easy_invalid_*/
+tracks/industrial-infineon/data/hard_invalid_*/
+tracks/industrial-infineon/data/task_datasets_*/
+tracks/industrial-infineon/data/coverage_outputs/
+tracks/industrial-infineon/data/generated/base_seed/
+tracks/industrial-infineon/data/*_test/
+tracks/industrial-infineon/data/**/*.csv
+tracks/industrial-infineon/data/**/*.json
+tracks/industrial-infineon/data/**/*.md
+!tracks/industrial-infineon/data/plan.md
