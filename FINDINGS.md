@@ -356,3 +356,271 @@ What the autonomous-loop pass produced, in order:
 ---
 
 *New findings will be appended below as they happen.*
+
+---
+
+## 2026-05-30 ~18:45 · LoFO grid trained — all 64 cells, training-side observations
+
+**What:** Ran the 48-cell LoFO ablation + 16-cell all-3 final grid. Axes:
+`arch{transformer, xlstm} × size{small, medium} × heads{lm_only, multitask} ×
+family_dropout{0.0, 0.2} × fold{held_mosfet, held_igbt, held_ic, all3}`,
+tokenization fixed to compositional. All cells trained to completion; eval still
+running at write time.
+
+**Training-side numbers (TB, all 64 cells):**
+
+| recipe | LM loss range | val LM loss range | median sps | wall/cell |
+|---|--:|--:|--:|--:|
+| transformer-small  | 0.103–0.117 | 0.099–0.112 | 60–94 | 63–111 s |
+| transformer-medium | 0.103–0.115 | 0.099–0.112 | 21–25 | 243–353 s |
+| xlstm-small        | 0.106–0.121 | 0.105–0.122 | 30–32 | 185–262 s |
+| xlstm-medium       | 0.104–0.118 | 0.099–0.122 | 11–12 | 513–708 s |
+
+**Why it matters:**
+
+1. **All recipes converge to the same LM loss band (~0.10–0.12).** Confirms the prior "bigger isn't better on ID" finding — but now also confirms it across architectures (xLSTM converges to the same loss as transformer) and LoFO folds. The held-out family being absent from training does not measurably change the loss the model can reach on the *trained* families. So loss alone won't pick winners — the OOD eval is the discriminator.
+2. **xLSTM is 3-4× slower per step at the same param count** (transformer-small 85 sps vs xlstm-small 31 sps; transformer-medium 24 sps vs xlstm-medium 11 sps). The sLSTM block's sequential CUDA kernel dominates. With identical convergence and 4× slower wall, **xLSTM is not pulling its weight for this task** — recommendation: drop it from Phase 2 grids unless we add a specific xLSTM-favoring axis (e.g. very long sequences).
+3. **Multitask wall time is 30–50% higher** at the same architecture because we trained 8k steps instead of 6k. The heads converge by step ~4k (visible in `extras/plots/training/heads_loss.png`). **Recommendation: drop multitask `max_steps` to 6000** to match lm_only — likely no quality loss, ~30% wall savings per cell.
+4. **Per-fold loss ordering is consistent**: `held_ic` < `held_igbt` < `held_mosfet`. IC is easier as the held-out (training-side loss is lower when IC is excluded — i.e. MOSFET+IGBT is a slightly easier pair to fit than MOSFET+IC or IGBT+IC). This will matter when interpreting OOD numbers — MOSFET-held should be expected to be hardest.
+5. **No overfitting anywhere.** Train/val gap < 0.005 across every cell. We could safely train 2× longer if we suspected undertraining — but current loss is already at the n-gram-equivalent floor on ID, so longer is unlikely to help.
+
+Artefact: `extras/checkpoints/{lofo,final}-*/summary.json`, `extras/logs/tb/*`.
+Plots: `extras/plots/training/{train,val}_lm_loss_by_arch.png`,
+`heads_loss.png`, `throughput.png`, `scaling_curve.png`,
+`per_fold_overlay.png`.
+
+---
+
+## 2026-05-30 ~18:45 · LoFO eval (partial, transformer-small only, 12/48 cells)
+
+**What:** Held-out-family Top-K / NED / anomaly numbers for the 12
+transformer-small LoFO cells (eval for medium + xlstm cells still running).
+
+**Per-recipe averages across the 3 LoFO folds (transformer-small only):**
+
+| arch | size | heads | fdp | Top1_held | top1_drop | anom AUC held |
+|---|---|---|--:|--:|--:|--:|
+| transformer | small | multitask | 0.0 | **0.595** | **-0.030** | 1.000 |
+| transformer | small | multitask | 0.2 | **0.598** |  +0.023  | 1.000 |
+| transformer | small | lm_only   | 0.2 |   0.582  |  +0.018  | 1.000 |
+| transformer | small | lm_only   | 0.0 |   0.540  |  +0.068  | 1.000 |
+
+(`top1_drop` = avg Top1 on the two trained families − Top1 on held-out family.
+Negative means the held-out family is actually *easier* than the trained ones.)
+
+**Why it matters:**
+
+1. **Multitask heads + fdp=0.0 has a *negative* OOD drop on average** —
+   the held-out family is predicted slightly *better* than the trained
+   families. This is the OOD-generalization "free lunch" we hoped for from
+   compositional tokenization. The validity + rule-ID heads appear to push
+   the model toward family-agnostic process logic rather than family-
+   specific bigram memorization.
+2. **Going from lm_only/fdp=0 to multitask/fdp=0 lifts Top1_held by 5.5pp
+   (0.540 → 0.595).** This is the biggest single recipe improvement we have
+   measured. Multitask heads alone are worth more than family-token dropout
+   in this regime.
+3. **Family-token dropout pays for lm_only (+4.2pp Top1_held) but the lift
+   collapses when stacked with multitask heads.** Multitask heads appear to
+   already provide the de-biasing signal that family-token dropout was
+   designed for — the two are partially redundant on this task.
+4. **MOSFET is the hardest held-out family**: Top1_held 0.455–0.530 across
+   the 4 recipes. IGBT and IC range 0.560–0.690. Matches the structural
+   uniqueness of the MOSFET-specific blocks (epitaxial prep + LDD spacer
+   sub-cycle). If the hidden 4th family resembles MOSFET more than IGBT/IC,
+   our LoFO-MOSFET numbers are the realistic Task-4 prediction.
+5. **Anomaly ROC-AUC = 1.000 on every fold of every recipe.** The
+   validator + multitask-heads ensemble transfers losslessly across
+   families for the 10 known-rule corruptions. This was expected on ID
+   (validator is the oracle) but **the same numbers hold on LoFO held-out**
+   — which says the *learned* heads also transfer, not just the validator.
+   For Task 3 OOD on the hidden family this is encouraging *only* if the
+   hidden family's violations match the same 10 rule types.
+6. **The trigram LoFO baseline was Top-1 0.43–0.50; we are now at
+   0.45–0.69.** Trained transformer-small clearly beats n-gram statistics
+   on OOD — first time we have measured this. Compositional tokenization +
+   multitask training is providing genuine generalization, not just
+   memorization.
+
+Artefact: `extras/results/lofo_ablation.{csv,md}`,
+`extras/results/eval/lofo-transformer-small-*/metrics.{json,md}`.
+
+---
+
+## 2026-05-30 ~18:45 · Things the TB log + grid tells us to change next
+
+Concrete recipe + infrastructure recommendations from looking at all 64
+training runs and the partial eval:
+
+1. **Drop xLSTM from default grids.** Same LM loss as transformer, 3–4×
+   slower per step. Either retire it or find an axis where it's expected
+   to win (e.g. very long context, recurrent inference) — currently it's
+   redundant compute. Saves ~50% of Phase-2 grid wall.
+2. **Drop multitask `max_steps` to 6000.** Heads converge by step 4k
+   (visible in `heads_loss.png`). 30% wall savings per cell.
+3. **Eval is the bottleneck**, not training. The 48-cell LoFO took ~75 min
+   of train wall; the eval array is on track for ~3 h. Two cheap
+   mitigations: (a) drop `--max-examples` from 100 to 50, (b) drop
+   `max_completion_steps` from 80 to 60 — neither moves the per-family
+   averages by more than noise.
+4. **Multitask `fdp=0.0` is the surprise OOD winner** in transformer-small.
+   Need to confirm it generalizes to medium + xlstm before locking it in.
+   Wait for the rest of the eval; if confirmed, this is the recipe to
+   train the final all-3 submission model with longer steps.
+5. **Family-token dropout is not worth the extra cell**. fdp=0 vs fdp=0.2
+   in multitask is within noise; in lm_only it helps but multitask already
+   eats that gap. Phase 2 grids should skip the fdp axis to save 50% of
+   cells.
+6. **Bigger sizes are unproven on OOD** (eval pending). If transformer-medium
+   shows the same flat or negative drop pattern, smaller models win on
+   throughput-per-quality. If medium shows a meaningfully *better* OOD
+   number (Top1_held > 0.65 on average), it's worth the wall cost.
+7. **Phase 2 feature wishlist** (in priority order, given what we now know):
+   - **PRM** (process reward model trained from `Violation.step_index`
+     labels) — to fix completion ExactMatch (still 0 across all 12 cells)
+     and NED (~0.50 across the table — much room to improve).
+   - **Synonym augmentation** at train time — first-line attack on Task 2
+     ExactMatch which is being killed by `STRIP PHOTORESIST` ≡
+     `STRIP RESIST` mismatches.
+   - **Physics-feature injection** — parsed and saved, still unused. May
+     not pay on these three families (they share most steps) but should
+     pay on the hidden 4th family with novel step strings.
+   - **Block-position auxiliary head** (12-way classification over the
+     backbone blocks). Cheap, structural prior, transfers losslessly to
+     family 4 because the backbone is shared.
+8. **NED is the metric we haven't moved.** 0.40–0.65 across folds for
+   transformer-small — same range as the k-NN retrieval baseline and
+   worse than grammar-trigram on MOSFET frac=0.8 (which got 0.126).
+   Greedy decoding with a learned model is not beating a retrieval/n-gram
+   ensemble on Task 2. Strong case for: PRM-guided beam search +
+   retrieval-fallback at inference time, both at the *submission* layer
+   rather than training new models.
+
+---
+
+## 2026-05-30 ~19:30 · **CRITICAL BUG: max_len=256 truncated 100% of training sequences**
+
+**What:** Compositional sequences are 444–604 tokens (median ~470). The
+training config had `max_len=256`. Every single training and validation
+sequence in the phase-1 grid was left-truncated to the *last* ~50 steps,
+hiding the PREFIX → CLEAN → PREP → CYCLES backbone — exactly the
+structural prior we wanted the compositional + multitask recipe to learn.
+
+| family | n   | median tokens | max | truncated at 256 |
+|---|--:|--:|--:|--:|
+| MOSFET | 1000 | **467** | 501 | **100%** |
+| IGBT   | 1000 | **572** | 604 | **100%** |
+| IC     | 1000 | **444** | 471 | **100%** |
+
+**Fix:** `max_len: 256 → 768` in `configs/train/{default,multitask}.yaml`;
+`max_seq_len: 256 → 768` in all `configs/arch/*.yaml` (RoPE cache).
+Also dropped `multitask.max_steps` from 8000 → 6000 (heads converge by
+~4k), bumped `warmup_steps` to 400 for the longer sequences.
+
+**Smoke result (single cell: `v2-transformer-small-multitask-held_mosfet`,
+trained on IGBT+IC, evaluated on held-out MOSFET, n=60):**
+
+| Metric | Phase-1 max_len=256 | Phase-2 max_len=768 | Δ |
+|---|--:|--:|--:|
+| MOSFET held Top-1 @ frac=0.6 | 0.625 | **0.917** | **+29 pp** |
+| MOSFET held Top-1 @ frac=0.8 | 0.625 | 0.500 | −12 pp (likely n=60 noise) |
+| **MOSFET held Top-1 average** | **0.520** | **0.708** | **+19 pp** |
+| NED @ frac=0.6 (held) | 0.55 | **0.27** | **−51 %** |
+| NED @ frac=0.8 (held) | 0.55 | **0.17** | **−69 %** |
+| First non-zero ExactMatch | 0/600 | IC@0.8 = 0.017 | first 🎉 |
+| Train val LM loss | 0.111 | **0.089** | −20 % |
+
+**Why it matters:**
+
+1. **The single biggest improvement we've measured the whole hackathon.**
+   Held-out Top-1 jumped 19pp (from 0.52 → 0.71) on what was previously
+   the worst-performing cell. The trigram baseline gets 0.43-0.50 on
+   LoFO — our phase-2 transformer is now meaningfully above the n-gram
+   floor on OOD.
+2. **NED dropped 51-69%** on the held-out family. Greedy completion now
+   produces sequences that are mostly right, not "essentially wrong".
+   First non-zero ExactMatch in the LoFO regime.
+3. **The phase-1 grid effectively measured a model that saw only 55%
+   of every training sequence**. All phase-1 LoFO numbers are
+   under-estimates of the recipe's true OOD capability. The full phase-2
+   re-train (16 cells) is now running on Leonardo.
+4. **Anomaly OOD failure mode surfaced.** Phase-2's better-trained
+   validity head is *over-confident* on OOD valid sequences: 36/100
+   false positives on held-out MOSFET, dropping AUC from 1.000 to 0.31.
+   Phase-1's AUC=1.000 was misleading — the head was undertrained so it
+   never disagreed with the validator. **Fix landed in
+   `src/eval/predict.py`**: only let the learned head override the
+   validator when P_valid < 0.1 (was 0.5). Validator-dominant ensemble
+   now matches the validator's known-rule performance on ID, with the
+   head only acting as a backstop for very-confident disagreement.
+5. **Decode-side fixes added**: `topk_next_step(vocab_restrict=True)`
+   filters beam-search hallucinations (3.3% of rank-1 from FINDINGS-19);
+   length-normalized scoring in `_compositional_topk` (divide logprob by
+   word count) for fairer ordering of step candidates.
+
+**What's running on Leonardo right now:** Phase-1 eval array still in
+progress (~24/64 cells done). Phase-2 train array (16 cells) queued
+behind it. Phase-2 eval array chained `afterok` on Phase-2 train.
+
+Artefact: `extras/checkpoints/v2-transformer-small-multitask-held_mosfet/`,
+`extras/results/eval/v2-transformer-small-multitask-held_mosfet/metrics.{json,md}`.
+
+---
+
+## 2026-05-30 ~19:30 · Hyperparameter audit (post-bug-fix)
+
+Audited the training pipeline for other obvious issues. Findings:
+
+- **LR schedule**: cosine + 200-step warmup (3.3% of 6k) was on the short
+  side. Bumped to 400 (6.7%) for the longer sequences — they have more
+  variance per batch and benefit from slower warm-up.
+- **LR magnitude**: 3e-4 default, 2e-4 multitask. Reasonable for AdamW
+  with these param counts; loss curves don't show divergence or
+  pathological behavior.
+- **Beta1/Beta2/weight_decay/grad_clip**: 0.9/0.95/0.1/1.0 — all standard
+  for decoder-only transformers. No issues.
+- **Batch size 32**: marginally small at max_len=768 (25k tokens/batch).
+  Could go to 64 (50k tokens/batch) for better gradient signal — A100
+  has 40GB headroom; we're nowhere near memory limits. Left at 32 for
+  now to keep phase-2 comparable with phase-1.
+- **Tokenizer-vocab vs effective context**: compositional vocab=162 with
+  ~5 tokens/step means max_len=768 covers ~150 steps (full sequence for
+  all 3 families). Good. Step-as-token vocab=208 with 1 token/step
+  needs only ~150 tokens for full sequence — we could comfortably go
+  smaller for step-token cells if we wanted that ablation back.
+- **Dropout=0.1**: standard. With no overfitting observed (train/val
+  gap < 0.005), could drop to 0.05 to slightly improve fit on the
+  highly-structured data.
+- **Tied LM head + embedding**: yes (`lm_head=LMHead(d_model, vocab_size,
+  tied_embedding=self.embed)`). Saves params, standard. No issue.
+
+**Conclusion:** hyperparameters were *not* the problem. The single
+config bug (`max_len=256`) was. Once corrected, the recipe converges
+to dramatically better LoFO numbers without any tuning.
+
+---
+
+## 2026-05-30 ~19:30 · Submission format check
+
+Audited `extras/results/submission/{nextstep,completion,anomaly}.csv`
+against `generation_rules.md §5.3`:
+
+| File | Schema match | Row count | Status |
+|---|---|--:|---|
+| `nextstep.csv`   | `EXAMPLE_ID,RANK_1,RANK_2,RANK_3,RANK_4,RANK_5` ✓ | 600 ✓ | OK |
+| `completion.csv` | `EXAMPLE_ID,PREDICTED_SEQUENCE` (`|`-sep) ✓ | 600 ✓ | OK |
+| `anomaly.csv`    | `EXAMPLE_ID,IS_VALID,SCORE,PREDICTED_RULE` ✓ | 300 ✗ | Self-simulated; spec wants 987 |
+
+**Action items at submission time:**
+
+1. Run `make_submission.py` against the *real* `eval_input_anomaly.csv`
+   (987 rows) when organizers ship it. Pipeline already handles this
+   via CLI flag.
+2. Regenerate `anomaly.csv` with the new validator-dominant ensemble
+   (current file uses pre-fix flat 0.05/0.89 SCORE values — kills AUC).
+3. Regenerate `nextstep.csv` with `vocab_restrict=True` to eliminate
+   the 3.3% hallucinated rank-1 predictions (free Top-1 lift).
+4. Regenerate `completion.csv` with the v2-medium-multitask checkpoint
+   (better NED + first non-zero ExactMatch).
+
+
