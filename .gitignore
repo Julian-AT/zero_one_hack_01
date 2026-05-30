@@ -88,3 +88,10 @@ participant_files/rerank_next_*.err
 
 # Large internal debug outputs
 participant_files/predictions/internal_reranker_benchmark_examples.csv
+
+# Retrieval bank and retrieval runtime logs
+tracks/industrial-infineon/data/retrieval_bank_v1/
+participant_files/gen_retrieval_bank_*.out
+participant_files/gen_retrieval_bank_*.err
+participant_files/retrieval_eval_*.out
+participant_files/retrieval_eval_*.err
