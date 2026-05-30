@@ -120,7 +120,33 @@ participant_files.zip                     — original archive
 
 ---
 
-## ⚠️ Merge conflicts to expect
+## ✅ Actual conflicts (from a real dry-run merge done 2026-05-31 00:35)
+
+Main has changed substantially since we last looked:
+- Neurosymbolic merged in (`f01e5a4`)
+- Ruff + pytest CI + pre-commit hooks added
+- README rewritten as a solution guide
+- **`FINDINGS.md` was DELETED on main** (narrative docs relocated)
+- Test suite added
+- Helpers consolidated into `src/`
+
+The real merge `abb` → `main` produces only **7 conflict files**:
+
+| File | Conflict type | Recommended resolution |
+|---|---|---|
+| `REPORT.md` | AA (both added) | **Take main's** as the spine; add our Phase-2 `max_len bug` section + winner pick from `submission/TEAM_DECISION_MEMO.md` as sub-sections |
+| `FINDINGS.md` | UD (main deleted, we modified) | **Move ours to `submission/abb_FINDINGS.md`** (main relocated narrative docs to a different home) |
+| `src/data/load.py` | UU | **Take abb** — has `ood_family_prob` + `synonym_randomize_prob` parameters that main lacks |
+| `src/eval/make_submission.py` | UU | **Take abb** — has trigram-grammar fallback that fixes the 82 % empty-rank bug |
+| `src/eval/predict.py` | UU | **Take abb** — validator-dominant ensemble + vocab_restrict + length-norm beam |
+| `src/eval/run_eval.py` | UU | **Take abb** — has Token Acc + Block-level Acc + F1 + ConfMat (matches official `eval_metrics.py`) |
+| `src/model/transformer.py` | UU | **Take abb** — `max_seq_len=768` default (matches the config fix) |
+
+Plus 191 new files coming in from main (additive, no conflict): `neurosymbolic-approach/`, `benchmark/`, `ssl_results/`, `tests/`, `.github/workflows/`, etc.
+
+Auto-merged cleanly (27 files): all configs, `pixi.toml`, baselines, scripts, etc.
+
+## ⚠️ Legacy merge conflicts table (historical — superseded by above)
 
 When merging `abb` into `main`:
 
