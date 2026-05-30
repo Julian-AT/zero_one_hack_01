@@ -1,0 +1,16 @@
+# xLSTM mixed-block ~100M params
+arch: xlstm
+model:
+  d_model: 768
+  num_blocks: 12
+  block_pattern: [mlstm, slstm, mlstm, slstm, mlstm, slstm, mlstm, slstm, mlstm, slstm, mlstm, slstm]
+  dropout: 0.1
+  max_seq_len: 256
+  mlstm:
+    num_heads: 12
+    conv1d_kernel_size: 4
+    qkv_proj_blocksize: 4
+  slstm:
+    num_heads: 12
+    conv1d_kernel_size: 4
+    backend: cuda

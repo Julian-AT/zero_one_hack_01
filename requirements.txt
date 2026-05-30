@@ -1,0 +1,30 @@
+# Core ML
+torch>=2.3
+numpy>=1.26
+pandas>=2.2
+
+# Models
+# xLSTM needs CUDA + Triton; pip install xlstm on Leonardo, no-op on Mac
+xlstm>=1.0.7; platform_system != "Darwin"
+einops>=0.7
+
+# Configuration / experiments
+pyyaml>=6.0
+omegaconf>=2.3
+
+# Tracking
+tensorboard>=2.16
+wandb>=0.17
+
+# Utilities
+tqdm>=4.66
+rich>=13.7
+
+# Dashboard / demo
+streamlit>=1.36
+plotly>=5.22
+matplotlib>=3.8
+seaborn>=0.13
+
+# Dev / notebooks
+jupyter>=1.0
