@@ -109,7 +109,7 @@ def predict_nextstep(
             partial, fam, ranker, candidate_vocab, k=5,
             use_roles=use_roles, role_sharpen=role_sharpen,
         )
-        # decode guarantees exactly 5 distinct steps.
+        # decode returns up to 5 distinct steps (exactly 5 with the full vocab).
         row = {"EXAMPLE_ID": eid}
         for col, step in zip(_RANK_COLUMNS, preds):
             row[col] = step

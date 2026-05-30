@@ -563,6 +563,7 @@ def train_ranker(
             loss, comp = total_loss(
                 step_logits, role_logits, step_tgt, role_tgt, PAD_ID,
                 valid_id_mask=valid_mask, role_w=float(cfg["role_w"]), sem_w=sem_w,
+                role_pad_id=ROLE_PAD_ID,
             )
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -633,7 +634,8 @@ if __name__ == "__main__":
     step_tgt = torch.randint(1, vocab, (B, T))
     role_tgt = torch.randint(0, NUM_ROLES, (B, T))
     opt = torch.optim.AdamW(m.parameters(), lr=1e-3)
-    loss, comp = total_loss(sl, rl, step_tgt, role_tgt, PAD_ID, role_w=0.3, sem_w=0.0)
+    loss, comp = total_loss(sl, rl, step_tgt, role_tgt, PAD_ID, role_w=0.3, sem_w=0.0,
+                            role_pad_id=ROLE_PAD_ID)
     opt.zero_grad(); loss.backward(); opt.step()
     print("loss value:", round(comp["total"], 4), comp)
     assert torch.isfinite(loss)

@@ -8,17 +8,21 @@ ranker. Because the gold next step is always legal (a guarantee established in
 
 Three public entry points:
 
-  * ``next_step_topk`` — exactly ``k`` distinct legal next steps, ranked by the
-    ranker, with optional role-sharpening (intersect the legal set with the
-    ranker's top predicted roles for a much stronger Top-1). The set is widened
-    progressively if role-sharpening leaves fewer than ``k`` candidates, and
-    falls back to the unconstrained ranker only as a last resort — but since the
-    gold is always legal we always prefer the constrained set.
+  * ``next_step_topk`` — up to ``k`` distinct legal next steps (exactly ``k``
+    whenever the candidate vocabulary has >= ``k`` steps, which the real 198-step
+    submission vocab always does), ranked by the ranker, with optional
+    role-sharpening (intersect the legal set with the ranker's top predicted
+    roles for a much stronger Top-1). The set is widened progressively if
+    role-sharpening leaves fewer than ``k`` candidates, and falls back to the
+    unconstrained ranker only as a last resort — but since the gold is always
+    legal we always prefer the constrained set.
 
   * ``complete`` — constrained greedy (``beam=1``) or beam search until ``SHIP
     LOT`` or ``max_len``, returning ONLY the steps after the given prefix, then
-    passing the full sequence through ``repair``. Constrained decoding makes the
-    completion rule-valid by construction; ``repair`` is a bounded safety net.
+    passing the full sequence through ``repair``. Constrained decoding keeps every
+    step legal; in the rare case a position has an empty legal set it falls back
+    to the unconstrained ranker, and the bounded ``repair`` pass restores full
+    rule-validity (self-tests confirm 100% of completions pass the validator).
 
   * ``repair`` — bounded greedy fix of the first violation reported by the
     role-augmented validator (insert a CLEAN before an uncleaned deposition, a
@@ -59,14 +63,15 @@ def next_step_topk(
     use_roles: bool = False,
     role_sharpen: bool = True,
 ) -> List[str]:
-    """Return exactly ``k`` distinct legal next steps, ranked by the ranker.
+    """Return up to ``k`` distinct legal next steps, ranked by the ranker
+    (exactly ``k`` whenever ``candidate_vocab`` has at least ``k`` distinct steps).
 
     Strategy (each step strictly widens the candidate set):
       1. legal set sharpened to the ranker's top predicted roles (if
          ``role_sharpen``) — strongest Top-1;
       2. legal set without the role filter;
       3. unconstrained ranker over the full ``candidate_vocab`` — last resort
-         padding so the function ALWAYS returns ``k`` items.
+         padding toward ``k`` items (capped at ``len(candidate_vocab)``).
 
     The gold next step is always in the legal set, so widening only ever appends
     *additional* (lower-priority) candidates; it never displaces the legal ones.

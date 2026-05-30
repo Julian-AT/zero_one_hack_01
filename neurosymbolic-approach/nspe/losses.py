@@ -104,6 +104,7 @@ def total_loss(
     valid_id_mask: Optional[torch.Tensor] = None,
     role_w: float = 0.3,
     sem_w: float = 0.0,
+    role_pad_id: Optional[int] = None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Combined objective ``step_ce + role_w * role_ce + sem_w * semantic_loss``.
 
@@ -111,11 +112,19 @@ def total_loss(
     ----------
     step_logits, role_logits : model outputs, ``[B, T, V]`` and ``[B, T, R]``.
     step_tgt, role_tgt       : gold next-step / next-role ids, ``[B, T]``.
-    pad_id                   : padding id (shared convention: pad target ids are
-                               ``pad_id`` for both step and role streams).
+    pad_id                   : padding id for the *step* target stream, ignored
+                               in ``step_ce``.
     valid_id_mask            : ``[B, T, V]`` bool legal-step mask. Required iff
                                ``sem_w > 0``; ignored otherwise.
     role_w, sem_w            : component weights.
+    role_pad_id              : padding id for the *role* target stream, ignored
+                               in ``role_ce``. The role stream pads with a
+                               dedicated id (``NUM_ROLES``) that differs from the
+                               step ``pad_id`` (0), so this must be passed
+                               explicitly — otherwise role-pad slots leak into
+                               the loss and real ``LOGISTICS`` (role 0) targets
+                               are wrongly ignored. Defaults to ``pad_id`` only
+                               for back-compat when the two conventions coincide.
 
     Returns
     -------
@@ -123,8 +132,9 @@ def total_loss(
     ``step_ce``, ``role_ce``, ``semantic`` (0.0 when ``sem_w == 0``) and
     ``total``.
     """
+    rpid = pad_id if role_pad_id is None else role_pad_id
     sce = step_ce(step_logits, step_tgt, pad_id)
-    rce = role_ce(role_logits, role_tgt, pad_id)
+    rce = role_ce(role_logits, role_tgt, rpid)
     loss = sce + role_w * rce
 
     sem_val = step_logits.new_zeros(())
