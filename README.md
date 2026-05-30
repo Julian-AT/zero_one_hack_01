@@ -6,6 +6,16 @@ Welcome to the central repository for Zero One Hack_01, hosted by [Lumos Consult
 
 ---
 
+## 👉 Our submission — Industrial AI (Infineon)
+
+This repo is our team's entry for the **Industrial AI** track. Start here:
+
+- **[`REPORT.md`](./REPORT.md)** — executive summary: approach, results, final files, how to run.
+- **[`ssl_results/README.md`](./ssl_results/README.md)** — full technical write-up.
+- **[`participant_files/predictions/`](./participant_files/predictions/)** — final submission CSVs.
+
+---
+
 ## Quick links
 
 - 🌐 **Docs**: [docs.zero-one.lumos-consulting.at](https://docs.zero-one.lumos-consulting.at/)
