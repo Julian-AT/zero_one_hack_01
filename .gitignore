@@ -30,7 +30,10 @@ Thumbs.db
 *.safetensors
 *.bin
 *.ckpt
-extras/logs/
+extras/logs/*.out
+extras/logs/*.err
+extras/logs/slurm-*.out
+extras/logs/slurm-*.err
 runs/
 tb_logs/
 wandb/
