@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="32" font-family="Arial" font-size="22" font-weight="bold">Next-step Top-1 prediction distribution</text>
+<text x="10" y="76" font-family="Arial" font-size="12">STRIP PHOTORESIST</text>
+<rect x="330" y="63" width="690" height="16" fill="#4C78A8"/>
+<text x="1028" y="76" font-family="Arial" font-size="12">55</text>
+<text x="10" y="100" font-family="Arial" font-size="12">MEASURE VIA CD</text>
+<rect x="330" y="87" width="652" height="16" fill="#4C78A8"/>
+<text x="990" y="100" font-family="Arial" font-size="12">52</text>
+<text x="10" y="124" font-family="Arial" font-size="12">CURE PASSIVATION</text>
+<rect x="330" y="111" width="627" height="16" fill="#4C78A8"/>
+<text x="965" y="124" font-family="Arial" font-size="12">50</text>
+<text x="10" y="148" font-family="Arial" font-size="12">CLEAN AFTER VIA ETCH</text>
+<rect x="330" y="135" width="614" height="16" fill="#4C78A8"/>
+<text x="952" y="148" font-family="Arial" font-size="12">49</text>
+<text x="10" y="172" font-family="Arial" font-size="12">DEPOSIT BARRIER METAL</text>
+<rect x="330" y="159" width="426" height="16" fill="#4C78A8"/>
+<text x="764" y="172" font-family="Arial" font-size="12">34</text>
+<text x="10" y="196" font-family="Arial" font-size="12">SPIN COAT PHOTORESIST</text>
+<rect x="330" y="183" width="414" height="16" fill="#4C78A8"/>
+<text x="752" y="196" font-family="Arial" font-size="12">33</text>
+<text x="10" y="220" font-family="Arial" font-size="12">PASSIVATION ETCH</text>
+<rect x="330" y="207" width="363" height="16" fill="#4C78A8"/>
+<text x="701" y="220" font-family="Arial" font-size="12">29</text>
+<text x="10" y="244" font-family="Arial" font-size="12">PAD WINDOW LITHO</text>
+<rect x="330" y="231" width="326" height="16" fill="#4C78A8"/>
+<text x="664" y="244" font-family="Arial" font-size="12">26</text>
+<text x="10" y="268" font-family="Arial" font-size="12">OPEN PAD WINDOW</text>
+<rect x="330" y="255" width="326" height="16" fill="#4C78A8"/>
+<text x="664" y="268" font-family="Arial" font-size="12">26</text>
+<text x="10" y="292" font-family="Arial" font-size="12">STRIP RESIST</text>
+<rect x="330" y="279" width="276" height="16" fill="#4C78A8"/>
+<text x="614" y="292" font-family="Arial" font-size="12">22</text>
+<text x="10" y="316" font-family="Arial" font-size="12">DEVELOP PAD WINDOW</text>
+<rect x="330" y="303" width="213" height="16" fill="#4C78A8"/>
+<text x="551" y="316" font-family="Arial" font-size="12">17</text>
+<text x="10" y="340" font-family="Arial" font-size="12">DEVELOP PHOTORESIST</text>
+<rect x="330" y="327" width="213" height="16" fill="#4C78A8"/>
+<text x="551" y="340" font-family="Arial" font-size="12">17</text>
+<text x="10" y="364" font-family="Arial" font-size="12">DEPOSIT PASSIVATION LAYER</text>
+<rect x="330" y="351" width="200" height="16" fill="#4C78A8"/>
+<text x="538" y="364" font-family="Arial" font-size="12">16</text>
+<text x="10" y="388" font-family="Arial" font-size="12">MEASURE PLANARITY</text>
+<rect x="330" y="375" width="200" height="16" fill="#4C78A8"/>
+<text x="538" y="388" font-family="Arial" font-size="12">16</text>
+<text x="10" y="412" font-family="Arial" font-size="12">MEASURE PASSIVATION THICKNESS</text>
+<rect x="330" y="399" width="200" height="16" fill="#4C78A8"/>
+<text x="538" y="412" font-family="Arial" font-size="12">16</text>
+<text x="10" y="436" font-family="Arial" font-size="12">MEASURE PASSIVATION QUALITY</text>
+<rect x="330" y="423" width="175" height="16" fill="#4C78A8"/>
+<text x="513" y="436" font-family="Arial" font-size="12">14</text>
+<text x="10" y="460" font-family="Arial" font-size="12">CLEAN PAD OPENING</text>
+<rect x="330" y="447" width="163" height="16" fill="#4C78A8"/>
+<text x="501" y="460" font-family="Arial" font-size="12">13</text>
+<text x="10" y="484" font-family="Arial" font-size="12">MEASURE LINE WIDTH</text>
+<rect x="330" y="471" width="138" height="16" fill="#4C78A8"/>
+<text x="476" y="484" font-family="Arial" font-size="12">11</text>
+<text x="10" y="508" font-family="Arial" font-size="12">DEPOSIT METAL SEED</text>
+<rect x="330" y="495" width="125" height="16" fill="#4C78A8"/>
+<text x="463" y="508" font-family="Arial" font-size="12">10</text>
+<text x="10" y="532" font-family="Arial" font-size="12">PASSIVATION ETCH PAD OPENING</text>
+<rect x="330" y="519" width="112" height="16" fill="#4C78A8"/>
+<text x="450" y="532" font-family="Arial" font-size="12">9</text>
+<text x="10" y="556" font-family="Arial" font-size="12">MEASURE SURFACE PLANARITY</text>
+<rect x="330" y="543" width="112" height="16" fill="#4C78A8"/>
+<text x="450" y="556" font-family="Arial" font-size="12">9</text>
+<text x="10" y="580" font-family="Arial" font-size="12">CMP INTERLAYER DIELECTRIC</text>
+<rect x="330" y="567" width="100" height="16" fill="#4C78A8"/>
+<text x="438" y="580" font-family="Arial" font-size="12">8</text>
+<text x="10" y="604" font-family="Arial" font-size="12">CMP DIELECTRIC</text>
+<rect x="330" y="591" width="100" height="16" fill="#4C78A8"/>
+<text x="438" y="604" font-family="Arial" font-size="12">8</text>
+<text x="10" y="628" font-family="Arial" font-size="12">SOFT BAKE</text>
+<rect x="330" y="615" width="87" height="16" fill="#4C78A8"/>
+<text x="425" y="628" font-family="Arial" font-size="12">7</text>
+<text x="10" y="652" font-family="Arial" font-size="12">MEASURE DIELECTRIC THICKNESS</text>
+<rect x="330" y="639" width="75" height="16" fill="#4C78A8"/>
+<text x="413" y="652" font-family="Arial" font-size="12">6</text>
+</svg>

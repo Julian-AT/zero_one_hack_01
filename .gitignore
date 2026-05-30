@@ -64,3 +64,34 @@ tracks/industrial-infineon/data/**/*.csv
 tracks/industrial-infineon/data/**/*.json
 tracks/industrial-infineon/data/**/*.md
 !tracks/industrial-infineon/data/plan.md
+
+# Leonardo / Slurm runtime artifacts
+participant_files/eval_preds_*.out
+participant_files/eval_preds_*.err
+tracks/industrial-infineon/jobs/
+tracks/industrial-infineon/logs/
+tracks/industrial-infineon/saved_models/
+
+# Large generated industrial data
+tracks/industrial-infineon/data/coverage_guided_*/
+tracks/industrial-infineon/data/easy_invalid_*/
+tracks/industrial-infineon/data/hard_invalid_*/
+tracks/industrial-infineon/data/task_datasets_*/
+tracks/industrial-infineon/data/generated/
+tracks/industrial-infineon/runs/*/checkpoint_*.pt
+
+# Participant eval/reranker runtime logs
+participant_files/bench_rerank_*.out
+participant_files/bench_rerank_*.err
+participant_files/rerank_next_*.out
+participant_files/rerank_next_*.err
+
+# Large internal debug outputs
+participant_files/predictions/internal_reranker_benchmark_examples.csv
+
+# Retrieval bank and retrieval runtime logs
+tracks/industrial-infineon/data/retrieval_bank_v1/
+participant_files/gen_retrieval_bank_*.out
+participant_files/gen_retrieval_bank_*.err
+participant_files/retrieval_eval_*.out
+participant_files/retrieval_eval_*.err
