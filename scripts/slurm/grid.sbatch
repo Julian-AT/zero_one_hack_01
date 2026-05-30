@@ -23,6 +23,16 @@
 set -euo pipefail
 cd "${SCRATCH}/zero_one_hack_01"
 
+# Load CUDA toolkit so xLSTM's sLSTM block can JIT-compile its kernels.
+# (Compute nodes have the CUDA runtime via the driver, but not nvcc + headers
+# until a module is loaded.)
+source /etc/profile.d/modules.sh 2>/dev/null || \
+    source /usr/share/Modules/init/bash 2>/dev/null || true
+module load gcc/12.2.0 2>&1 || true
+module load cuda/12.6 2>&1 || true
+echo "[grid] gcc=$(gcc --version 2>/dev/null | head -1)"
+echo "[grid] CUDA_HOME=${CUDA_HOME:-unset}  nvcc=$(which nvcc 2>/dev/null || echo unset)"
+
 # Cell index → (arch_config, token_config)
 CONFIGS=(
     "configs/arch/transformer_small.yaml configs/token/compositional.yaml"
