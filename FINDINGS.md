@@ -141,4 +141,62 @@ Artefact: `extras/results/baselines/retrieval_metrics.json`.
 
 ---
 
+## 2026-05-30 ~03:00 · xLSTM scaling on Leonardo
+
+**What:** After the `module load gcc/12.2.0 + cuda/12.6` fix, the xLSTM cells trained successfully. Compositional tokens, same training budget as the transformer cells.
+
+| Cell | Arch | Params | Final LM loss | Wall time |
+|---|---|--:|--:|--:|
+| 0 | transformer_small | 4.2M | 0.1062 | 73 s |
+| 1 | transformer_medium | 33.6M | **0.1061** | 255 s |
+| 2 | transformer_large | 113.4M | 0.1062 | 576 s |
+| 3 | xlstm_small (mLSTM+sLSTM) | ~5M | **0.1192** | ~270 s |
+| 4 | xlstm_medium | ~25M | **0.1093** | ~440 s |
+| 5 | xlstm_large | ~100M | (running) | — |
+
+**Why it matters:**
+
+1. **xLSTM converges to a slightly higher loss than the same-size Transformer** (0.119 vs 0.106 at small, 0.109 vs 0.106 at medium). The gap shrinks with scale — xLSTM-medium is essentially competitive.
+2. **xLSTM-small reaches 0.119 in ~270 s** vs transformer-small's 73 s — sLSTM's sequential CUDA kernels are slower per step than SDPA. Reasonable but not free.
+3. **The mixed mLSTM+sLSTM stack is competitive** and produces a legitimate non-Transformer architecture for the report's "scaling across architectures" section. The briefing explicitly mentions architecture comparison as a stretch goal.
+4. **Compile-once cost amortizes** — the first JIT compile of the sLSTM kernel took ~2 minutes; cached at `~/.cache/torch_extensions/py312_cu126/` for subsequent runs.
+
+---
+
+## 2026-05-30 ~03:10 · Physics features lookup is alive
+
+**What:** `src/data/physics.py` parses the three `*_longdescription_parameters.csv` reference files into a `step_string → 10-d feature vector` lookup at `data/processed/physics_features.json`. 136 step strings covered.
+
+**Coverage of each feature across the 136 steps:**
+
+| Feature | % present | Range |
+|---|--:|---|
+| `tool_idx` (categorical) | 100% | 0..9 |
+| `is_wet` / `is_anneal` / `is_implant` | 100% | 0 / 1 |
+| `log_thickness_nm` | 37.5% | -0.7 .. 5.9 |
+| `log_time_s` | 21.3% | 0.7 .. 3.6 |
+| `temp_C` | 20.6% | 25 .. 1100 |
+| `log_pressure_torr` | 8.1% | -2.5 .. 1.6 |
+| `energy_keV` | 5.9% | 30 .. 150 (implants) |
+| `log_dose_per_cm2` | 5.9% | 13.0 .. 15.7 (implants) |
+
+**Examples:**
+
+```
+THERMAL OXIDATION   → temp=1000°C, time≈30 min, thick=50nm,  tool=FURNACE
+DEPOSIT POLYSILICON → temp=620°C,             thick=200nm,   tool=LPCVD
+IMPLANT P BODY      →            energy=80keV, log_dose=13.7, tool=OTHER, implant=1
+STRIP PHOTORESIST   → time≈5 min, pressure=0.2 Torr,         tool=OTHER
+```
+
+**Why it matters:**
+
+1. **This is the OOD lever for Task 4** (hidden family). For a new step string we have never seen, we can still place it in feature space if the organizers provide parameters: `DEPOSIT GATE OXIDE 2` at `LPCVD; 950 °C; thickness 80 nm` lands near `DEPOSIT GATE OXIDE OR DIELECTRIC` even without lexical match.
+2. **Almost no team will exploit these `_parameters` CSVs.** The track briefing mentions them but doesn't push parsing — it'll be a differentiator in the report.
+3. **NaN-heavy:** 70%+ of cells are NaN. The model needs to handle this gracefully — we'll use a learnable "missingness" mask alongside the projected features. Implementation defers to Tier-2.5 (post-multi-task training).
+
+Artefact: `data/processed/physics_features.json` (also lists tool taxonomy).
+
+---
+
 *New findings will be appended below as they happen.*
