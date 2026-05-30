@@ -71,6 +71,7 @@ def train(cfg: dict[str, Any]) -> dict[str, float]:
         family_dropout=cfg["train"]["family_dropout"],
         num_workers=cfg["data"].get("num_workers", 0),
         seed=cfg["train"]["seed"],
+        ood_family_prob=cfg["data"].get("ood_family_prob", 0.0),
     )
 
     # ---- Val loader on held-out provided sequences (the trigram split) -

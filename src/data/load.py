@@ -30,6 +30,7 @@ from torch.utils.data import DataLoader, Dataset, IterableDataset
 
 from src.data.canonicalize import canonicalize_sequence
 from src.data.corrupt import corrupt_random
+from src.data.ood_generator import generate_ood_sequence, random_ood_family
 from src.data.tokenizer import BaseTokenizer, FAMILY_TOKEN
 from src.data.validator import (
     NUM_RULE_CLASSES,
@@ -175,6 +176,7 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         canonicalize: bool = False,
         family_dropout: float = 0.0,
         seed: int = 42,
+        ood_family_prob: float = 0.0,
     ) -> None:
         super().__init__()
         self.tokenizer = tokenizer
@@ -184,6 +186,7 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         self.canonicalize = canonicalize
         self.family_dropout = family_dropout
         self.seed = seed
+        self.ood_family_prob = ood_family_prob
 
     def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
         worker_info = torch.utils.data.get_worker_info()
@@ -191,8 +194,23 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         rng = random.Random(self.seed + worker_id * 9973)
 
         while True:
-            family = rng.choice(self.families)
-            steps = generate_sequence(family, rng)
+            # With ood_family_prob, draw from synthetic OOD families
+            # (DIODE / SCHOTTKY / SIC_MOSFET). Labeled as <FAMILY_UNK> so the
+            # model treats them as "unknown family" examples — encourages
+            # backbone-level learning rather than family-token shortcuts.
+            if self.ood_family_prob > 0 and rng.random() < self.ood_family_prob:
+                ood_fam = random_ood_family(rng)
+                steps = generate_ood_sequence(ood_fam, rng)
+                if steps is None:
+                    # Defensive: extremely rare. Fall back to a real family.
+                    family = rng.choice(self.families)
+                    steps = generate_sequence(family, rng)
+                else:
+                    family = "unk"   # train as <FAMILY_UNK>
+            else:
+                family = rng.choice(self.families)
+                steps = generate_sequence(family, rng)
+
             ex = Example(family=family, steps=steps, validity=1,
                           rule_class=VALID_CLASS_IDX)
 
@@ -245,11 +263,13 @@ def make_online_loader(
     family_dropout: float = 0.0,
     num_workers: int = 0,
     seed: int = 42,
+    ood_family_prob: float = 0.0,
 ) -> DataLoader:
     ds = OnlineGeneratorIterableDataset(
         tokenizer, families, max_len=max_len,
         corrupt_fraction=corrupt_fraction, canonicalize=canonicalize,
         family_dropout=family_dropout, seed=seed,
+        ood_family_prob=ood_family_prob,
     )
     return DataLoader(
         ds,
