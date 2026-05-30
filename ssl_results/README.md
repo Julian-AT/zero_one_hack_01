@@ -2,9 +2,25 @@
 
 ## TL;DR
 
-We trained and compared several next-step process-sequence models for the Industrial Infineon semiconductor process-flow task.
+We built a complete synthetic semiconductor process-sequence learning pipeline for the Industrial Infineon hackathon task.
 
-The original three SSL models all reach roughly **81% Top-1** and **~99.6–99.99% Top-3/Top-5** on held-out in-distribution next-step prediction. We then added a new **coverage-guided valid-data run** trained on our improved synthetic data pipeline. This new run reaches:
+The project contains:
+
+```text
+rule-based process generation
+→ coverage-guided valid data generation
+→ easy invalid sequence generation
+→ hard invalid near-miss generation
+→ task-specific dataset construction
+→ SSL / hybrid Transformer training
+→ official-format eval prediction generation
+→ rule-aware reranking
+→ retrieval-augmented prediction attempt
+→ learned contrastive reranker
+→ final submission files
+```
+
+The strongest measured internal model result is the **hybrid Transformer trained on coverage-guided valid data**:
 
 ```text
 Test loss: 0.7829
@@ -14,205 +30,151 @@ Top-5:     0.9997  ≈ 99.97%
 MRR:       0.8976
 ```
 
-The new coverage-guided run is slightly lower than the previous three on plain in-distribution next-step accuracy, but it was trained on a broader, coverage-guided valid-process corpus. The important result is that the dataset pipeline is now much stronger than the original SSL baseline: it contains valid coverage-guided sequences, easy invalid near-misses, and hard invalid near-misses.
-
-We also generated official-format eval prediction files for:
-
-1. next-step prediction,
-2. sequence completion,
-3. anomaly detection.
-
-The official eval inputs are unlabeled, so we cannot compute official accuracy locally. The organizers hold the hidden ground truth.
+Important caveat: the official eval input files are unlabeled. We can generate official-format prediction files, but only the organizers can compute final official accuracy.
 
 ---
 
-## 1. What We Built
+## 1. Project Goal
 
-The full pipeline now consists of:
+The goal is to learn process logic from synthetic semiconductor fabrication sequences.
+
+The model should support:
+
+1. **Next-step prediction**
+   Given a partial process sequence, predict the next fabrication step.
+
+2. **Sequence completion**
+   Given a partial process sequence, predict the continuation.
+
+3. **Anomaly detection**
+   Given a full process sequence, classify whether it is valid or invalid.
+
+4. **Rule attribution**
+   Given an invalid sequence, identify which process rule was violated.
+
+The process families are:
 
 ```text
-rule-based generator
-→ coverage tracker
-→ coverage-guided valid generation
-→ easy invalid generation
-→ hard invalid generation
-→ task dataset builder
-→ SSL next-step model
-→ eval prediction generation
-→ reranking / retrieval diagnostics
+MOSFET
+IGBT
+IC
 ```
 
-The major additions beyond the original SSL experiments are:
+---
 
-* coverage-guided valid data,
-* controlled easy-invalid examples,
-* hard invalid near-misses,
-* task-specific datasets for next-step, completion, anomaly, and rule attribution,
-* official-format eval prediction files,
-* reranking and retrieval-augmented prediction diagnostics.
+## 2. What We Built
+
+The final pipeline contains the following major components.
+
+| Stage                        | Purpose                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| Rule-based generator         | Generate valid synthetic semiconductor process flows                                      |
+| Coverage tracker             | Measure step, transition, trigram, block, and rule-boundary coverage                      |
+| Coverage-guided generator    | Generate broader valid data by targeting rare/missing coverage                            |
+| Easy invalid generator       | Create controlled obvious rule violations                                                 |
+| Hard invalid generator       | Create realistic near-miss invalid process flows                                          |
+| Task dataset builder         | Convert full sequences into next-step, completion, anomaly, and rule-attribution datasets |
+| SSL Transformer              | Learn next-step process grammar from valid sequences                                      |
+| Hybrid Transformer           | Add semantic/process features to step-token learning                                      |
+| Eval prediction script       | Generate official-format prediction CSVs                                                  |
+| Rule-aware reranker          | Reorder model Top-5 predictions using valid/invalid statistics and validator checks       |
+| Retrieval augmentation       | Use a generated valid-sequence memory bank to retrieve continuations                      |
+| Learned contrastive reranker | Train a small reranker to distinguish correct next steps from plausible wrong candidates  |
 
 ---
 
-## 2. Model and Dataset Configurations
+## 3. Main Data Files
 
-| # | Run                                 | Training data                                      | Input representation                     | Purpose                             |
-| - | ----------------------------------- | -------------------------------------------------- | ---------------------------------------- | ----------------------------------- |
-| 1 | `ssl_original_full`                 | Original 3 families: MOSFET, IGBT, IC              | step-as-token                            | Original baseline                   |
-| 2 | `ssl_augmented_full`                | 6 families: original + DIODE, SCHOTTKY, SIC_MOSFET | step-as-token                            | Tests family augmentation           |
-| 3 | `ssl_hybrid_augmented_full`         | 6 families                                         | step-token + semantic feature embeddings | Tests hybrid semantic-feature input |
-| 4 | `ssl_hybrid_new_coverage_guided_v1` | coverage-guided valid data                         | hybrid semantic-feature Transformer      | Tests new coverage-guided dataset   |
+Large generated data files are usually not committed to GitHub, but they are created by the pipeline on Leonardo.
 
-Runs 1–3 are the original SSL comparison. Run 4 is the new model trained after building the coverage-guided augmentation pipeline.
-
----
-
-## 3. Final Test Metrics
-
-| Model                             | Test loss |  Top-1 |  Top-3 |  Top-5 |    MRR | Interpretation                                                                |
-| --------------------------------- | --------: | -----: | -----: | -----: | -----: | ----------------------------------------------------------------------------- |
-| Original step-token               |    0.7631 | 0.8125 | 0.9955 | 0.9999 | 0.9034 | Original 3-family baseline                                                    |
-| Augmented step-token              |    0.7606 | 0.8117 | 0.9960 | 0.9999 | 0.9029 | Adding families does not materially change in-distribution next-step accuracy |
-| Hybrid semantic-feature augmented |    0.7607 | 0.8116 | 0.9960 | 0.9999 | 0.9029 | Semantic features are stable but mostly inert on in-distribution SSL          |
-| Hybrid coverage-guided valid data |    0.7829 | 0.8031 | 0.9932 | 0.9997 | 0.8976 | Slightly harder/more diverse valid dataset; still very strong Top-3/Top-5     |
-
-### Reading the table
-
-Top-1 is standard next-step accuracy. The new coverage-guided run gets **80.31% Top-1 accuracy** on its held-out internal test split.
-
-Top-3 and Top-5 are relaxed ranking accuracies. The coverage-guided model gets the correct answer in its Top-3 predictions **99.32%** of the time and in its Top-5 predictions **99.97%** of the time.
-
-This means the model almost always knows the correct neighborhood of the next process step. Most remaining errors are ranking errors inside a small set of plausible candidates.
-
----
-
-## 4. Training Curves and Summary Charts
-
-### Validation curves
-
-|                                                  |                                                  |
-| ------------------------------------------------ | ------------------------------------------------ |
-| ![Validation loss](ssl_val_loss_comparison.png)  | ![Validation Top-1](ssl_val_top1_comparison.png) |
-| ![Validation Top-3](ssl_val_top3_comparison.png) | ![Validation Top-5](ssl_val_top5_comparison.png) |
-
-![Validation MRR](ssl_val_mrr_comparison.png)
-
-### Final test bar charts
-
-|                                  |                                  |
-| -------------------------------- | -------------------------------- |
-| ![Test loss](test_loss_bar.png)  | ![Test Top-1](test_top1_bar.png) |
-| ![Test Top-3](test_top3_bar.png) | ![Test Top-5](test_top5_bar.png) |
-
-![Test MRR](test_mrr_bar.png)
-
-If coverage-guided comparison plots were generated, see also:
-
-|                                                                       |                                                                       |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| ![Coverage-guided test loss](test_loss_bar_with_coverage_guided.png)  | ![Coverage-guided test Top-1](test_top1_bar_with_coverage_guided.png) |
-| ![Coverage-guided test Top-3](test_top3_bar_with_coverage_guided.png) | ![Coverage-guided test Top-5](test_top5_bar_with_coverage_guided.png) |
-
-![Coverage-guided test MRR](test_mrr_bar_with_coverage_guided.png)
-
----
-
-## 5. Data Augmentation Pipeline
-
-The new dataset pipeline contains three major generated sequence types.
-
-### 5.1 Coverage-Guided Valid Data
-
-Path:
+### 3.1 Coverage-Guided Valid Data
 
 ```text
 tracks/industrial-infineon/data/coverage_guided_v1/coverage_guided_sequences.csv
 ```
 
-Purpose:
+Used for:
 
 ```text
-valid process-flow learning
+SSL / hybrid model training
 next-step prediction
 sequence completion
+valid process-flow modeling
 ```
 
-The coverage-guided generator does not simply sample random process flows. It accepts candidates that improve coverage over:
+This is the most important valid training dataset.
+
+It is generated by accepting candidate sequences that improve coverage of:
 
 * rare steps,
 * rare transitions,
 * rare trigrams,
-* block transitions,
-* optional branches,
+* rare block transitions,
+* optional process branches,
 * lithography levels,
 * rule-boundary situations.
 
-This produces a broader valid-process dataset than the original generator output.
+Approximate size:
 
-### 5.2 Easy Invalid Data
+```text
+~5.5k valid full sequences
+~695k next-step training examples after task conversion
+```
 
-Path:
+### 3.2 Easy Invalid Data
 
 ```text
 tracks/industrial-infineon/data/easy_invalid_v1/invalid_sequences.csv
 ```
 
-Purpose:
+Used for:
 
 ```text
-basic anomaly detection
-basic rule attribution
-sanity-check invalid process logic
+anomaly detection
+rule attribution
+invalid-context features
+validator/reranker support
 ```
 
-It contains controlled invalid sequences, balanced over:
+Approximate size:
 
 ```text
-3 product families × 10 process rules × 1000 examples
+3 families × 10 rules × 1000 examples = 30,000 easy invalid sequences
 ```
 
-Total:
-
-```text
-30,000 easy invalid sequences
-```
-
-### 5.3 Hard Invalid Data
-
-Path:
+### 3.3 Hard Invalid Data
 
 ```text
 tracks/industrial-infineon/data/hard_invalid_v1/hard_invalid_sequences.csv
 ```
 
-Purpose:
+Used for:
 
 ```text
 hard anomaly detection
-hard rule attribution
-near-miss process validation
+near-miss invalid process logic
+invalid-context reranking features
 ```
 
-The hard invalid examples perturb realistic process regions instead of inserting obviously wrong early steps.
-
-Examples:
-
-* make a clean step too stale before deposition,
-* move electrical test before passivation cure,
-* move pad opening before passivation cure,
-* skip/decrease a lithography level,
-* move CMP too far away from fill/deposition.
-
-Total:
+Approximate size:
 
 ```text
-30,000 hard invalid sequences
+3 families × 10 rules × 1000 examples = 30,000 hard invalid sequences
 ```
+
+Hard invalids are more realistic than easy invalids. They perturb plausible process regions, for example:
+
+* move test before passivation,
+* move pad opening before passivation cure,
+* make CMP too far away from deposition/fill,
+* remove necessary clean/deposition dependencies,
+* create lithography-level skips.
 
 ---
 
-## 6. Task-Specific Datasets
+## 4. Task-Specific Datasets
 
-The generated data is converted into task-specific CSVs.
+The full generated sequences are converted into model-ready datasets.
 
 Path:
 
@@ -220,17 +182,15 @@ Path:
 tracks/industrial-infineon/data/task_datasets_v1/
 ```
 
-Files:
-
 | File                       | Input            | Target              | Purpose                         |
 | -------------------------- | ---------------- | ------------------- | ------------------------------- |
 | `next_step_prediction.csv` | process prefix   | next step           | supervised next-step prediction |
-| `sequence_completion.csv`  | partial sequence | suffix continuation | sequence completion             |
-| `anomaly_detection.csv`    | full sequence    | valid/invalid label | binary process validity         |
+| `sequence_completion.csv`  | partial sequence | target suffix       | sequence completion             |
+| `anomaly_detection.csv`    | full sequence    | valid/invalid label | binary validity detection       |
 | `rule_attribution.csv`     | invalid sequence | violated rule       | explainable anomaly detection   |
-| `sequence_summary.csv`     | metadata         | none                | inspection/debugging            |
+| `sequence_summary.csv`     | metadata         | none                | dataset inspection/debugging    |
 
-Approximate size:
+Approximate dataset sizes:
 
 | Dataset                      | Approx. examples |
 | ---------------------------- | ---------------: |
@@ -244,331 +204,49 @@ Approximate size:
 
 ---
 
-## 7. Official Eval Prediction Files
+## 5. Model Runs
 
-The organizers provided:
+We compared four major SSL-style next-step models.
 
-```text
-participant_files/eval_input_valid.csv
-participant_files/eval_input_anomaly.csv
-participant_files/eval_metrics.py
-```
-
-The eval input files are unlabeled.
-
-We generated official-format predictions:
-
-```text
-participant_files/predictions/predictions_nextstep.csv
-participant_files/predictions/predictions_completion.csv
-participant_files/predictions/predictions_anomaly.csv
-```
-
-Expected row counts:
-
-| File                         | Expected rows incl. header |
-| ---------------------------- | -------------------------: |
-| `eval_input_valid.csv`       |                        601 |
-| `predictions_nextstep.csv`   |                        601 |
-| `predictions_completion.csv` |                        601 |
-| `eval_input_anomaly.csv`     |                        988 |
-| `predictions_anomaly.csv`    |                        988 |
-
-These counts were verified after generation.
-
-### Important caveat
-
-The official eval files do not include hidden labels such as:
-
-* `NEXT_STEP`,
-* `FULL_SEQUENCE`,
-* `IS_VALID`,
-* violated rule labels.
-
-Therefore, we cannot compute official eval accuracy locally. Only the organizers can score the final prediction files.
+| # | Run                                 | Training data                            | Input representation                   | Purpose                                 |
+| - | ----------------------------------- | ---------------------------------------- | -------------------------------------- | --------------------------------------- |
+| 1 | `ssl_original_full`                 | Original 3 families: MOSFET, IGBT, IC    | step-token only                        | Original baseline                       |
+| 2 | `ssl_augmented_full`                | Original + additional generated families | step-token only                        | Tests family augmentation               |
+| 3 | `ssl_hybrid_augmented_full`         | Augmented data                           | step-token + semantic/process features | Tests hybrid input representation       |
+| 4 | `ssl_hybrid_new_coverage_guided_v1` | coverage-guided valid data               | hybrid semantic-feature Transformer    | Tests new coverage-guided data pipeline |
 
 ---
 
-## 8. Eval Prediction Diagnostics
+## 6. Internal Test Metrics
 
-Path:
+These metrics are measured on our internal held-out test split, not the hidden official eval.
 
-```text
-participant_files/eval_plots/eval_prediction_report.md
-```
+| Model                             | Test loss |  Top-1 |  Top-3 |  Top-5 |    MRR | Interpretation                                                                      |
+| --------------------------------- | --------: | -----: | -----: | -----: | -----: | ----------------------------------------------------------------------------------- |
+| Original step-token               |    0.7631 | 0.8125 | 0.9955 | 0.9999 | 0.9034 | Original 3-family SSL baseline                                                      |
+| Augmented step-token              |    0.7606 | 0.8117 | 0.9960 | 0.9999 | 0.9029 | More families did not materially change in-distribution next-step accuracy          |
+| Hybrid semantic-feature augmented |    0.7607 | 0.8116 | 0.9960 | 0.9999 | 0.9029 | Semantic features were stable but not clearly better on this metric                 |
+| Hybrid coverage-guided valid data |    0.7829 | 0.8031 | 0.9932 | 0.9997 | 0.8976 | Slightly harder/more diverse coverage-guided dataset; still very strong Top-3/Top-5 |
 
-This report visualizes the generated official-format prediction files.
+### Interpretation
 
-It does not compute official accuracy. It only checks:
+Top-1 is normal next-step accuracy.
 
-* row-count consistency,
-* next-step prediction distribution,
-* completion length distribution,
-* anomaly valid/invalid prediction distribution,
-* anomaly predicted rule distribution.
-
-Generated figures include:
+The coverage-guided model reaches:
 
 ```text
-participant_files/eval_plots/nextstep_top1_distribution.svg
-participant_files/eval_plots/nextstep_top5_distribution.svg
-participant_files/eval_plots/completion_length_distribution.svg
-participant_files/eval_plots/completion_first_step_distribution.svg
-participant_files/eval_plots/completion_last_step_distribution.svg
-participant_files/eval_plots/anomaly_validity_counts.svg
-participant_files/eval_plots/anomaly_rule_distribution.svg
-participant_files/eval_plots/anomaly_score_distribution.svg
+Top-1 accuracy: 80.31%
+Top-3 accuracy: 99.32%
+Top-5 accuracy: 99.97%
 ```
+
+This means the correct next step is almost always inside the model’s top candidates. Most remaining errors are ranking/calibration errors rather than complete candidate-generation failures.
 
 ---
 
-## 9. Reranking Experiment
+## 7. Training Curves and Comparison Figures
 
-Because the coverage-guided model has:
-
-```text
-Top-1 ≈ 80.31%
-Top-3 ≈ 99.32%
-Top-5 ≈ 99.97%
-```
-
-the correct next step is almost always already in the candidate set. This motivated a rule-aware reranker.
-
-### Reranking method
-
-The reranker uses:
-
-1. original model rank,
-2. valid-sequence n-gram continuation evidence,
-3. invalid-mutation context penalties,
-4. process-rule validator penalties.
-
-Relevant files:
-
-```text
-participant_files/rerank_nextstep_with_rules.py
-participant_files/run_rerank_nextstep.slurm
-participant_files/predictions/predictions_nextstep_reranked.csv
-participant_files/predictions/rerank_nextstep_report.md
-```
-
-### Official eval reranking activity
-
-On the 600 official valid eval examples:
-
-```text
-Top-1 changed: 10 / 600 = 1.67%
-Any Top-5 order changed: 140 / 600 = 23.33%
-Validator-penalized candidates: 93
-```
-
-This means the reranker is conservative. It does not rewrite the model outputs globally; it only changes a small number of Top-1 decisions and adjusts ordering in about one quarter of examples.
-
-### Internal reranker benchmark
-
-We also evaluated the reranker on an internal labeled test split.
-
-Relevant files:
-
-```text
-participant_files/benchmark_reranker_internal.py
-participant_files/run_internal_reranker_benchmark.slurm
-participant_files/predictions/internal_reranker_benchmark_report.md
-ssl_results/internal_reranker_benchmark_report.md
-```
-
-The observed improvement was very small, approximately:
-
-```text
-Δ Top-1 ≈ +0.0004
-```
-
-Interpretation:
-
-* the reranker is safe/conservative,
-* it does not substantially improve next-step accuracy,
-* the model-only predictions were already very strong,
-* the remaining Top-1 errors are not easily fixed by simple local n-gram/rule reranking.
-
----
-
-## 10. Retrieval-Augmented Experiment
-
-As a final high-upside extension, we implemented retrieval-augmented prediction.
-
-### Idea
-
-Instead of relying only on the Transformer, we generate a large valid process bank and retrieve exact matching prefixes.
-
-Pipeline:
-
-```text
-large generated valid sequence bank
-→ exact prefix matching against official partial eval examples
-→ retrieved next-step frequencies
-→ retrieved suffix continuations
-```
-
-Relevant files:
-
-```text
-participant_files/run_generate_retrieval_bank.slurm
-participant_files/retrieval_augmented_eval.py
-participant_files/run_retrieval_augmented_eval.slurm
-participant_files/predictions/retrieval_augmented_report.md
-participant_files/predictions/predictions_nextstep_retrieval.csv
-participant_files/predictions/predictions_completion_retrieval.csv
-```
-
-This can improve eval predictions if the official eval partial prefixes overlap strongly with the generated retrieval bank.
-
-### How to interpret retrieval results
-
-The key diagnostics are in:
-
-```text
-participant_files/predictions/retrieval_augmented_report.md
-```
-
-Look at:
-
-```text
-Exact prefix match rate
-Top-1 changed vs model-only
-Retrieved completion used
-Completion changed vs model-only
-Validator-valid completed sequences
-Validator-invalid completed sequences
-```
-
-Decision rule:
-
-| Retrieval diagnostic          | Action                                                      |
-| ----------------------------- | ----------------------------------------------------------- |
-| Exact prefix match rate > 25% | use retrieval next-step + retrieval completion              |
-| Exact prefix match rate < 10% | keep model-only predictions                                 |
-| 10–25%                        | use only if completion validator quality does not get worse |
-
-This retrieval step is not an official accuracy evaluation because the official labels are hidden. It is a controlled prediction-improvement attempt.
-
----
-
-## 11. Current Best Submission Files
-
-The active submission files are:
-
-```text
-participant_files/predictions/predictions_nextstep.csv
-participant_files/predictions/predictions_completion.csv
-participant_files/predictions/predictions_anomaly.csv
-```
-
-Backups and variants may include:
-
-```text
-participant_files/predictions/predictions_nextstep_model_only.csv
-participant_files/predictions/predictions_nextstep_reranked.csv
-participant_files/predictions/predictions_nextstep_retrieval.csv
-participant_files/predictions/predictions_completion_before_retrieval.csv
-participant_files/predictions/predictions_completion_retrieval.csv
-```
-
-Only the active three prediction files should be submitted unless the submission instructions ask for otherwise.
-
-Create a final zip from repo root:
-
-```bash
-zip -j participant_eval_predictions_final.zip \
-  participant_files/predictions/predictions_nextstep.csv \
-  participant_files/predictions/predictions_completion.csv \
-  participant_files/predictions/predictions_anomaly.csv
-```
-
-The zip should contain exactly:
-
-```text
-predictions_nextstep.csv
-predictions_completion.csv
-predictions_anomaly.csv
-```
-
----
-
-## 12. What We Can Claim
-
-### Strong claims
-
-* A small self-supervised Transformer learns the synthetic semiconductor process grammar well.
-* In-distribution next-step prediction reaches around **80–81% Top-1** and near-saturated **Top-3/Top-5**.
-* Coverage-guided data remains highly learnable while broadening process coverage.
-* The invalid-data pipeline creates balanced easy and hard rule-violation examples.
-* Official-format eval predictions were generated for all three tasks.
-* Validator-based anomaly prediction directly uses the explicit process rules.
-
-### Careful claims
-
-* The new coverage-guided dataset is likely harder/more diverse, so slightly lower Top-1 is not necessarily worse.
-* Reranking had only a very small measured internal effect.
-* Retrieval augmentation is a plausible final extension, but official benefit is unknown without hidden labels.
-* Official eval accuracy cannot be computed locally from the provided input-only files.
-
-### Claims we should not make
-
-* We should not claim official eval accuracy before organizer scoring.
-* We should not claim true real-world semiconductor process validity; the data is synthetic.
-* We should not claim semantic features improve in-distribution SSL, because the metrics show they are mostly inert there.
-* We should not claim reranking materially improves accuracy; the measured delta is tiny.
-
----
-
-## 13. Recommended Final Story
-
-The strongest final story is:
-
-```text
-We built a full synthetic process-logic learning pipeline, not just a next-step model.
-The pipeline generates broad valid flows, easy invalids, and hard invalid near-misses.
-The SSL Transformer learns the valid grammar with ~80% Top-1 and ~99.3% Top-3 accuracy.
-The explicit validator and invalid-data generation make the system rule-aware and support anomaly/rule-attribution evaluation.
-For the official hidden eval, we generated complete submission-format predictions for next-step, completion, and anomaly tasks.
-```
-
-This is a stronger story than simply saying “we trained another Transformer,” because the central contribution is the **data-generation, validation, and benchmark pipeline**.
-
----
-
-## 14. Files in This Folder
-
-Per-run metrics:
-
-```text
-original_metrics.csv
-augmented_metrics.csv
-hybrid_augmented_metrics.csv
-hybrid_coverage_guided_metrics.csv
-```
-
-Comparison summaries:
-
-```text
-ssl_model_comparison_summary.csv
-ssl_comparison_summary.csv
-ssl_model_comparison_summary_with_coverage_guided.csv
-```
-
-Coverage-guided result addendum:
-
-```text
-coverage_guided_addendum.md
-```
-
-Internal reranker result:
-
-```text
-internal_reranker_benchmark_report.md
-```
-
-Figures:
+Figures in this folder include:
 
 ```text
 ssl_val_loss_comparison.png
@@ -602,22 +280,574 @@ test_mrr_bar_with_coverage_guided.png
 
 ---
 
-## 15. Next Steps After Submission
+## 8. Use of Valid and Invalid Data
 
-If more time is available after the hackathon submission, the most useful follow-ups are:
+### Valid data
 
-1. train a real multi-task Transformer with shared encoder and heads for:
+The valid coverage-guided dataset was directly used to train the final hybrid SSL model.
+
+So the valid data is fully used for:
+
+```text
+next-step learning
+valid process-flow modeling
+completion generation
+official eval prediction generation
+```
+
+### Invalid data
+
+The invalid data was used partially.
+
+It was used for:
+
+```text
+invalid-context features in reranking
+validator/rule-aware prediction support
+anomaly prediction support
+hard/easy invalid benchmark construction
+```
+
+The invalid data was not fully exploited in the final neural architecture because we did not complete a full multi-task neural model with anomaly and rule-attribution heads.
+
+The honest summary is:
+
+```text
+Valid data: used directly for model training.
+Invalid data: generated and used for rule-aware/reranking/validation logic, but not fully used for neural multi-task training.
+```
+
+The strongest future extension would be:
+
+```text
+SSL pretraining on valid data
+→ supervised next-step fine-tuning
+→ contrastive/ranking fine-tuning
+→ anomaly/rule-attribution multi-task fine-tuning using invalid data
+```
+
+---
+
+## 9. Official Eval Files
+
+The organizers provided:
+
+```text
+participant_files/eval_input_valid.csv
+participant_files/eval_input_anomaly.csv
+participant_files/eval_metrics.py
+```
+
+The official eval input files are unlabeled.
+
+Expected input line counts:
+
+| File                     | Lines incl. header |
+| ------------------------ | -----------------: |
+| `eval_input_valid.csv`   |                601 |
+| `eval_input_anomaly.csv` |                988 |
+
+The valid eval file contains 600 partial sequences for Tasks 1 and 2.
+
+The anomaly eval file contains 987 unlabeled full sequences for Task 3.
+
+---
+
+## 10. Official Prediction Files
+
+The final active prediction files are:
+
+```text
+participant_files/predictions/predictions_nextstep.csv
+participant_files/predictions/predictions_completion.csv
+participant_files/predictions/predictions_anomaly.csv
+```
+
+Expected line counts:
+
+| File                         | Lines incl. header |
+| ---------------------------- | -----------------: |
+| `predictions_nextstep.csv`   |                601 |
+| `predictions_completion.csv` |                601 |
+| `predictions_anomaly.csv`    |                988 |
+
+These files are the actual final submission files unless the team explicitly decides to swap in one of the backup variants.
+
+---
+
+## 11. Why Official Accuracy Is Not Available Locally
+
+The official eval files do not include the hidden labels.
+
+For next-step scoring, we would need:
+
+```text
+NEXT_STEP
+```
+
+For completion scoring, we would need:
+
+```text
+FULL_SEQUENCE
+```
+
+For anomaly scoring, we would need:
+
+```text
+IS_VALID
+VIOLATION_RULE
+```
+
+Those labels are hidden by the organizers.
+
+Therefore:
+
+```text
+internal accuracy = available
+official eval accuracy = organizer-only
+```
+
+The local reports can verify row counts, prediction distributions, and internal held-out accuracy, but they cannot compute official hidden-eval accuracy.
+
+---
+
+## 12. Eval Prediction Diagnostics
+
+Diagnostic report:
+
+```text
+participant_files/eval_plots/eval_prediction_report.md
+```
+
+This report checks:
+
+* row-count consistency,
+* next-step prediction distribution,
+* completion length distribution,
+* completion first/last predicted steps,
+* anomaly valid/invalid prediction distribution,
+* anomaly predicted rule distribution,
+* anomaly score distribution.
+
+Generated diagnostic plots include:
+
+```text
+participant_files/eval_plots/nextstep_top1_distribution.svg
+participant_files/eval_plots/nextstep_top5_distribution.svg
+participant_files/eval_plots/completion_length_distribution.svg
+participant_files/eval_plots/completion_first_step_distribution.svg
+participant_files/eval_plots/completion_last_step_distribution.svg
+participant_files/eval_plots/anomaly_validity_counts.svg
+participant_files/eval_plots/anomaly_rule_distribution.svg
+participant_files/eval_plots/anomaly_score_distribution.svg
+```
+
+These are diagnostics only, not official scores.
+
+---
+
+## 13. Rule-Aware Reranker
+
+Because the model already reaches very high Top-3/Top-5 accuracy, we tried to improve Top-1 by reranking the model’s Top-5 candidates.
+
+Relevant files:
+
+```text
+participant_files/rerank_nextstep_with_rules.py
+participant_files/run_rerank_nextstep.slurm
+participant_files/predictions/predictions_nextstep_reranked.csv
+participant_files/predictions/rerank_nextstep_report.md
+```
+
+The reranker uses:
+
+1. the original model rank,
+2. valid n-gram continuation statistics,
+3. invalid mutation-context penalties,
+4. process-rule validator penalties.
+
+On the official eval predictions, the heuristic reranker changed:
+
+```text
+Top-1 changed: 10 / 600 = 1.67%
+Any Top-5 order changed: 140 / 600 = 23.33%
+Validator-penalized candidates: 93
+```
+
+Interpretation:
+
+```text
+The heuristic reranker is conservative.
+It does not substantially rewrite model outputs.
+It mainly adjusts ordering and penalizes process-invalid candidates.
+```
+
+Internal benchmark:
+
+```text
+participant_files/predictions/internal_reranker_benchmark_report.md
+ssl_results/internal_reranker_benchmark_report.md
+```
+
+The observed internal change was tiny, around:
+
+```text
+Δ Top-1 ≈ +0.0004
+```
+
+So the heuristic reranker is not a major accuracy improvement.
+
+---
+
+## 14. Retrieval-Augmented Prediction Attempt
+
+We also implemented a retrieval/RAG-style prediction attempt.
+
+Relevant files:
+
+```text
+participant_files/run_generate_retrieval_bank.slurm
+participant_files/retrieval_augmented_eval.py
+participant_files/run_retrieval_augmented_eval.slurm
+participant_files/predictions/retrieval_augmented_report.md
+participant_files/predictions/predictions_nextstep_retrieval.csv
+participant_files/predictions/predictions_completion_retrieval.csv
+```
+
+Idea:
+
+```text
+generate a large valid-sequence bank
+→ match eval partial prefixes against that bank
+→ reuse retrieved next steps / continuations
+```
+
+This can help if the official eval prefixes overlap strongly with generated valid sequences.
+
+However, retrieval is not the best generalization story. It is mostly a last-mile strategy for hidden eval, not a principled replacement for learning process logic.
+
+Interpretation:
+
+```text
+Neural model = better generalization
+Retrieval = useful if eval resembles generated memory
+```
+
+The retrieval report should be inspected here:
+
+```text
+participant_files/predictions/retrieval_augmented_report.md
+ssl_results/retrieval_augmented_report.md
+```
+
+Key diagnostics:
+
+```text
+Exact prefix match rate
+Top-1 changed vs model-only
+Retrieved completion used
+Completion changed vs model-only
+Validator-valid completed sequences
+Validator-invalid completed sequences
+```
+
+---
+
+## 15. Learned Contrastive Reranker
+
+As a final high-upside experiment, we implemented a learned contrastive reranker.
+
+Relevant files:
+
+```text
+participant_files/train_learned_contrastive_reranker.py
+participant_files/run_learned_contrastive_reranker.slurm
+participant_files/predictions/predictions_nextstep_learned_reranked.csv
+participant_files/predictions/learned_reranker_report.md
+ssl_results/learned_reranker_report.md
+```
+
+### Idea
+
+The SSL model generates Top-5 likely next-step candidates.
+
+The learned reranker scores each candidate using:
+
+* original model rank,
+* valid n-gram continuation evidence,
+* invalid mutation-context features,
+* process block features,
+* family features,
+* validator violation features.
+
+Then it reorders the Top-5 candidates.
+
+### Why this is the most targeted improvement
+
+The model already has:
+
+```text
+Top-1 ≈ 80%
+Top-3 ≈ 99%
+Top-5 ≈ 99.97%
+```
+
+So the correct answer is almost always already present. The failure mode is usually ranking, not candidate discovery.
+
+The learned reranker directly targets:
+
+```text
+Among these 5 plausible candidates, which one should be Rank 1?
+```
+
+### Report
+
+Inspect the result here:
+
+```text
+participant_files/predictions/learned_reranker_report.md
+ssl_results/learned_reranker_report.md
+```
+
+Decision rule:
+
+```text
+If learned reranker improves internal validation/test Top-1 or MRR:
+    use predictions_nextstep_learned_reranked.csv as active predictions_nextstep.csv
+
+If it hurts internal Top-1:
+    keep the previous predictions_nextstep.csv
+```
+
+The active final next-step file remains:
+
+```text
+participant_files/predictions/predictions_nextstep.csv
+```
+
+Only the active file should be submitted.
+
+---
+
+## 16. Final Active Submission Files
+
+Submit these three files:
+
+```text
+participant_files/predictions/predictions_nextstep.csv
+participant_files/predictions/predictions_completion.csv
+participant_files/predictions/predictions_anomaly.csv
+```
+
+Possible backup/variant files include:
+
+```text
+participant_files/predictions/predictions_nextstep_model_only.csv
+participant_files/predictions/predictions_nextstep_reranked.csv
+participant_files/predictions/predictions_nextstep_retrieval.csv
+participant_files/predictions/predictions_nextstep_learned_reranked.csv
+participant_files/predictions/predictions_completion_before_retrieval.csv
+participant_files/predictions/predictions_completion_retrieval.csv
+```
+
+The backup/variant files should not be submitted unless manually chosen as active.
+
+---
+
+## 17. Final Submission Zip
+
+From repo root:
+
+```bash
+zip -j participant_eval_predictions_final.zip \
+  participant_files/predictions/predictions_nextstep.csv \
+  participant_files/predictions/predictions_completion.csv \
+  participant_files/predictions/predictions_anomaly.csv
+```
+
+Check contents:
+
+```bash
+unzip -l participant_eval_predictions_final.zip
+```
+
+Expected contents:
+
+```text
+predictions_nextstep.csv
+predictions_completion.csv
+predictions_anomaly.csv
+```
+
+---
+
+## 18. Final Verification Commands
+
+Run from repo root:
+
+```bash
+wc -l participant_files/eval_input_valid.csv
+wc -l participant_files/predictions/predictions_nextstep.csv
+wc -l participant_files/predictions/predictions_completion.csv
+
+wc -l participant_files/eval_input_anomaly.csv
+wc -l participant_files/predictions/predictions_anomaly.csv
+```
+
+Expected:
+
+```text
+601 participant_files/eval_input_valid.csv
+601 participant_files/predictions/predictions_nextstep.csv
+601 participant_files/predictions/predictions_completion.csv
+
+988 participant_files/eval_input_anomaly.csv
+988 participant_files/predictions/predictions_anomaly.csv
+```
+
+---
+
+## 19. What We Can Claim
+
+Strong claims:
+
+* We built an end-to-end synthetic process-logic learning pipeline.
+* We generated valid, easy invalid, and hard invalid semiconductor process sequences.
+* The coverage-guided generator improved data diversity.
+* The hybrid SSL Transformer learned valid process flow with around **80.31% Top-1** and **99.32% Top-3** internal next-step accuracy.
+* The correct next step is almost always in the model’s Top-5 candidates.
+* We generated official-format prediction files for all three organizer eval tasks.
+* We implemented rule-aware reranking, retrieval augmentation, and a learned contrastive reranker as final improvement attempts.
+* The invalid data supports anomaly detection, rule attribution, validator features, and reranking features.
+
+Careful claims:
+
+* The official eval accuracy is not known locally because labels are hidden.
+* The coverage-guided model is slightly lower than the original models on internal in-distribution Top-1, but it is trained on a broader/harder dataset.
+* The heuristic reranker had only a tiny internal effect.
+* Retrieval is useful as a last-mile memory strategy but is weaker as a generalization story.
+* The learned reranker is the most principled final ranking improvement, but should be used only if its internal validation/test report improves Top-1 or MRR.
+
+Do not claim:
+
+* official hidden-eval accuracy,
+* real-world semiconductor validity beyond the synthetic rule system,
+* that invalid data was fully used in neural multi-task training,
+* that retrieval improves generalization.
+
+---
+
+## 20. Recommended Final Presentation Story
+
+The strongest final story is:
+
+```text
+We did not just train another Transformer.
+We built a synthetic process-logic data engine and benchmark pipeline.
+
+The pipeline generates valid process flows, targeted coverage-guided variants,
+and controlled invalid near-misses.
+
+The hybrid Transformer learns the valid process grammar well:
+~80% Top-1 and ~99% Top-3 next-step accuracy internally.
+
+The invalid-data pipeline enables anomaly detection, rule attribution,
+validator-based scoring, and rule-aware reranking.
+
+For the official hidden eval, we generated complete submission-format predictions
+for next-step prediction, sequence completion, and anomaly detection.
+
+The main contribution is the data-generation, validation, and evaluation workflow,
+with the model as one component in a broader process-logic learning system.
+```
+
+---
+
+## 21. Files in `ssl_results/`
+
+Per-run metrics:
+
+```text
+original_metrics.csv
+augmented_metrics.csv
+hybrid_augmented_metrics.csv
+hybrid_coverage_guided_metrics.csv
+```
+
+Comparison summaries:
+
+```text
+ssl_model_comparison_summary.csv
+ssl_comparison_summary.csv
+ssl_model_comparison_summary_with_coverage_guided.csv
+```
+
+Reports:
+
+```text
+coverage_guided_addendum.md
+internal_reranker_benchmark_report.md
+learned_reranker_report.md
+retrieval_augmented_report.md
+eval_prediction_report.md
+```
+
+Figures:
+
+```text
+ssl_val_loss_comparison.png
+ssl_val_top1_comparison.png
+ssl_val_top3_comparison.png
+ssl_val_top5_comparison.png
+ssl_val_mrr_comparison.png
+
+test_loss_bar.png
+test_top1_bar.png
+test_top3_bar.png
+test_top5_bar.png
+test_mrr_bar.png
+```
+
+Coverage-guided figures, if generated:
+
+```text
+ssl_val_loss_comparison_with_coverage_guided.png
+ssl_val_top1_comparison_with_coverage_guided.png
+ssl_val_top3_comparison_with_coverage_guided.png
+ssl_val_top5_comparison_with_coverage_guided.png
+ssl_val_mrr_comparison_with_coverage_guided.png
+
+test_loss_bar_with_coverage_guided.png
+test_top1_bar_with_coverage_guided.png
+test_top3_bar_with_coverage_guided.png
+test_top5_bar_with_coverage_guided.png
+test_mrr_bar_with_coverage_guided.png
+```
+
+---
+
+## 22. Future Work
+
+The most important post-hackathon extensions would be:
+
+1. train a true multi-task Transformer with heads for:
 
    * next-step prediction,
-   * validity classification,
+   * valid/invalid classification,
    * rule attribution;
 
-2. evaluate on held-out product families and held-out process branches;
+2. use the invalid data directly in neural training, not just reranking/validation;
 
-3. replace greedy sequence completion with beam search plus validator pruning;
+3. train a pairwise ranking model with stronger hard negatives;
 
-4. train a learned reranker on internal labeled data instead of using heuristic reranking;
+4. evaluate on held-out product families and held-out process branches;
 
-5. report anomaly/rule-attribution metrics on the generated easy/hard invalid datasets.
+5. replace greedy completion with beam search plus validator pruning;
 
-The most important missing research result is not another in-distribution Top-1 number. It is **generalization and rule-aware reasoning under invalid or out-of-distribution process flows**.
+6. perform error-driven regeneration:
+
+   * train model,
+   * inspect failures,
+   * generate more samples around failure modes;
+
+7. compare ID-to-OOD performance drop as the main research metric.
