@@ -42,6 +42,11 @@ extend-exclude = [
     "tracks/industrial-infineon/training_data/generate_sequences.py",
     "participant_files/eval_metrics.py",
     "tracks/industrial-infineon/scripts/eval_metrics.py",
+    # Separate experiment tracks not yet brought under this lint config.
+    # Lint these in their own pass before folding into the standard.
+    "neurosymbolic-approach/**",
+    "benchmark/**",
+    "ssl_results/update_ssl_results_with_coverage_guided.py",
 ]
 
 [tool.ruff.lint]
