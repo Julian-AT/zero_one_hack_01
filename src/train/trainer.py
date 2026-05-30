@@ -72,6 +72,7 @@ def train(cfg: dict[str, Any]) -> dict[str, float]:
         num_workers=cfg["data"].get("num_workers", 0),
         seed=cfg["train"]["seed"],
         ood_family_prob=cfg["data"].get("ood_family_prob", 0.0),
+        synonym_randomize_prob=cfg["data"].get("synonym_randomize_prob", 0.0),
     )
 
     # ---- Val loader on held-out provided sequences (the trigram split) -

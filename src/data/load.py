@@ -28,7 +28,7 @@ from typing import Iterable, Iterator, List, Optional
 import torch
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 
-from src.data.canonicalize import canonicalize_sequence
+from src.data.canonicalize import canonicalize_sequence, randomize_synonyms
 from src.data.corrupt import corrupt_random
 from src.data.ood_generator import generate_ood_sequence, random_ood_family
 from src.data.tokenizer import BaseTokenizer, FAMILY_TOKEN
@@ -177,6 +177,7 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         family_dropout: float = 0.0,
         seed: int = 42,
         ood_family_prob: float = 0.0,
+        synonym_randomize_prob: float = 0.0,
     ) -> None:
         super().__init__()
         self.tokenizer = tokenizer
@@ -187,6 +188,7 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         self.family_dropout = family_dropout
         self.seed = seed
         self.ood_family_prob = ood_family_prob
+        self.synonym_randomize_prob = synonym_randomize_prob
 
     def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
         worker_info = torch.utils.data.get_worker_info()
@@ -222,6 +224,12 @@ class OnlineGeneratorIterableDataset(IterableDataset):
 
             if self.canonicalize:
                 ex.steps = canonicalize_sequence(ex.steps)
+            elif self.synonym_randomize_prob > 0:
+                # Mutually exclusive with canonicalize: synonym randomization
+                # *expands* exposure to all surface forms, canonicalize
+                # *collapses* them. We pick one.
+                ex.steps = randomize_synonyms(ex.steps, rng,
+                                                prob=self.synonym_randomize_prob)
 
             yield encode_example(ex, self.tokenizer, self.max_len,
                                  family_dropout=self.family_dropout, rng=rng)
@@ -264,12 +272,14 @@ def make_online_loader(
     num_workers: int = 0,
     seed: int = 42,
     ood_family_prob: float = 0.0,
+    synonym_randomize_prob: float = 0.0,
 ) -> DataLoader:
     ds = OnlineGeneratorIterableDataset(
         tokenizer, families, max_len=max_len,
         corrupt_fraction=corrupt_fraction, canonicalize=canonicalize,
         family_dropout=family_dropout, seed=seed,
         ood_family_prob=ood_family_prob,
+        synonym_randomize_prob=synonym_randomize_prob,
     )
     return DataLoader(
         ds,
