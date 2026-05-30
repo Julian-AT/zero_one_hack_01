@@ -1,4 +1,5 @@
 """Shared filesystem paths."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,11 +18,11 @@ CONFIGS_DIR = REPO_ROOT / "configs"
 
 FAMILY_FILES = {
     "mosfet": RAW_DATA_DIR / "MOSFET_variants.csv",
-    "igbt":   RAW_DATA_DIR / "IGBT_variants.csv",
-    "ic":     RAW_DATA_DIR / "IC_variants.csv",
+    "igbt": RAW_DATA_DIR / "IGBT_variants.csv",
+    "ic": RAW_DATA_DIR / "IC_variants.csv",
 }
 FAMILY_PARAM_FILES = {
     "mosfet": RAW_DATA_DIR / "MOSFET_longdescription_parameters.csv",
-    "igbt":   RAW_DATA_DIR / "IGBT_longdescription_parameters.csv",
-    "ic":     RAW_DATA_DIR / "IC_longdescription_parameters.csv",
+    "igbt": RAW_DATA_DIR / "IGBT_longdescription_parameters.csv",
+    "ic": RAW_DATA_DIR / "IC_longdescription_parameters.csv",
 }

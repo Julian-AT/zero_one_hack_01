@@ -3,6 +3,7 @@
 The trainer passes batch labels and the model's output dict; this module
 returns the scalar total loss + a per-component dict for logging.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -32,10 +33,8 @@ def compute_losses(
     """
     logs: dict[str, float] = {}
 
-    # ---- LM CE ----------------------------------------------------------
-    lm_logits = outputs["lm_logits"]            # [B, L, V]
-    labels = batch["labels"]                     # [B, L]
-    # next-token: predict pos t from logits at t-1
+    lm_logits = outputs["lm_logits"]
+    labels = batch["labels"]
     shift_logits = lm_logits[:, :-1, :].contiguous()
     shift_labels = labels[:, 1:].contiguous()
     lm_loss = F.cross_entropy(
@@ -47,20 +46,16 @@ def compute_losses(
 
     total = weights.lm_weight * lm_loss
 
-    # ---- Validity BCE ---------------------------------------------------
     if weights.validity_weight > 0 and "validity_logit" in outputs:
-        validity_logit = outputs["validity_logit"]    # [B]
-        validity_target = batch["validity"].float()    # [B]
-        validity_loss = F.binary_cross_entropy_with_logits(
-            validity_logit, validity_target
-        )
+        validity_logit = outputs["validity_logit"]
+        validity_target = batch["validity"].float()
+        validity_loss = F.binary_cross_entropy_with_logits(validity_logit, validity_target)
         total = total + weights.validity_weight * validity_loss
         logs["validity_loss"] = float(validity_loss.item())
 
-    # ---- Rule-ID CE -----------------------------------------------------
     if weights.rule_id_weight > 0 and "rule_id_logits" in outputs:
-        rule_logits = outputs["rule_id_logits"]       # [B, C]
-        rule_target = batch["rule_class"]              # [B]
+        rule_logits = outputs["rule_id_logits"]
+        rule_target = batch["rule_class"]
         rule_loss = F.cross_entropy(rule_logits, rule_target)
         total = total + weights.rule_id_weight * rule_loss
         logs["rule_id_loss"] = float(rule_loss.item())

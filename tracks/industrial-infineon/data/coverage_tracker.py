@@ -63,10 +63,10 @@ import json
 import re
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Optional
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Optional integration with generate_sequences.py
@@ -74,18 +74,18 @@ from typing import Any, Iterable, Optional
 
 try:
     from generate_sequences import (  # type: ignore
-        validate_sequence,
-        DEPOSITION_STEPS,
-        CLEAN_STEPS,
-        ETCH_STEPS,
-        METAL_ETCH_STEPS,
-        IMPLANT_STEPS,
-        IMPLANT_OPENER_STEPS,
-        CMP_STEPS,
-        FILL_STEPS,
-        PAD_WINDOW_STEPS,
-        ELECTRICAL_TEST_STEPS,
         BACKSIDE_METAL_STEPS,
+        CLEAN_STEPS,
+        CMP_STEPS,
+        DEPOSITION_STEPS,
+        ELECTRICAL_TEST_STEPS,
+        ETCH_STEPS,
+        FILL_STEPS,
+        IMPLANT_OPENER_STEPS,
+        IMPLANT_STEPS,
+        METAL_ETCH_STEPS,
+        PAD_WINDOW_STEPS,
+        validate_sequence,
     )
 
     GENERATOR_IMPORT_OK = True
@@ -96,127 +96,148 @@ except Exception:
 
     # Fallback sets. These are intentionally small. If generate_sequences.py is
     # available in the same folder, the script will use the authoritative sets.
-    DEPOSITION_STEPS = frozenset({
-        "THERMAL OXIDATION",
-        "GATE OXIDE GROWTH",
-        "DEPOSIT PAD OXIDE",
-        "EPITAXIAL DEPOSITION",
-        "DEPOSIT POLYSILICON",
-        "DEPOSIT SPACER DIELECTRIC",
-        "DEPOSIT FIELD OXIDE",
-        "DEPOSIT GATE OXIDE OR DIELECTRIC",
-        "DEPOSIT INTERLAYER DIELECTRIC",
-        "DEPOSIT INTERLEVEL DIELECTRIC",
-        "DEPOSIT BARRIER METAL",
-        "DEPOSIT METAL SEED",
-        "DEPOSIT METAL 1",
-        "DEPOSIT TOP METAL",
-        "DEPOSIT BACKSIDE METAL",
-        "DEPOSIT TUNGSTEN SEED",
-        "DEPOSIT PASSIVATION",
-        "DEPOSIT PASSIVATION LAYER",
-        "DEPOSIT BACKSIDE PROTECTION",
-    })
+    DEPOSITION_STEPS = frozenset(
+        {
+            "THERMAL OXIDATION",
+            "GATE OXIDE GROWTH",
+            "DEPOSIT PAD OXIDE",
+            "EPITAXIAL DEPOSITION",
+            "DEPOSIT POLYSILICON",
+            "DEPOSIT SPACER DIELECTRIC",
+            "DEPOSIT FIELD OXIDE",
+            "DEPOSIT GATE OXIDE OR DIELECTRIC",
+            "DEPOSIT INTERLAYER DIELECTRIC",
+            "DEPOSIT INTERLEVEL DIELECTRIC",
+            "DEPOSIT BARRIER METAL",
+            "DEPOSIT METAL SEED",
+            "DEPOSIT METAL 1",
+            "DEPOSIT TOP METAL",
+            "DEPOSIT BACKSIDE METAL",
+            "DEPOSIT TUNGSTEN SEED",
+            "DEPOSIT PASSIVATION",
+            "DEPOSIT PASSIVATION LAYER",
+            "DEPOSIT BACKSIDE PROTECTION",
+        }
+    )
 
-    CLEAN_STEPS = frozenset({
-        "PRE CLEAN WAFER",
-        "WAFER CLEAN PRE PROCESS",
-        "WAFER SURFACE CLEAN",
-        "RCA CLEAN 1",
-        "RCA CLEAN 2",
-        "WET CLEAN RCA1",
-        "WET CLEAN RCA2",
-        "HF DIP",
-        "OXIDE STRIP",
-        "SURFACE PREP FOR DEPOSITION",
-        "FRONTSIDE CLEAN",
-        "BACKSIDE CLEAN",
-        "FRONTSIDE CLEAN FINAL",
-        "BACKSIDE CLEAN FINAL",
-        "WAFER CLEAN PRE-GRIND",
-        "DRY WAFER",
-        "DRY WAFER BACKSIDE",
-        "CLEAN AFTER ETCH",
-        "CLEAN AFTER OXIDE ETCH",
-        "CLEAN AFTER POLY ETCH",
-        "CLEAN AFTER VIA ETCH",
-        "CLEAN AFTER METAL ETCH",
-        "CLEAN AFTER WINDOW ETCH",
-        "CLEAN AFTER FIELD ETCH",
-        "CLEAN PAD OPENING",
-        "BACKSIDE ETCH CLEAN",
-        "BACKSIDE RINSE",
-        "THERMAL OXIDATION",
-        "GATE OXIDE PREP",
-        "RAPID THERMAL ANNEAL",
-        "EPITAXY ANNEAL",
-        "ANNEAL OXIDE",
-    })
+    CLEAN_STEPS = frozenset(
+        {
+            "PRE CLEAN WAFER",
+            "WAFER CLEAN PRE PROCESS",
+            "WAFER SURFACE CLEAN",
+            "RCA CLEAN 1",
+            "RCA CLEAN 2",
+            "WET CLEAN RCA1",
+            "WET CLEAN RCA2",
+            "HF DIP",
+            "OXIDE STRIP",
+            "SURFACE PREP FOR DEPOSITION",
+            "FRONTSIDE CLEAN",
+            "BACKSIDE CLEAN",
+            "FRONTSIDE CLEAN FINAL",
+            "BACKSIDE CLEAN FINAL",
+            "WAFER CLEAN PRE-GRIND",
+            "DRY WAFER",
+            "DRY WAFER BACKSIDE",
+            "CLEAN AFTER ETCH",
+            "CLEAN AFTER OXIDE ETCH",
+            "CLEAN AFTER POLY ETCH",
+            "CLEAN AFTER VIA ETCH",
+            "CLEAN AFTER METAL ETCH",
+            "CLEAN AFTER WINDOW ETCH",
+            "CLEAN AFTER FIELD ETCH",
+            "CLEAN PAD OPENING",
+            "BACKSIDE ETCH CLEAN",
+            "BACKSIDE RINSE",
+            "THERMAL OXIDATION",
+            "GATE OXIDE PREP",
+            "RAPID THERMAL ANNEAL",
+            "EPITAXY ANNEAL",
+            "ANNEAL OXIDE",
+        }
+    )
 
-    ETCH_STEPS = frozenset({
-        "OXIDE ETCH",
-        "OXIDE ETCH DRY",
-        "POLYSILICON ETCH",
-        "POLYSILICON ETCH DRY",
-        "ETCH SILICON OR OXIDE WINDOW",
-        "FIELD OXIDE ETCH",
-        "VIA ETCH",
-        "VIA ETCH THROUGH DIELECTRIC",
-        "DIELECTRIC ETCH VIA",
-        "METAL ETCH",
-        "METAL ETCH DRY",
-        "PASSIVATION ETCH PAD OPENING",
-        "PASSIVATION ETCH",
-    })
+    ETCH_STEPS = frozenset(
+        {
+            "OXIDE ETCH",
+            "OXIDE ETCH DRY",
+            "POLYSILICON ETCH",
+            "POLYSILICON ETCH DRY",
+            "ETCH SILICON OR OXIDE WINDOW",
+            "FIELD OXIDE ETCH",
+            "VIA ETCH",
+            "VIA ETCH THROUGH DIELECTRIC",
+            "DIELECTRIC ETCH VIA",
+            "METAL ETCH",
+            "METAL ETCH DRY",
+            "PASSIVATION ETCH PAD OPENING",
+            "PASSIVATION ETCH",
+        }
+    )
 
     METAL_ETCH_STEPS = frozenset({"METAL ETCH", "METAL ETCH DRY"})
 
-    IMPLANT_STEPS = frozenset({
-        "IMPLANT WELL",
-        "IMPLANT SOURCE DRAIN",
-        "IMPLANT SOURCE REGION",
-        "IMPLANT LDD",
-        "IMPLANT P BODY",
-        "IMPLANT N BUFFER",
-        "IMPLANT CHANNEL STOP",
-        "IMPLANT DRAIN / CATHODE REGION",
-        "IMPLANT N-TYPE",
-    })
+    IMPLANT_STEPS = frozenset(
+        {
+            "IMPLANT WELL",
+            "IMPLANT SOURCE DRAIN",
+            "IMPLANT SOURCE REGION",
+            "IMPLANT LDD",
+            "IMPLANT P BODY",
+            "IMPLANT N BUFFER",
+            "IMPLANT CHANNEL STOP",
+            "IMPLANT DRAIN / CATHODE REGION",
+            "IMPLANT N-TYPE",
+        }
+    )
 
-    IMPLANT_OPENER_STEPS = frozenset({
-        "OXIDE ETCH",
-        "OXIDE ETCH DRY",
-        "ETCH SILICON OR OXIDE WINDOW",
-        "DEVELOP PHOTORESIST",
-    })
+    IMPLANT_OPENER_STEPS = frozenset(
+        {
+            "OXIDE ETCH",
+            "OXIDE ETCH DRY",
+            "ETCH SILICON OR OXIDE WINDOW",
+            "DEVELOP PHOTORESIST",
+        }
+    )
 
-    CMP_STEPS = frozenset({
-        "CMP DIELECTRIC",
-        "CMP INTERLAYER DIELECTRIC",
-        "CMP METAL",
-        "CMP VIA FILL",
-    })
+    CMP_STEPS = frozenset(
+        {
+            "CMP DIELECTRIC",
+            "CMP INTERLAYER DIELECTRIC",
+            "CMP METAL",
+            "CMP VIA FILL",
+        }
+    )
 
-    FILL_STEPS = frozenset({
-        "FILL VIA METAL",
-        "FILL VIA TUNGSTEN",
-    }) | DEPOSITION_STEPS
+    FILL_STEPS = (
+        frozenset(
+            {
+                "FILL VIA METAL",
+                "FILL VIA TUNGSTEN",
+            }
+        )
+        | DEPOSITION_STEPS
+    )
 
-    PAD_WINDOW_STEPS = frozenset({
-        "OPEN PAD WINDOW",
-        "OPEN BOND PAD WINDOW",
-        "PAD WINDOW LITHO",
-        "OPEN PAD WINDOW LITHO",
-    })
+    PAD_WINDOW_STEPS = frozenset(
+        {
+            "OPEN PAD WINDOW",
+            "OPEN BOND PAD WINDOW",
+            "PAD WINDOW LITHO",
+            "OPEN PAD WINDOW LITHO",
+        }
+    )
 
-    ELECTRICAL_TEST_STEPS = frozenset({
-        "PARAMETRIC TEST",
-        "ELECTRICAL PARAMETRIC TEST",
-        "THRESHOLD VOLTAGE TEST",
-        "BREAKDOWN VOLTAGE TEST",
-        "LEAKAGE TEST",
-        "SWITCHING TEST",
-    })
+    ELECTRICAL_TEST_STEPS = frozenset(
+        {
+            "PARAMETRIC TEST",
+            "ELECTRICAL PARAMETRIC TEST",
+            "THRESHOLD VOLTAGE TEST",
+            "BREAKDOWN VOLTAGE TEST",
+            "LEAKAGE TEST",
+            "SWITCHING TEST",
+        }
+    )
 
     BACKSIDE_METAL_STEPS = frozenset({"DEPOSIT BACKSIDE METAL"})
 
@@ -224,6 +245,7 @@ except Exception:
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class SequenceRecord:
@@ -249,8 +271,8 @@ class CoverageSummary:
     unique_block_transitions: int
     validation_enabled: bool
     validator_import_ok: bool
-    valid_sequences: Optional[int]
-    invalid_sequences: Optional[int]
+    valid_sequences: int | None
+    invalid_sequences: int | None
 
 
 # ---------------------------------------------------------------------------
@@ -324,6 +346,7 @@ EXPECTED_RULES = [
 # CSV loading
 # ---------------------------------------------------------------------------
 
+
 def _normalise_header(name: str) -> str:
     return name.lstrip("\ufeff").strip().strip('"').strip().upper()
 
@@ -340,7 +363,7 @@ def infer_family_from_name(path: Path) -> str:
     return "unknown"
 
 
-def read_sequences_from_csv(path: Path, family_hint: Optional[str] = None) -> list[SequenceRecord]:
+def read_sequences_from_csv(path: Path, family_hint: str | None = None) -> list[SequenceRecord]:
     """
     Read one sequence CSV.
 
@@ -361,8 +384,7 @@ def read_sequences_from_csv(path: Path, family_hint: Optional[str] = None) -> li
 
         if "STEP" not in norm_to_raw:
             raise ValueError(
-                f"Cannot parse {path}: expected a STEP column. "
-                f"Found headers: {raw_fields}"
+                f"Cannot parse {path}: expected a STEP column. Found headers: {raw_fields}"
             )
 
         seq_key = norm_to_raw.get("SEQUENCE_ID")
@@ -372,16 +394,13 @@ def read_sequences_from_csv(path: Path, family_hint: Optional[str] = None) -> li
         grouped_steps: dict[str, list[str]] = defaultdict(list)
         grouped_family: dict[str, str] = {}
 
-        for row_idx, row in enumerate(reader):
+        for _row_idx, row in enumerate(reader):
             raw_step = (row.get(step_key) or "").strip().strip('"')
             if not raw_step:
                 continue
 
             seq_id = (row.get(seq_key) or "seq_0001").strip() if seq_key else "seq_0001"
-            family = (
-                (row.get(fam_key) or "").strip().lower()
-                if fam_key else ""
-            )
+            family = (row.get(fam_key) or "").strip().lower() if fam_key else ""
 
             if not family:
                 family = family_hint or infer_family_from_name(path)
@@ -405,6 +424,7 @@ def read_sequences_from_csv(path: Path, family_hint: Optional[str] = None) -> li
 # ---------------------------------------------------------------------------
 # Feature extraction
 # ---------------------------------------------------------------------------
+
 
 def length_bin(length: int) -> str:
     for label, lo, hi in LENGTH_BINS:
@@ -444,7 +464,13 @@ def classify_step_to_block(step: str) -> str:
     This does not need to be perfect. It is for coverage monitoring and
     identifying underrepresented regions.
     """
-    if step in {"RECEIVE WAFER LOT", "LOT IDENTIFICATION", "LOT RELEASE", "FINAL LOT RELEASE", "SHIP LOT"}:
+    if step in {
+        "RECEIVE WAFER LOT",
+        "LOT IDENTIFICATION",
+        "LOT RELEASE",
+        "FINAL LOT RELEASE",
+        "SHIP LOT",
+    }:
         return "LOGISTICS"
 
     if "INSPECTION" in step or step.startswith("INSPECT") or "CHECK" in step:
@@ -461,7 +487,13 @@ def classify_step_to_block(step: str) -> str:
     if step in DEPOSITION_STEPS or step.startswith("DEPOSIT") or "EPITAXIAL DEPOSITION" in step:
         return "DEPOSITION"
 
-    if "ANNEAL" in step or "THERMAL" in step or "DIFFUSION" in step or "DENSIFY" in step or "CURE" in step:
+    if (
+        "ANNEAL" in step
+        or "THERMAL" in step
+        or "DIFFUSION" in step
+        or "DENSIFY" in step
+        or "CURE" in step
+    ):
         return "THERMAL"
 
     if (
@@ -509,7 +541,7 @@ def nearest_previous_distance(
     index: int,
     targets: set[str] | frozenset[str],
     max_window: int,
-) -> Optional[int]:
+) -> int | None:
     """
     Return distance to nearest previous target step within max_window.
     Distance 1 means directly previous step.
@@ -590,7 +622,7 @@ def extract_rule_boundary_features(steps: list[str]) -> Counter[str]:
     levels = extract_litho_levels(steps)
     if levels:
         c[f"RULE_LITHO_LEVEL_SKIP:num_levels={len(levels)}"] += 1
-        for prev, curr in zip(levels, levels[1:]):
+        for prev, curr in zip(levels, levels[1:], strict=False):
             delta = curr - prev
             c[f"RULE_LITHO_LEVEL_SKIP:delta={delta}"] += 1
             if delta == 1:
@@ -625,8 +657,8 @@ def extract_rule_boundary_features(steps: list[str]) -> Counter[str]:
                     c["RULE_CMP_NO_DEP:boundary_exact_6"] += 1
 
     # RULE_PAD_OPEN_BEFORE_DEP: pad opening after passivation deposition and cure.
-    last_passivation_dep: Optional[int] = None
-    last_cure: Optional[int] = None
+    last_passivation_dep: int | None = None
+    last_cure: int | None = None
     for i, step in enumerate(steps):
         if step in {"DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER"}:
             last_passivation_dep = i
@@ -668,6 +700,7 @@ def extract_rule_boundary_features(steps: list[str]) -> Counter[str]:
 # Coverage computation
 # ---------------------------------------------------------------------------
 
+
 def compute_coverage(
     records: list[SequenceRecord],
     validate: bool = False,
@@ -686,8 +719,8 @@ def compute_coverage(
 
     validation_rule_counts: Counter[str] = Counter()
     invalid_sequence_ids: list[str] = []
-    valid_sequences: Optional[int] = None
-    invalid_sequences: Optional[int] = None
+    valid_sequences: int | None = None
+    invalid_sequences: int | None = None
 
     lengths: list[int] = []
 
@@ -781,6 +814,7 @@ def compute_coverage(
 # Undercovered target extraction
 # ---------------------------------------------------------------------------
 
+
 def build_undercovered_targets(
     coverage: dict[str, Any],
     min_count: int,
@@ -794,13 +828,15 @@ def build_undercovered_targets(
     rows: list[dict[str, Any]] = []
 
     def add(target_type: str, target: str, count: int, note: str) -> None:
-        rows.append({
-            "target_type": target_type,
-            "target": target,
-            "count": count,
-            "min_count": min_count,
-            "note": note,
-        })
+        rows.append(
+            {
+                "target_type": target_type,
+                "target": target,
+                "count": count,
+                "min_count": min_count,
+                "note": note,
+            }
+        )
 
     families = coverage["summary"]["families"]
     for fam in FAMILIES:
@@ -848,6 +884,7 @@ def build_undercovered_targets(
 # ---------------------------------------------------------------------------
 # Writing outputs
 # ---------------------------------------------------------------------------
+
 
 def write_counter_csv(path: Path, counter_dict: dict[str, int], key_name: str) -> None:
     with path.open("w", newline="", encoding="utf-8") as f:
@@ -900,108 +937,134 @@ def write_markdown_report(
     lines.append("# Semiconductor Sequence Coverage Report\n")
 
     lines.append("## Summary\n")
-    lines.append(markdown_table(
-        ["Metric", "Value"],
-        [
-            ["Number of sequences", summary["num_sequences"]],
-            ["Number of step rows", summary["num_step_rows"]],
-            ["Families covered", summary["num_families"]],
-            ["Min sequence length", summary["min_length"]],
-            ["Mean sequence length", f"{summary['mean_length']:.2f}"],
-            ["Max sequence length", summary["max_length"]],
-            ["Unique steps", summary["unique_steps"]],
-            ["Unique adjacent transitions", summary["unique_transitions"]],
-            ["Unique trigrams", summary["unique_trigrams"]],
-            ["Unique blocks", summary["unique_blocks"]],
-            ["Unique block transitions", summary["unique_block_transitions"]],
-            ["Validation enabled", summary["validation_enabled"]],
-            ["Validator import ok", summary["validator_import_ok"]],
-            ["Valid sequences", summary["valid_sequences"]],
-            ["Invalid sequences", summary["invalid_sequences"]],
-        ],
-    ))
+    lines.append(
+        markdown_table(
+            ["Metric", "Value"],
+            [
+                ["Number of sequences", summary["num_sequences"]],
+                ["Number of step rows", summary["num_step_rows"]],
+                ["Families covered", summary["num_families"]],
+                ["Min sequence length", summary["min_length"]],
+                ["Mean sequence length", f"{summary['mean_length']:.2f}"],
+                ["Max sequence length", summary["max_length"]],
+                ["Unique steps", summary["unique_steps"]],
+                ["Unique adjacent transitions", summary["unique_transitions"]],
+                ["Unique trigrams", summary["unique_trigrams"]],
+                ["Unique blocks", summary["unique_blocks"]],
+                ["Unique block transitions", summary["unique_block_transitions"]],
+                ["Validation enabled", summary["validation_enabled"]],
+                ["Validator import ok", summary["validator_import_ok"]],
+                ["Valid sequences", summary["valid_sequences"]],
+                ["Invalid sequences", summary["invalid_sequences"]],
+            ],
+        )
+    )
 
     lines.append("\n## Family Counts\n")
-    lines.append(markdown_table(
-        ["Family", "Count"],
-        [[k, v] for k, v in summary["families"].items()],
-    ))
+    lines.append(
+        markdown_table(
+            ["Family", "Count"],
+            [[k, v] for k, v in summary["families"].items()],
+        )
+    )
 
     lines.append("\n## Length Bins\n")
-    lines.append(markdown_table(
-        ["Length bin", "Count"],
-        [[k, v] for k, v in coverage["length_bins"].items()],
-    ))
+    lines.append(
+        markdown_table(
+            ["Length bin", "Count"],
+            [[k, v] for k, v in coverage["length_bins"].items()],
+        )
+    )
 
     lines.append("\n## Optional Step Presence\n")
-    lines.append(markdown_table(
-        ["Optional feature", "Count"],
-        [[k, v] for k, v in coverage["optional_presence_counts"].items()],
-    ))
+    lines.append(
+        markdown_table(
+            ["Optional feature", "Count"],
+            [[k, v] for k, v in coverage["optional_presence_counts"].items()],
+        )
+    )
 
     lines.append("\n## Lithography Levels\n")
-    lines.append(markdown_table(
-        ["Litho level", "Count"],
-        [[k, v] for k, v in coverage["litho_level_counts"].items()],
-    ))
+    lines.append(
+        markdown_table(
+            ["Litho level", "Count"],
+            [[k, v] for k, v in coverage["litho_level_counts"].items()],
+        )
+    )
 
     lines.append(f"\n## Top {top_k} Steps\n")
-    lines.append(markdown_table(
-        ["Step", "Count"],
-        [[k, v] for k, v in top_items(coverage["step_counts"], top_k)],
-    ))
+    lines.append(
+        markdown_table(
+            ["Step", "Count"],
+            [[k, v] for k, v in top_items(coverage["step_counts"], top_k)],
+        )
+    )
 
     lines.append(f"\n## Rarest {top_k} Observed Steps\n")
-    lines.append(markdown_table(
-        ["Step", "Count"],
-        [[k, v] for k, v in bottom_items(coverage["step_counts"], top_k)],
-    ))
+    lines.append(
+        markdown_table(
+            ["Step", "Count"],
+            [[k, v] for k, v in bottom_items(coverage["step_counts"], top_k)],
+        )
+    )
 
     lines.append(f"\n## Top {top_k} Block Transitions\n")
-    lines.append(markdown_table(
-        ["Block transition", "Count"],
-        [[k, v] for k, v in top_items(coverage["block_transition_counts"], top_k)],
-    ))
+    lines.append(
+        markdown_table(
+            ["Block transition", "Count"],
+            [[k, v] for k, v in top_items(coverage["block_transition_counts"], top_k)],
+        )
+    )
 
     lines.append(f"\n## Rarest {top_k} Observed Block Transitions\n")
-    lines.append(markdown_table(
-        ["Block transition", "Count"],
-        [[k, v] for k, v in bottom_items(coverage["block_transition_counts"], top_k)],
-    ))
+    lines.append(
+        markdown_table(
+            ["Block transition", "Count"],
+            [[k, v] for k, v in bottom_items(coverage["block_transition_counts"], top_k)],
+        )
+    )
 
     lines.append(f"\n## Top {top_k} Rule-Boundary Cases\n")
-    lines.append(markdown_table(
-        ["Rule-boundary feature", "Count"],
-        [[k, v] for k, v in top_items(coverage["rule_boundary_counts"], top_k)],
-    ))
+    lines.append(
+        markdown_table(
+            ["Rule-boundary feature", "Count"],
+            [[k, v] for k, v in top_items(coverage["rule_boundary_counts"], top_k)],
+        )
+    )
 
     lines.append(f"\n## Rarest {top_k} Observed Rule-Boundary Cases\n")
-    lines.append(markdown_table(
-        ["Rule-boundary feature", "Count"],
-        [[k, v] for k, v in bottom_items(coverage["rule_boundary_counts"], top_k)],
-    ))
+    lines.append(
+        markdown_table(
+            ["Rule-boundary feature", "Count"],
+            [[k, v] for k, v in bottom_items(coverage["rule_boundary_counts"], top_k)],
+        )
+    )
 
     if coverage["summary"]["validation_enabled"]:
         lines.append("\n## Validation Rule Counts\n")
-        lines.append(markdown_table(
-            ["Validation result / rule", "Count"],
-            [[k, v] for k, v in coverage["validation_rule_counts"].items()],
-        ))
+        lines.append(
+            markdown_table(
+                ["Validation result / rule", "Count"],
+                [[k, v] for k, v in coverage["validation_rule_counts"].items()],
+            )
+        )
 
     lines.append("\n## Undercovered Targets\n")
-    lines.append(markdown_table(
-        ["Target type", "Target", "Count", "Min count", "Note"],
-        [
+    lines.append(
+        markdown_table(
+            ["Target type", "Target", "Count", "Min count", "Note"],
             [
-                r["target_type"],
-                r["target"],
-                r["count"],
-                r["min_count"],
-                r["note"],
-            ]
-            for r in undercovered[:100]
-        ],
-    ))
+                [
+                    r["target_type"],
+                    r["target"],
+                    r["count"],
+                    r["min_count"],
+                    r["note"],
+                ]
+                for r in undercovered[:100]
+            ],
+        )
+    )
 
     lines.append("\n## Interpretation\n")
     lines.append(
@@ -1041,15 +1104,26 @@ def write_outputs(
     write_undercovered_csv(output_dir / "undercovered_targets.csv", undercovered)
 
     write_counter_csv(output_dir / "step_counts.csv", coverage["step_counts"], "STEP")
-    write_counter_csv(output_dir / "transition_counts.csv", coverage["transition_counts"], "TRANSITION")
+    write_counter_csv(
+        output_dir / "transition_counts.csv", coverage["transition_counts"], "TRANSITION"
+    )
     write_counter_csv(output_dir / "trigram_counts.csv", coverage["trigram_counts"], "TRIGRAM")
-    write_counter_csv(output_dir / "block_transition_counts.csv", coverage["block_transition_counts"], "BLOCK_TRANSITION")
-    write_counter_csv(output_dir / "rule_boundary_counts.csv", coverage["rule_boundary_counts"], "RULE_BOUNDARY_FEATURE")
+    write_counter_csv(
+        output_dir / "block_transition_counts.csv",
+        coverage["block_transition_counts"],
+        "BLOCK_TRANSITION",
+    )
+    write_counter_csv(
+        output_dir / "rule_boundary_counts.csv",
+        coverage["rule_boundary_counts"],
+        "RULE_BOUNDARY_FEATURE",
+    )
 
 
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -1104,7 +1178,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
 

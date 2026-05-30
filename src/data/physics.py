@@ -25,15 +25,14 @@ CLI:
     python -m src.data.physics              # build lookup, save to data/processed/
     python -m src.data.physics --inspect    # print a few examples
 """
+
 from __future__ import annotations
 
 import json
 import math
 import re
 import sys
-from collections import Counter
 from pathlib import Path
-from typing import Optional
 
 from src.utils.paths import FAMILY_PARAM_FILES, RAW_DATA_DIR
 
@@ -48,36 +47,56 @@ import csv  # noqa: E402
 NAN = float("nan")
 
 # Translate unicode superscripts/subscripts to ASCII for cleaner regex.
-_SUPERSCRIPTS = str.maketrans({
-    "⁰":"0","¹":"1","²":"2","³":"3","⁴":"4","⁵":"5","⁶":"6","⁷":"7","⁸":"8","⁹":"9",
-    "⁻":"-","⁺":"+",
-    "₀":"0","₁":"1","₂":"2","₃":"3","₄":"4","₅":"5","₆":"6","₇":"7","₈":"8","₉":"9",
-})
+_SUPERSCRIPTS = str.maketrans(
+    {
+        "⁰": "0",
+        "¹": "1",
+        "²": "2",
+        "³": "3",
+        "⁴": "4",
+        "⁵": "5",
+        "⁶": "6",
+        "⁷": "7",
+        "⁸": "8",
+        "⁹": "9",
+        "⁻": "-",
+        "⁺": "+",
+        "₀": "0",
+        "₁": "1",
+        "₂": "2",
+        "₃": "3",
+        "₄": "4",
+        "₅": "5",
+        "₆": "6",
+        "₇": "7",
+        "₈": "8",
+        "₉": "9",
+    }
+)
 
 TOOL_TAXONOMY = [
-    "LPCVD", "PECVD", "RPCVD", "PVD",
-    "ICP", "RIE",
+    "LPCVD",
+    "PECVD",
+    "RPCVD",
+    "PVD",
+    "ICP",
+    "RIE",
     "CMP",
-    "WET",            # wet etch / wet clean
-    "FURNACE",        # furnace anneal / oxidation
+    "WET",  # wet etch / wet clean
+    "FURNACE",  # furnace anneal / oxidation
     "OTHER",
 ]
 TOOL_TO_IDX = {t: i for i, t in enumerate(TOOL_TAXONOMY)}
 
-
-# --------------------------------------------------------------------------- #
-# Parsers                                                                     #
-# --------------------------------------------------------------------------- #
 
 _TEMP_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*°\s*C")
 _ENERGY_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*keV")
 _PRESSURE_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(mTorr|Torr)", re.IGNORECASE)
 _THICK_NM_RE = re.compile(r"(?:thickness\s*)?(\d+(?:[.,]\d+)?)(?:[–\-](\d+(?:[.,]\d+)?))?\s*nm")
 _THICK_UM_RE = re.compile(r"(?:thickness\s*)?(\d+(?:[.,]\d+)?)(?:[–\-](\d+(?:[.,]\d+)?))?\s*µm")
-_DOSE_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*[x×*]\s*10\s*\^?\s*(-?\d+)\s*cm\s*-?\s*\d?",
-                       re.UNICODE)
+_DOSE_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*[x×*]\s*10\s*\^?\s*(-?\d+)\s*cm\s*-?\s*\d?", re.UNICODE)
 # Time units
-_TIME_S_RE  = re.compile(r"(?<!\w)(\d+(?:[.,]\d+)?)\s*s\b")
+_TIME_S_RE = re.compile(r"(?<!\w)(\d+(?:[.,]\d+)?)\s*s\b")
 _TIME_MIN_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*min\b")
 _TIME_HR_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*hr\b")
 
@@ -103,34 +122,34 @@ def parse_one(params: str, description: str = "") -> list[float]:
     """
     p = (params or "").translate(_SUPERSCRIPTS)
     description = (description or "").translate(_SUPERSCRIPTS)
-    full = (description + " " + p).strip()
 
-    # 0: temp_C
     m = _TEMP_RE.search(p)
     temp_c = _f(m.group(1)) if m else NAN
 
-    # 1: log_time_s (collapse min/hr to seconds)
-    secs: Optional[float] = None
+    secs: float | None = None
     m = _TIME_HR_RE.search(p)
-    if m: secs = _f(m.group(1)) * 3600
+    if m:
+        secs = _f(m.group(1)) * 3600
     if secs is None:
         m = _TIME_MIN_RE.search(p)
-        if m: secs = _f(m.group(1)) * 60
+        if m:
+            secs = _f(m.group(1)) * 60
     if secs is None:
         m = _TIME_S_RE.search(p)
-        if m: secs = _f(m.group(1))
+        if m:
+            secs = _f(m.group(1))
     log_time_s = math.log10(secs) if (secs is not None and secs > 0) else NAN
 
-    # 2: log_thickness_nm
-    thick_nm: Optional[float] = None
+    thick_nm: float | None = None
     m = _THICK_NM_RE.search(p)
-    if m: thick_nm = _midpoint(m)
+    if m:
+        thick_nm = _midpoint(m)
     if thick_nm is None:
         m = _THICK_UM_RE.search(p)
-        if m: thick_nm = _midpoint(m) * 1000   # µm → nm
+        if m:
+            thick_nm = _midpoint(m) * 1000  # µm → nm
     log_thickness_nm = math.log10(thick_nm) if (thick_nm and thick_nm > 0) else NAN
 
-    # 3: log_pressure_torr
     log_pressure = NAN
     m = _PRESSURE_RE.search(p)
     if m:
@@ -141,11 +160,9 @@ def parse_one(params: str, description: str = "") -> list[float]:
         if v > 0:
             log_pressure = math.log10(v)
 
-    # 4: energy_keV
     m = _ENERGY_RE.search(p)
     energy_keV = _f(m.group(1)) if m else NAN
 
-    # 5: log_dose_per_cm2
     log_dose = NAN
     m = _DOSE_RE.search(p)
     if m:
@@ -154,7 +171,6 @@ def parse_one(params: str, description: str = "") -> list[float]:
         if coef > 0:
             log_dose = math.log10(coef) + expo
 
-    # 6: tool category
     up = p.upper() + " " + (description or "").upper()
     tool_idx = TOOL_TO_IDX["OTHER"]
     for t in ["LPCVD", "PECVD", "RPCVD", "PVD", "ICP", "RIE", "CMP"]:
@@ -162,18 +178,18 @@ def parse_one(params: str, description: str = "") -> list[float]:
             tool_idx = TOOL_TO_IDX[t]
             break
     else:
-        if any(k in up for k in ["WET CLEAN", "RCA", "HF", "WET ETCH", "PIRANHA", "SPM", "DI ", "MEGASONIC"]):
+        if any(
+            k in up
+            for k in ["WET CLEAN", "RCA", "HF", "WET ETCH", "PIRANHA", "SPM", "DI ", "MEGASONIC"]
+        ):
             tool_idx = TOOL_TO_IDX["WET"]
         elif any(k in up for k in ["FURNACE", "ANNEAL", "RTA", "RAPID THERMAL", "OXIDATION"]):
             tool_idx = TOOL_TO_IDX["FURNACE"]
 
-    # 7: is_wet (boolean)
     is_wet = 1.0 if tool_idx == TOOL_TO_IDX["WET"] else 0.0
 
-    # 8: is_anneal
     is_anneal = 1.0 if any(k in up for k in ["ANNEAL", "RTA", "RAPID THERMAL"]) else 0.0
 
-    # 9: is_implant_or_dope
     is_dope = 1.0 if any(k in up for k in ["IMPLANT", "DOPE", "DOSE", " KEV"]) else 0.0
 
     return [
@@ -189,10 +205,6 @@ def parse_one(params: str, description: str = "") -> list[float]:
         is_dope,
     ]
 
-
-# --------------------------------------------------------------------------- #
-# Lookup build                                                                #
-# --------------------------------------------------------------------------- #
 
 def _read_param_csv(path: Path) -> list[tuple[str, str, str]]:
     """Read STEP, DESCRIPTION, REALISTIC FAB-LEVEL PARAMETERS columns."""
@@ -235,8 +247,18 @@ def features_stats(lookup: dict[str, list[float]]) -> dict:
     """Sanity stats on the lookup."""
     feats = list(lookup.values())
     n = len(feats)
-    names = ["temp_C", "log_time_s", "log_thickness_nm", "log_pressure_torr",
-             "energy_keV", "log_dose", "tool_idx", "is_wet", "is_anneal", "is_implant"]
+    names = [
+        "temp_C",
+        "log_time_s",
+        "log_thickness_nm",
+        "log_pressure_torr",
+        "energy_keV",
+        "log_dose",
+        "tool_idx",
+        "is_wet",
+        "is_anneal",
+        "is_implant",
+    ]
     stats: dict = {"n_steps": n}
     for i, name in enumerate(names):
         vals = [v[i] for v in feats if not math.isnan(v[i])]
@@ -269,30 +291,50 @@ if __name__ == "__main__":
 
     # Save the lookup as JSON for easy inspection / loading.
     with out_path.open("w") as f:
-        json.dump({
-            "schema": [
-                "temp_C", "log_time_s", "log_thickness_nm", "log_pressure_torr",
-                "energy_keV", "log_dose", "tool_idx", "is_wet", "is_anneal",
-                "is_implant_or_dope",
-            ],
-            "tool_taxonomy": TOOL_TAXONOMY,
-            "lookup": lookup,
-        }, f, indent=2)
+        json.dump(
+            {
+                "schema": [
+                    "temp_C",
+                    "log_time_s",
+                    "log_thickness_nm",
+                    "log_pressure_torr",
+                    "energy_keV",
+                    "log_dose",
+                    "tool_idx",
+                    "is_wet",
+                    "is_anneal",
+                    "is_implant_or_dope",
+                ],
+                "tool_taxonomy": TOOL_TAXONOMY,
+                "lookup": lookup,
+            },
+            f,
+            indent=2,
+        )
 
     stats = features_stats(lookup)
     print(f"Built lookup for {stats['n_steps']} unique step strings.")
     for k, v in stats.items():
-        if k == "n_steps": continue
+        if k == "n_steps":
+            continue
         if "present_pct" in v:
-            print(f"  {k:25s} present={v['present_pct']:5.1f}%  "
-                  f"min={v['min']:>9.3f}  mean={v['mean']:>9.3f}  max={v['max']:>9.3f}")
+            print(
+                f"  {k:25s} present={v['present_pct']:5.1f}%  "
+                f"min={v['min']:>9.3f}  mean={v['mean']:>9.3f}  max={v['max']:>9.3f}"
+            )
         else:
             print(f"  {k:25s} present=0")
 
     if args.inspect:
         print("\nExamples:")
-        for step in ["THERMAL OXIDATION", "DEPOSIT POLYSILICON", "IMPLANT P BODY",
-                     "STRIP PHOTORESIST", "WAFER SORT TEST", "RCA CLEAN 1"]:
+        for step in [
+            "THERMAL OXIDATION",
+            "DEPOSIT POLYSILICON",
+            "IMPLANT P BODY",
+            "STRIP PHOTORESIST",
+            "WAFER SORT TEST",
+            "RCA CLEAN 1",
+        ]:
             v = lookup.get(step)
             print(f"  {step:30s} → {v}")
 

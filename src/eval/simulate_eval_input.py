@@ -12,6 +12,7 @@ eval_input_valid.csv:
 eval_input_anomaly.csv:
     EXAMPLE_ID, FAMILY, SEQUENCE
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,8 +29,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--per-family-valid", type=int, default=100)
     parser.add_argument("--per-family-anomaly", type=int, default=100)
-    parser.add_argument("--corrupt-frac", type=float, default=0.4,
-                        help="Fraction of anomaly examples that are corrupted")
+    parser.add_argument(
+        "--corrupt-frac",
+        type=float,
+        default=0.4,
+        help="Fraction of anomaly examples that are corrupted",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", default="extras/results/eval_inputs")
     args = parser.parse_args()
@@ -38,15 +43,15 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(args.seed)
 
-    # ---- Group held-out per family
     examples = load_all_families()
     by_fam: dict[str, list] = {}
     for ex in examples:
         by_fam.setdefault(ex.family, []).append(ex)
-    held: dict[str, list] = {fam: lst[-args.per_family_valid:] for fam, lst in by_fam.items()}
-    held_anomaly: dict[str, list] = {fam: lst[-args.per_family_anomaly:] for fam, lst in by_fam.items()}
+    held: dict[str, list] = {fam: lst[-args.per_family_valid :] for fam, lst in by_fam.items()}
+    held_anomaly: dict[str, list] = {
+        fam: lst[-args.per_family_anomaly :] for fam, lst in by_fam.items()
+    }
 
-    # ---- valid.csv : two cuts (0.6 / 0.8) per held-out sequence
     valid_path = out_dir / "eval_input_valid.csv"
     with valid_path.open("w", newline="") as f:
         w = csv.writer(f)
@@ -55,12 +60,12 @@ def main() -> None:
             for i, ex in enumerate(lst):
                 for frac in (0.6, 0.8):
                     cut = max(2, int(len(ex.steps) * frac))
-                    if cut >= len(ex.steps): continue
-                    eid = f"valid_{fam}_{i:04d}_f{int(frac*100)}"
+                    if cut >= len(ex.steps):
+                        continue
+                    eid = f"valid_{fam}_{i:04d}_f{int(frac * 100)}"
                     w.writerow([eid, fam, frac, "|".join(ex.steps[:cut])])
     print(f"wrote {valid_path}")
 
-    # ---- anomaly.csv : mix of valid + injected violations, unlabeled
     truth_path = out_dir / "eval_input_anomaly_truth.csv"
     test_path = out_dir / "eval_input_anomaly.csv"
     truths: list[dict] = []
@@ -74,8 +79,7 @@ def main() -> None:
                     c = corrupt_random(list(ex.steps), rng, verify=True)
                     if c is not None:
                         w.writerow([eid, fam, "|".join(c.corrupted_steps)])
-                        truths.append({"EXAMPLE_ID": eid, "IS_VALID": 0,
-                                         "RULE": c.rule})
+                        truths.append({"EXAMPLE_ID": eid, "IS_VALID": 0, "RULE": c.rule})
                         continue
                 w.writerow([eid, fam, "|".join(ex.steps)])
                 truths.append({"EXAMPLE_ID": eid, "IS_VALID": 1, "RULE": ""})

@@ -12,11 +12,11 @@ nearest-neighbor copy is a strong-and-interpretable Task 2 reference.
 Also serves as a smoke test for the eval pipeline against the documented
 submission format in generation_rules.md §5.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
 from collections import Counter
 from pathlib import Path
@@ -27,7 +27,6 @@ OUT_DIR = REPO / "extras" / "results" / "baselines"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 sys.path.insert(0, str(DATA_DIR))
-from generate_sequences import read_csv_sequences  # noqa: E402
 
 sys.path.insert(0, str(REPO / "extras" / "baselines"))
 from trigram_baseline import (  # noqa: E402
@@ -78,8 +77,7 @@ def retrieve_completion(
     best_idx = 0
     best_cont: list[str] = []
     # First pass: insist on tail-step match where possible.
-    candidates = [(i, s) for i, s in enumerate(train_seqs)
-                   if tail is None or tail in s]
+    candidates = [(i, s) for i, s in enumerate(train_seqs) if tail is None or tail in s]
     if not candidates:
         candidates = list(enumerate(train_seqs))
     for i, s in candidates:
@@ -94,11 +92,11 @@ def retrieve_completion(
                 continue
         if split + 1 >= len(s):
             continue
-        score = jaccard_count(prefix_bag, _bag(s[:split + 1]))
+        score = jaccard_count(prefix_bag, _bag(s[: split + 1]))
         if score > best_score:
             best_score = score
             best_idx = i
-            best_cont = s[split + 1:]
+            best_cont = s[split + 1 :]
     # Trim/pad continuation to target_len.
     if len(best_cont) >= target_len:
         best_cont = best_cont[:target_len]
@@ -152,8 +150,10 @@ def main() -> None:
         per_fam = {}
         for fam, seqs in test_id.items():
             m = evaluate(seqs, all_train, frac)
-            print(f"  frac={frac}  {fam.upper():>6}: n={m['n']:,}  "
-                  f"ExactMatch={m['exact_match']:.4f}  NED={m['normalized_edit_distance']:.4f}")
+            print(
+                f"  frac={frac}  {fam.upper():>6}: n={m['n']:,}  "
+                f"ExactMatch={m['exact_match']:.4f}  NED={m['normalized_edit_distance']:.4f}"
+            )
             per_fam[fam] = m
         results["id_retrieval"][f"{frac}"] = per_fam
 
@@ -165,8 +165,10 @@ def main() -> None:
             m = evaluate(test_seqs_lofo, train_seqs_lofo, frac)
             key = f"{held_out}_{frac}"
             results["lofo_retrieval"][key] = m
-            print(f"  held_out={held_out.upper():>6}  frac={frac}: "
-                  f"ExactMatch={m['exact_match']:.4f}  NED={m['normalized_edit_distance']:.4f}")
+            print(
+                f"  held_out={held_out.upper():>6}  frac={frac}: "
+                f"ExactMatch={m['exact_match']:.4f}  NED={m['normalized_edit_distance']:.4f}"
+            )
 
     out = OUT_DIR / "retrieval_metrics.json"
     with out.open("w") as f:

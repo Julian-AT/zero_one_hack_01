@@ -18,21 +18,21 @@ Both yield batches with the same schema:
     validity    [B]      long; 1 = valid, 0 = invalid
     rule_class  [B]      long; in [0, NUM_RULE_CLASSES) — see validator.py
 """
+
 from __future__ import annotations
 
 import random
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional
 
 import torch
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 
 from src.data.canonicalize import canonicalize_sequence
 from src.data.corrupt import corrupt_random
-from src.data.tokenizer import BaseTokenizer, FAMILY_TOKEN
+from src.data.tokenizer import BaseTokenizer
 from src.data.validator import (
-    NUM_RULE_CLASSES,
     VALID_CLASS_IDX,
     generate_sequence,
     read_csv_sequences,
@@ -46,38 +46,30 @@ IGNORE_INDEX = -100
 @dataclass
 class Example:
     family: str
-    steps: List[str]
-    validity: int = 1                # 1 = valid, 0 = corrupted
+    steps: list[str]
+    validity: int = 1  # 1 = valid, 0 = corrupted
     rule_class: int = VALID_CLASS_IDX  # which rule was injected (for multi-task)
 
 
-# --------------------------------------------------------------------------- #
-# Data loading from CSV                                                       #
-# --------------------------------------------------------------------------- #
-
-def load_family(family: str, path: Path | None = None,
-                canonicalize: bool = False) -> List[Example]:
+def load_family(family: str, path: Path | None = None, canonicalize: bool = False) -> list[Example]:
     p = Path(path) if path is not None else FAMILY_FILES[family.lower()]
     raw = read_csv_sequences(p)
-    out: List[Example] = []
+    out: list[Example] = []
     for steps in raw.values():
         s = canonicalize_sequence(steps) if canonicalize else steps
         out.append(Example(family=family.lower(), steps=list(s)))
     return out
 
 
-def load_all_families(families: Iterable[str] | None = None,
-                      canonicalize: bool = False) -> List[Example]:
+def load_all_families(
+    families: Iterable[str] | None = None, canonicalize: bool = False
+) -> list[Example]:
     fams = list(families) if families is not None else list(FAMILY_FILES.keys())
-    out: List[Example] = []
+    out: list[Example] = []
     for fam in fams:
         out.extend(load_family(fam, canonicalize=canonicalize))
     return out
 
-
-# --------------------------------------------------------------------------- #
-# Encoding to tensors                                                         #
-# --------------------------------------------------------------------------- #
 
 def encode_example(
     ex: Example,
@@ -98,7 +90,7 @@ def encode_example(
     # Truncate keeping BOS + FAMILY at start, EOS at the end.
     if len(wrapped) > max_len:
         head = wrapped[:2]
-        tail = wrapped[-(max_len - 2):]
+        tail = wrapped[-(max_len - 2) :]
         wrapped = head + tail
 
     pad = max_len - len(wrapped)
@@ -111,11 +103,11 @@ def encode_example(
         labels[i] = IGNORE_INDEX
 
     return {
-        "input_ids":  torch.tensor(input_ids, dtype=torch.long),
-        "labels":     torch.tensor(labels,    dtype=torch.long),
-        "attn_mask":  torch.tensor(attn_mask, dtype=torch.long),
-        "family_id":  torch.tensor(family_tok_id, dtype=torch.long),
-        "validity":   torch.tensor(ex.validity,   dtype=torch.long),
+        "input_ids": torch.tensor(input_ids, dtype=torch.long),
+        "labels": torch.tensor(labels, dtype=torch.long),
+        "attn_mask": torch.tensor(attn_mask, dtype=torch.long),
+        "family_id": torch.tensor(family_tok_id, dtype=torch.long),
+        "validity": torch.tensor(ex.validity, dtype=torch.long),
         "rule_class": torch.tensor(ex.rule_class, dtype=torch.long),
     }
 
@@ -124,16 +116,17 @@ def collate(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     return {k: torch.stack([b[k] for b in batch], dim=0) for k in batch[0]}
 
 
-# --------------------------------------------------------------------------- #
-# Static-pool dataset (held-out eval, fixed splits)                           #
-# --------------------------------------------------------------------------- #
-
 class ProcessSequenceDataset(Dataset):
     """A fixed list of Examples. Used for validation, held-out eval, and LoFO."""
 
-    def __init__(self, examples: Iterable[Example], tokenizer: BaseTokenizer,
-                 max_len: int = 256, family_dropout: float = 0.0,
-                 seed: int = 0) -> None:
+    def __init__(
+        self,
+        examples: Iterable[Example],
+        tokenizer: BaseTokenizer,
+        max_len: int = 256,
+        family_dropout: float = 0.0,
+        seed: int = 0,
+    ) -> None:
         self.examples = list(examples)
         self.tok = tokenizer
         self.max_len = max_len
@@ -144,13 +137,14 @@ class ProcessSequenceDataset(Dataset):
         return len(self.examples)
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
-        return encode_example(self.examples[idx], self.tok, self.max_len,
-                              family_dropout=self.family_dropout, rng=self.rng)
+        return encode_example(
+            self.examples[idx],
+            self.tok,
+            self.max_len,
+            family_dropout=self.family_dropout,
+            rng=self.rng,
+        )
 
-
-# --------------------------------------------------------------------------- #
-# Online-generator IterableDataset (Stage-1 training stream)                  #
-# --------------------------------------------------------------------------- #
 
 class OnlineGeneratorIterableDataset(IterableDataset):
     """Stream of generated + optionally corrupted sequences.
@@ -193,25 +187,25 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         while True:
             family = rng.choice(self.families)
             steps = generate_sequence(family, rng)
-            ex = Example(family=family, steps=steps, validity=1,
-                          rule_class=VALID_CLASS_IDX)
+            ex = Example(family=family, steps=steps, validity=1, rule_class=VALID_CLASS_IDX)
 
             if rng.random() < self.corrupt_fraction:
                 c = corrupt_random(list(steps), rng, verify=True)
                 if c is not None:
-                    ex = Example(family=family, steps=c.corrupted_steps,
-                                  validity=0, rule_class=rule_class_index(c.corrupted_steps))
+                    ex = Example(
+                        family=family,
+                        steps=c.corrupted_steps,
+                        validity=0,
+                        rule_class=rule_class_index(c.corrupted_steps),
+                    )
 
             if self.canonicalize:
                 ex.steps = canonicalize_sequence(ex.steps)
 
-            yield encode_example(ex, self.tokenizer, self.max_len,
-                                 family_dropout=self.family_dropout, rng=rng)
+            yield encode_example(
+                ex, self.tokenizer, self.max_len, family_dropout=self.family_dropout, rng=rng
+            )
 
-
-# --------------------------------------------------------------------------- #
-# Convenience DataLoader builders                                             #
-# --------------------------------------------------------------------------- #
 
 def make_static_loader(
     examples: list[Example],
@@ -222,8 +216,7 @@ def make_static_loader(
     num_workers: int = 0,
     family_dropout: float = 0.0,
 ) -> DataLoader:
-    ds = ProcessSequenceDataset(examples, tokenizer, max_len=max_len,
-                                  family_dropout=family_dropout)
+    ds = ProcessSequenceDataset(examples, tokenizer, max_len=max_len, family_dropout=family_dropout)
     return DataLoader(
         ds,
         batch_size=batch_size,
@@ -247,9 +240,13 @@ def make_online_loader(
     seed: int = 42,
 ) -> DataLoader:
     ds = OnlineGeneratorIterableDataset(
-        tokenizer, families, max_len=max_len,
-        corrupt_fraction=corrupt_fraction, canonicalize=canonicalize,
-        family_dropout=family_dropout, seed=seed,
+        tokenizer,
+        families,
+        max_len=max_len,
+        corrupt_fraction=corrupt_fraction,
+        canonicalize=canonicalize,
+        family_dropout=family_dropout,
+        seed=seed,
     )
     return DataLoader(
         ds,
@@ -263,12 +260,21 @@ def make_online_loader(
 if __name__ == "__main__":
     # Smoke test: build tokenizer, draw a few online batches, print shapes.
     from src.data.tokenizer import build_tokenizer
+
     tok = build_tokenizer("step")
-    loader = make_online_loader(tok, families=["mosfet", "igbt", "ic"],
-                                  batch_size=4, max_len=256, corrupt_fraction=0.5,
-                                  num_workers=0, seed=0)
+    loader = make_online_loader(
+        tok,
+        families=["mosfet", "igbt", "ic"],
+        batch_size=4,
+        max_len=256,
+        corrupt_fraction=0.5,
+        num_workers=0,
+        seed=0,
+    )
     it = iter(loader)
     for i in range(2):
         batch = next(it)
         print(f"batch {i}: " + ", ".join(f"{k}={tuple(v.shape)}" for k, v in batch.items()))
-        print(f"   validity={batch['validity'].tolist()}  rule_class={batch['rule_class'].tolist()}")
+        print(
+            f"   validity={batch['validity'].tolist()}  rule_class={batch['rule_class'].tolist()}"
+        )

@@ -30,7 +30,6 @@ import random
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 GENERATOR_PATH = ROOT / "training_data" / "generate_sequences.py"
 
@@ -485,7 +484,7 @@ def inspect(path):
 
     fam_seq_counts = {}
     fam_lengths = {}
-    for (fam, sid), length in seq_lengths.items():
+    for (fam, _sid), length in seq_lengths.items():
         fam_seq_counts[fam] = fam_seq_counts.get(fam, 0) + 1
         fam_lengths.setdefault(fam, []).append(length)
 
@@ -497,7 +496,7 @@ def inspect(path):
             f"{fam_seq_counts[fam]} sequences, "
             f"rows={counts[fam]}, "
             f"length min/mean/max="
-            f"{min(lengths)}/{sum(lengths)/len(lengths):.1f}/{max(lengths)}"
+            f"{min(lengths)}/{sum(lengths) / len(lengths):.1f}/{max(lengths)}"
         )
 
 

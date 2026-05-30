@@ -7,6 +7,7 @@
 The validity + rule-ID heads are zeroed at the loss-weight level by default
 (see configs/train/default.yaml); they activate once labels are passed in.
 """
+
 from __future__ import annotations
 
 import torch
@@ -29,7 +30,6 @@ class LMHead(nn.Module):
             self.bias = None
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
-        # hidden: [B, L, D] → logits: [B, L, V]
         return torch.nn.functional.linear(hidden, self.weight, self.bias)
 
 
@@ -45,7 +45,6 @@ class ValidityHead(nn.Module):
         )
 
     def forward(self, pooled: torch.Tensor) -> torch.Tensor:
-        # pooled: [B, D] → logit: [B]
         return self.net(pooled).squeeze(-1)
 
 
@@ -61,5 +60,4 @@ class RuleIDHead(nn.Module):
         )
 
     def forward(self, pooled: torch.Tensor) -> torch.Tensor:
-        # pooled: [B, D] → logits: [B, num_classes]
         return self.net(pooled)

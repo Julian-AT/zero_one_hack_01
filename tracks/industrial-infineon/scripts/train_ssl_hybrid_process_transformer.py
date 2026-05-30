@@ -47,7 +47,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-
 SPECIAL_TOKENS = ["<PAD>", "<BOS>", "<EOS>", "<UNK>", "<MASK>"]
 FAMILY_UNKNOWN = "<FAM_UNKNOWN>"
 FEATURE_NAMES = ["action", "role", "material", "block", "side", "level"]
@@ -287,7 +286,22 @@ def parse_material(step: str) -> str:
         ("WAFER_SUBSTRATE", ["WAFER", "SUBSTRATE"]),
         ("BACKSIDE", ["BACKSIDE"]),
         ("FRONTSIDE", ["FRONTSIDE"]),
-        ("METROLOGY_TARGET", ["THICKNESS", "GEOMETRY", "CD", "PARTICLE", "DEFECT", "RESISTANCE", "RESISTIVITY", "PLANARITY", "QUALITY", "WIDTH", "DEPTH"]),
+        (
+            "METROLOGY_TARGET",
+            [
+                "THICKNESS",
+                "GEOMETRY",
+                "CD",
+                "PARTICLE",
+                "DEFECT",
+                "RESISTANCE",
+                "RESISTIVITY",
+                "PLANARITY",
+                "QUALITY",
+                "WIDTH",
+                "DEPTH",
+            ],
+        ),
         ("LOT", ["LOT"]),
     ]
 
@@ -390,8 +404,8 @@ def split_records(records, train_frac, val_frac, seed):
         n_train = int(n * train_frac)
         n_val = int(n * val_frac)
         train.extend(rs[:n_train])
-        val.extend(rs[n_train:n_train + n_val])
-        test.extend(rs[n_train + n_val:])
+        val.extend(rs[n_train : n_train + n_val])
+        test.extend(rs[n_train + n_val :])
 
     rng.shuffle(train)
     rng.shuffle(val)
@@ -425,14 +439,23 @@ def build_vocabs(records):
     for tok, tid in token_to_id.items():
         fd = feature_dict_for_token(tok)
         for j, name in enumerate(FEATURE_NAMES):
-            token_feature_table[tid, j] = feature_to_id[name].get(fd[name], feature_to_id[name]["UNKNOWN"])
+            token_feature_table[tid, j] = feature_to_id[name].get(
+                fd[name], feature_to_id[name]["UNKNOWN"]
+            )
 
     unknown_feature_ids = torch.tensor(
         [feature_to_id[name]["UNKNOWN"] for name in FEATURE_NAMES],
         dtype=torch.long,
     )
 
-    return token_to_id, id_to_token, family_to_id, feature_to_id, token_feature_table, unknown_feature_ids
+    return (
+        token_to_id,
+        id_to_token,
+        family_to_id,
+        feature_to_id,
+        token_feature_table,
+        unknown_feature_ids,
+    )
 
 
 class ProcessDataset(Dataset):
@@ -457,7 +480,7 @@ class ProcessDataset(Dataset):
         ids += [self.eos_id]
 
         if len(ids) > self.max_len:
-            ids = ids[:self.max_len]
+            ids = ids[: self.max_len]
 
         x = ids[:-1]
         y = ids[1:]
@@ -553,9 +576,9 @@ class HybridProcessTransformerLM(nn.Module):
         self.family_emb = nn.Embedding(num_families, d_model)
         self.pos_emb = nn.Embedding(max_len, d_model)
 
-        self.feature_embs = nn.ModuleList([
-            nn.Embedding(size, d_model) for size in feature_vocab_sizes
-        ])
+        self.feature_embs = nn.ModuleList(
+            [nn.Embedding(size, d_model) for size in feature_vocab_sizes]
+        )
 
         self.input_norm = nn.LayerNorm(d_model)
 
@@ -698,7 +721,9 @@ def evaluate(model, loader, criterion, device, pad_id):
         target_expanded = target_ids.unsqueeze(-1)
 
         correct1 += int(((topk[:, :, :1] == target_expanded).any(dim=-1) & valid).sum().item())
-        correct3 += int(((topk[:, :, :min(3, k)] == target_expanded).any(dim=-1) & valid).sum().item())
+        correct3 += int(
+            ((topk[:, :, : min(3, k)] == target_expanded).any(dim=-1) & valid).sum().item()
+        )
         correct5 += int(((topk == target_expanded).any(dim=-1) & valid).sum().item())
 
         flat_logits = logits[valid]
@@ -721,7 +746,9 @@ def evaluate(model, loader, criterion, device, pad_id):
     }
 
 
-def save_checkpoint(path, model, optimizer, cfg, token_to_id, family_to_id, feature_to_id, epoch, best_val_loss):
+def save_checkpoint(
+    path, model, optimizer, cfg, token_to_id, family_to_id, feature_to_id, epoch, best_val_loss
+):
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
@@ -829,7 +856,14 @@ def main():
     print(f"Family counts: {family_counts}")
 
     print("[2/6] Building token and feature vocabularies...")
-    token_to_id, id_to_token, family_to_id, feature_to_id, token_feature_table, unknown_feature_ids = build_vocabs(records)
+    (
+        token_to_id,
+        id_to_token,
+        family_to_id,
+        feature_to_id,
+        token_feature_table,
+        unknown_feature_ids,
+    ) = build_vocabs(records)
 
     pad_id = token_to_id["<PAD>"]
     bos_id = token_to_id["<BOS>"]
@@ -839,7 +873,7 @@ def main():
 
     print(f"Step vocab size including specials: {len(token_to_id)}")
     print(f"Families: {family_to_id}")
-    print(f"Feature vocab sizes: {dict(zip(FEATURE_NAMES, feature_vocab_sizes))}")
+    print(f"Feature vocab sizes: {dict(zip(FEATURE_NAMES, feature_vocab_sizes, strict=False))}")
 
     with (out_dir / "vocab.json").open("w", encoding="utf-8") as f:
         json.dump(
@@ -939,7 +973,9 @@ def main():
     print(f"Device: {device}")
     print(f"Parameters: {n_params:,}")
 
-    class_weights = make_class_weights(train_records, token_to_id, cfg.max_len, cfg.class_weight).to(device)
+    class_weights = make_class_weights(
+        train_records, token_to_id, cfg.max_len, cfg.class_weight
+    ).to(device)
 
     criterion = nn.CrossEntropyLoss(
         ignore_index=pad_id,
@@ -961,10 +997,21 @@ def main():
     metrics_path = out_dir / "metrics.csv"
     with metrics_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "epoch", "split", "loss", "ppl", "top1", "top3", "top5",
-            "mrr", "tokens", "lr", "seconds"
-        ])
+        writer.writerow(
+            [
+                "epoch",
+                "split",
+                "loss",
+                "ppl",
+                "top1",
+                "top3",
+                "top5",
+                "mrr",
+                "tokens",
+                "lr",
+                "seconds",
+            ]
+        )
 
     print("[5/6] Training...")
     best_val_loss = float("inf")
@@ -1037,11 +1084,21 @@ def main():
         with metrics_path.open("a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             for split, metrics in [("train", train_metrics), ("val", val_metrics)]:
-                writer.writerow([
-                    epoch, split, metrics["loss"], metrics["ppl"], metrics["top1"],
-                    metrics["top3"], metrics["top5"], metrics["mrr"],
-                    metrics["tokens"], current_lr, seconds
-                ])
+                writer.writerow(
+                    [
+                        epoch,
+                        split,
+                        metrics["loss"],
+                        metrics["ppl"],
+                        metrics["top1"],
+                        metrics["top3"],
+                        metrics["top5"],
+                        metrics["mrr"],
+                        metrics["tokens"],
+                        current_lr,
+                        seconds,
+                    ]
+                )
 
         save_checkpoint(
             out_dir / "checkpoint_last.pt",
@@ -1083,12 +1140,21 @@ def main():
 
     with metrics_path.open("a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            cfg.epochs, "test", test_metrics["loss"], test_metrics["ppl"],
-            test_metrics["top1"], test_metrics["top3"], test_metrics["top5"],
-            test_metrics["mrr"], test_metrics["tokens"],
-            optimizer.param_groups[0]["lr"], 0.0,
-        ])
+        writer.writerow(
+            [
+                cfg.epochs,
+                "test",
+                test_metrics["loss"],
+                test_metrics["ppl"],
+                test_metrics["top1"],
+                test_metrics["top3"],
+                test_metrics["top5"],
+                test_metrics["mrr"],
+                test_metrics["tokens"],
+                optimizer.param_groups[0]["lr"],
+                0.0,
+            ]
+        )
 
     print(f"Done. Outputs written to: {out_dir}")
 

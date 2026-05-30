@@ -1,6 +1,7 @@
 from pathlib import Path
-import pandas as pd
+
 import matplotlib.pyplot as plt
+import pandas as pd
 
 OUT = Path("ssl_results")
 OUT.mkdir(exist_ok=True)
@@ -68,24 +69,28 @@ for name, df in dfs.items():
     row = {"model": name.replace("\n", " ")}
 
     if not best_val.empty:
-        row.update({
-            "best_val_epoch": int(best_val["epoch"].iloc[0]),
-            "best_val_loss": float(best_val["loss"].iloc[0]),
-            "best_val_top1": float(best_val["top1"].iloc[0]),
-            "best_val_top3": float(best_val["top3"].iloc[0]),
-            "best_val_top5": float(best_val["top5"].iloc[0]),
-            "best_val_mrr": float(best_val["mrr"].iloc[0]),
-        })
+        row.update(
+            {
+                "best_val_epoch": int(best_val["epoch"].iloc[0]),
+                "best_val_loss": float(best_val["loss"].iloc[0]),
+                "best_val_top1": float(best_val["top1"].iloc[0]),
+                "best_val_top3": float(best_val["top3"].iloc[0]),
+                "best_val_top5": float(best_val["top5"].iloc[0]),
+                "best_val_mrr": float(best_val["mrr"].iloc[0]),
+            }
+        )
 
     if not test.empty:
         last_test = test.tail(1)
-        row.update({
-            "test_loss": float(last_test["loss"].iloc[0]),
-            "test_top1": float(last_test["top1"].iloc[0]),
-            "test_top3": float(last_test["top3"].iloc[0]),
-            "test_top5": float(last_test["top5"].iloc[0]),
-            "test_mrr": float(last_test["mrr"].iloc[0]),
-        })
+        row.update(
+            {
+                "test_loss": float(last_test["loss"].iloc[0]),
+                "test_top1": float(last_test["top1"].iloc[0]),
+                "test_top3": float(last_test["top3"].iloc[0]),
+                "test_top5": float(last_test["top5"].iloc[0]),
+                "test_mrr": float(last_test["mrr"].iloc[0]),
+            }
+        )
 
     rows.append(row)
 

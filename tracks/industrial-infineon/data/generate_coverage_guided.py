@@ -62,8 +62,6 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Optional
-
 
 # ---------------------------------------------------------------------------
 # Robust local imports
@@ -90,19 +88,19 @@ except Exception as exc:
 
 try:
     from coverage_tracker import (  # type: ignore
+        OPTIONAL_STEP_GROUPS,
         SequenceRecord,
-        read_sequences_from_csv,
-        compute_coverage,
         build_undercovered_targets,
-        write_outputs,
         classify_step_to_block,
+        compute_coverage,
+        extract_litho_levels,
         extract_rule_boundary_features,
         length_bin,
         pairwise,
-        trigrams,
+        read_sequences_from_csv,
         stringify_tuple,
-        extract_litho_levels,
-        OPTIONAL_STEP_GROUPS,
+        trigrams,
+        write_outputs,
     )
 except Exception as exc:
     raise RuntimeError(
@@ -147,6 +145,7 @@ class FamilyGenerationStats:
 # ---------------------------------------------------------------------------
 # Utility functions
 # ---------------------------------------------------------------------------
+
 
 def sequence_hash(steps: list[str]) -> str:
     text = "\n".join(steps)
@@ -293,6 +292,7 @@ def seed_coverage_from_records(
 # CSV writing
 # ---------------------------------------------------------------------------
 
+
 def write_long_csv(
     path: Path,
     existing_records: list[SequenceRecord],
@@ -309,49 +309,55 @@ def write_long_csv(
 
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "SEQUENCE_ID",
-            "FAMILY",
-            "STEP_INDEX",
-            "STEP",
-            "IS_VALID",
-            "SPLIT",
-            "SOURCE",
-            "GENERATION_SCORE",
-        ])
+        writer.writerow(
+            [
+                "SEQUENCE_ID",
+                "FAMILY",
+                "STEP_INDEX",
+                "STEP",
+                "IS_VALID",
+                "SPLIT",
+                "SOURCE",
+                "GENERATION_SCORE",
+            ]
+        )
 
         if include_existing:
-            for idx, record in enumerate(existing_records, start=1):
+            for _idx, record in enumerate(existing_records, start=1):
                 family = infer_family_from_record(record)
                 clean_id = record.sequence_id.replace(":", "_").replace("\\", "_").replace("/", "_")
                 sequence_id = f"existing_{clean_id}"
                 split = stable_split(sequence_id, split_seed)
 
                 for step_index, step in enumerate(record.steps):
-                    writer.writerow([
-                        sequence_id,
-                        family,
-                        step_index,
-                        step,
-                        1,
-                        split,
-                        "existing",
-                        "",
-                    ])
+                    writer.writerow(
+                        [
+                            sequence_id,
+                            family,
+                            step_index,
+                            step,
+                            1,
+                            split,
+                            "existing",
+                            "",
+                        ]
+                    )
 
         for sample in new_samples:
             split = stable_split(sample.sequence_id, split_seed)
             for step_index, step in enumerate(sample.steps):
-                writer.writerow([
-                    sample.sequence_id,
-                    sample.family,
-                    step_index,
-                    step,
-                    1,
-                    split,
-                    sample.source,
-                    f"{sample.score:.6f}",
-                ])
+                writer.writerow(
+                    [
+                        sample.sequence_id,
+                        sample.family,
+                        step_index,
+                        step,
+                        1,
+                        split,
+                        sample.source,
+                        f"{sample.score:.6f}",
+                    ]
+                )
 
 
 def write_sequence_summary_csv(
@@ -368,49 +374,56 @@ def write_sequence_summary_csv(
 
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "SEQUENCE_ID",
-            "FAMILY",
-            "LENGTH",
-            "IS_VALID",
-            "SPLIT",
-            "SOURCE",
-            "GENERATION_SCORE",
-            "SCORE_DETAILS_JSON",
-        ])
+        writer.writerow(
+            [
+                "SEQUENCE_ID",
+                "FAMILY",
+                "LENGTH",
+                "IS_VALID",
+                "SPLIT",
+                "SOURCE",
+                "GENERATION_SCORE",
+                "SCORE_DETAILS_JSON",
+            ]
+        )
 
         if include_existing:
             for record in existing_records:
                 family = infer_family_from_record(record)
                 clean_id = record.sequence_id.replace(":", "_").replace("\\", "_").replace("/", "_")
                 sequence_id = f"existing_{clean_id}"
-                writer.writerow([
-                    sequence_id,
-                    family,
-                    len(record.steps),
-                    1,
-                    stable_split(sequence_id, split_seed),
-                    "existing",
-                    "",
-                    "",
-                ])
+                writer.writerow(
+                    [
+                        sequence_id,
+                        family,
+                        len(record.steps),
+                        1,
+                        stable_split(sequence_id, split_seed),
+                        "existing",
+                        "",
+                        "",
+                    ]
+                )
 
         for sample in new_samples:
-            writer.writerow([
-                sample.sequence_id,
-                sample.family,
-                len(sample.steps),
-                1,
-                stable_split(sample.sequence_id, split_seed),
-                sample.source,
-                f"{sample.score:.6f}",
-                json.dumps(sample.score_details, sort_keys=True),
-            ])
+            writer.writerow(
+                [
+                    sample.sequence_id,
+                    sample.family,
+                    len(sample.steps),
+                    1,
+                    stable_split(sample.sequence_id, split_seed),
+                    sample.source,
+                    f"{sample.score:.6f}",
+                    json.dumps(sample.score_details, sort_keys=True),
+                ]
+            )
 
 
 # ---------------------------------------------------------------------------
 # Main generation loop
 # ---------------------------------------------------------------------------
+
 
 def generate_for_family(
     family: str,
@@ -438,7 +451,7 @@ def generate_for_family(
     forced_accepts = 0
 
     attempts_since_accept = 0
-    best_buffered: Optional[tuple[list[str], float, dict[str, float], int]] = None
+    best_buffered: tuple[list[str], float, dict[str, float], int] | None = None
 
     def accept_candidate(
         steps: list[str],
@@ -561,6 +574,7 @@ def generate_for_family(
 # Existing data loading
 # ---------------------------------------------------------------------------
 
+
 def load_existing_records(paths: list[Path]) -> list[SequenceRecord]:
     records: list[SequenceRecord] = []
     for path in paths:
@@ -572,6 +586,7 @@ def load_existing_records(paths: list[Path]) -> list[SequenceRecord]:
 # ---------------------------------------------------------------------------
 # Manifest
 # ---------------------------------------------------------------------------
+
 
 def write_manifest(
     path: Path,
@@ -604,10 +619,10 @@ def write_manifest(
             "family_counts": dict(sorted(family_counts_new.items())),
         },
         "combined_if_existing_included": {
-            "num_sequences": len(new_samples) + (len(existing_records) if args.include_existing_in_output else 0),
-            "num_step_rows": total_step_rows_new + (
-                total_step_rows_existing if args.include_existing_in_output else 0
-            ),
+            "num_sequences": len(new_samples)
+            + (len(existing_records) if args.include_existing_in_output else 0),
+            "num_step_rows": total_step_rows_new
+            + (total_step_rows_existing if args.include_existing_in_output else 0),
         },
         "family_generation_stats": [asdict(s) for s in family_stats],
         "output_files": output_files,
@@ -620,6 +635,7 @@ def write_manifest(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -733,7 +749,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
 
     output_dir = Path(args.output_dir)
@@ -883,7 +899,9 @@ def main(argv: Optional[list[str]] = None) -> None:
     print(f"  unique steps:                  {final_coverage['summary']['unique_steps']:,}")
     print(f"  unique transitions:            {final_coverage['summary']['unique_transitions']:,}")
     print(f"  unique trigrams:               {final_coverage['summary']['unique_trigrams']:,}")
-    print(f"  unique block transitions:      {final_coverage['summary']['unique_block_transitions']:,}")
+    print(
+        f"  unique block transitions:      {final_coverage['summary']['unique_block_transitions']:,}"
+    )
 
     print("\nNext step after this:")
     print("  Inspect the new coverage report.")

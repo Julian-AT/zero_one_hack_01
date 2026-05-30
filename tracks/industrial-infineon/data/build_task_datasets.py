@@ -52,11 +52,10 @@ import csv
 import hashlib
 import json
 import time
-from collections import Counter, defaultdict
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, Optional
-
 
 STEP_SEP = " ||| "
 
@@ -64,6 +63,7 @@ STEP_SEP = " ||| "
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SequenceItem:
@@ -98,6 +98,7 @@ class BuildStats:
 # Generic helpers
 # ---------------------------------------------------------------------------
 
+
 def normalise_header(name: str) -> str:
     return name.lstrip("\ufeff").strip().strip('"').strip().upper()
 
@@ -124,7 +125,7 @@ def stable_split(key: str, seed: int) -> str:
     sequence end up in the same train/val/test split as the corresponding
     original sequence. This reduces leakage.
     """
-    h = int(hashlib.md5(f"{key}|{seed}".encode("utf-8")).hexdigest(), 16) % 100
+    h = int(hashlib.md5(f"{key}|{seed}".encode()).hexdigest(), 16) % 100
     if h < 80:
         return "train"
     if h < 90:
@@ -172,6 +173,7 @@ def sequence_split(item: SequenceItem, seed: int, split_mode: str) -> str:
 # Streaming CSV reader
 # ---------------------------------------------------------------------------
 
+
 def make_sequence_item(
     path: Path,
     input_kind: str,
@@ -196,7 +198,9 @@ def make_sequence_item(
 
     violated_rule = get_col(first_row, norm_to_raw, "VIOLATED_RULE", "")
     validator_rules = get_col(first_row, norm_to_raw, "VALIDATOR_RULES", "")
-    validator_violation_count_str = get_col(first_row, norm_to_raw, "VALIDATOR_VIOLATION_COUNT", "0")
+    validator_violation_count_str = get_col(
+        first_row, norm_to_raw, "VALIDATOR_VIOLATION_COUNT", "0"
+    )
     source = get_col(first_row, norm_to_raw, "SOURCE", input_kind)
     input_split = get_col(first_row, norm_to_raw, "SPLIT", "")
 
@@ -256,11 +260,11 @@ def iter_sequences_from_long_csv(path: Path, input_kind: str) -> Iterable[Sequen
         step_key = norm_to_raw["STEP"]
         step_index_key = norm_to_raw.get("STEP_INDEX")
 
-        current_sequence_id: Optional[str] = None
-        current_first_row: Optional[dict[str, str]] = None
+        current_sequence_id: str | None = None
+        current_first_row: dict[str, str] | None = None
         current_steps: list[tuple[int, str]] = []
 
-        def flush_current() -> Optional[SequenceItem]:
+        def flush_current() -> SequenceItem | None:
             if current_sequence_id is None or current_first_row is None:
                 return None
             return make_sequence_item(
@@ -272,7 +276,7 @@ def iter_sequences_from_long_csv(path: Path, input_kind: str) -> Iterable[Sequen
                 indexed_steps=current_steps,
             )
 
-        for row_number, row in enumerate(reader):
+        for _row_number, row in enumerate(reader):
             raw_step = (row.get(step_key) or "").strip().strip('"')
             if not raw_step:
                 continue
@@ -312,6 +316,7 @@ def iter_sequences_from_long_csv(path: Path, input_kind: str) -> Iterable[Sequen
 # Dataset writers
 # ---------------------------------------------------------------------------
 
+
 def write_next_step_examples(
     writer: csv.writer,
     item: SequenceItem,
@@ -337,19 +342,21 @@ def write_next_step_examples(
 
         example_id = f"next_{clean_id(item.sequence_id)}_{target_index:04d}"
 
-        writer.writerow([
-            example_id,
-            item.sequence_id,
-            item.origin_id,
-            item.family,
-            split,
-            target_index,
-            len(prefix),
-            context_window,
-            safe_join_steps(context),
-            target,
-            item.source,
-        ])
+        writer.writerow(
+            [
+                example_id,
+                item.sequence_id,
+                item.origin_id,
+                item.family,
+                split,
+                target_index,
+                len(prefix),
+                context_window,
+                safe_join_steps(context),
+                target,
+                item.source,
+            ]
+        )
 
         example_idx += 1
         stats.next_step_examples += 1
@@ -398,22 +405,24 @@ def write_completion_examples(
 
         example_id = f"completion_{clean_id(item.sequence_id)}_{cut_index:04d}"
 
-        writer.writerow([
-            example_id,
-            item.sequence_id,
-            item.origin_id,
-            item.family,
-            split,
-            f"{frac:.4f}",
-            cut_index,
-            n,
-            context_window,
-            target_window,
-            safe_join_steps(prefix_context),
-            safe_join_steps(target_suffix),
-            truncated,
-            item.source,
-        ])
+        writer.writerow(
+            [
+                example_id,
+                item.sequence_id,
+                item.origin_id,
+                item.family,
+                split,
+                f"{frac:.4f}",
+                cut_index,
+                n,
+                context_window,
+                target_window,
+                safe_join_steps(prefix_context),
+                safe_join_steps(target_suffix),
+                truncated,
+                item.source,
+            ]
+        )
 
         stats.completion_examples += 1
 
@@ -426,21 +435,23 @@ def write_anomaly_example(
 ) -> None:
     example_id = f"anomaly_{clean_id(item.sequence_id)}"
 
-    writer.writerow([
-        example_id,
-        item.sequence_id,
-        item.origin_id,
-        item.family,
-        split,
-        len(item.steps),
-        safe_join_steps(item.steps),
-        item.is_valid,
-        item.violated_rule,
-        item.validator_rules,
-        item.validator_violation_count,
-        item.input_kind,
-        item.source,
-    ])
+    writer.writerow(
+        [
+            example_id,
+            item.sequence_id,
+            item.origin_id,
+            item.family,
+            split,
+            len(item.steps),
+            safe_join_steps(item.steps),
+            item.is_valid,
+            item.violated_rule,
+            item.validator_rules,
+            item.validator_violation_count,
+            item.input_kind,
+            item.source,
+        ]
+    )
 
     stats.anomaly_examples += 1
 
@@ -456,20 +467,22 @@ def write_rule_attribution_example(
 
     example_id = f"rule_{clean_id(item.sequence_id)}"
 
-    writer.writerow([
-        example_id,
-        item.sequence_id,
-        item.origin_id,
-        item.family,
-        split,
-        len(item.steps),
-        safe_join_steps(item.steps),
-        item.violated_rule,
-        item.validator_rules,
-        item.validator_violation_count,
-        item.input_kind,
-        item.source,
-    ])
+    writer.writerow(
+        [
+            example_id,
+            item.sequence_id,
+            item.origin_id,
+            item.family,
+            split,
+            len(item.steps),
+            safe_join_steps(item.steps),
+            item.violated_rule,
+            item.validator_rules,
+            item.validator_violation_count,
+            item.input_kind,
+            item.source,
+        ]
+    )
 
     stats.rule_attribution_examples += 1
 
@@ -479,20 +492,22 @@ def write_sequence_summary(
     item: SequenceItem,
     split: str,
 ) -> None:
-    writer.writerow([
-        item.sequence_id,
-        item.origin_id,
-        item.family,
-        split,
-        len(item.steps),
-        item.is_valid,
-        item.violated_rule,
-        item.validator_rules,
-        item.validator_violation_count,
-        item.input_kind,
-        item.source,
-        item.input_file,
-    ])
+    writer.writerow(
+        [
+            item.sequence_id,
+            item.origin_id,
+            item.family,
+            split,
+            len(item.steps),
+            item.is_valid,
+            item.violated_rule,
+            item.validator_rules,
+            item.validator_violation_count,
+            item.input_kind,
+            item.source,
+            item.input_file,
+        ]
+    )
 
 
 def write_combined_long(
@@ -502,27 +517,30 @@ def write_combined_long(
     stats: BuildStats,
 ) -> None:
     for idx, step in enumerate(item.steps):
-        writer.writerow([
-            item.sequence_id,
-            item.origin_id,
-            item.family,
-            idx,
-            step,
-            item.is_valid,
-            item.violated_rule,
-            item.validator_rules,
-            item.validator_violation_count,
-            split,
-            item.input_kind,
-            item.source,
-            item.input_file,
-        ])
+        writer.writerow(
+            [
+                item.sequence_id,
+                item.origin_id,
+                item.family,
+                idx,
+                step,
+                item.is_valid,
+                item.violated_rule,
+                item.validator_rules,
+                item.validator_violation_count,
+                split,
+                item.input_kind,
+                item.source,
+                item.input_file,
+            ]
+        )
         stats.combined_long_rows += 1
 
 
 # ---------------------------------------------------------------------------
 # Reporting
 # ---------------------------------------------------------------------------
+
 
 def markdown_table(headers: list[str], rows: list[list[object]]) -> str:
     if not rows:
@@ -548,56 +566,70 @@ def write_report(
     lines.append("# Task Dataset Build Report\n")
 
     lines.append("## Summary\n")
-    lines.append(markdown_table(
-        ["Metric", "Value"],
-        [
-            ["Valid sequences", stats.valid_sequences],
-            ["Easy invalid sequences", stats.easy_invalid_sequences],
-            ["Hard invalid sequences", stats.hard_invalid_sequences],
-            ["Skipped duplicate sequences", stats.skipped_duplicate_sequences],
-            ["Next-step examples", stats.next_step_examples],
-            ["Completion examples", stats.completion_examples],
-            ["Anomaly examples", stats.anomaly_examples],
-            ["Rule-attribution examples", stats.rule_attribution_examples],
-            ["Combined long rows", stats.combined_long_rows],
-        ],
-    ))
+    lines.append(
+        markdown_table(
+            ["Metric", "Value"],
+            [
+                ["Valid sequences", stats.valid_sequences],
+                ["Easy invalid sequences", stats.easy_invalid_sequences],
+                ["Hard invalid sequences", stats.hard_invalid_sequences],
+                ["Skipped duplicate sequences", stats.skipped_duplicate_sequences],
+                ["Next-step examples", stats.next_step_examples],
+                ["Completion examples", stats.completion_examples],
+                ["Anomaly examples", stats.anomaly_examples],
+                ["Rule-attribution examples", stats.rule_attribution_examples],
+                ["Combined long rows", stats.combined_long_rows],
+            ],
+        )
+    )
 
     lines.append("\n## Sequence Counts by Split\n")
-    lines.append(markdown_table(
-        ["Split", "Count"],
-        [[k, v] for k, v in sorted(counters["split_counts"].items())],
-    ))
+    lines.append(
+        markdown_table(
+            ["Split", "Count"],
+            [[k, v] for k, v in sorted(counters["split_counts"].items())],
+        )
+    )
 
     lines.append("\n## Sequence Counts by Family\n")
-    lines.append(markdown_table(
-        ["Family", "Count"],
-        [[k, v] for k, v in sorted(counters["family_counts"].items())],
-    ))
+    lines.append(
+        markdown_table(
+            ["Family", "Count"],
+            [[k, v] for k, v in sorted(counters["family_counts"].items())],
+        )
+    )
 
     lines.append("\n## Sequence Counts by Validity\n")
-    lines.append(markdown_table(
-        ["IS_VALID", "Count"],
-        [[k, v] for k, v in sorted(counters["validity_counts"].items())],
-    ))
+    lines.append(
+        markdown_table(
+            ["IS_VALID", "Count"],
+            [[k, v] for k, v in sorted(counters["validity_counts"].items())],
+        )
+    )
 
     lines.append("\n## Invalid Counts by Rule\n")
-    lines.append(markdown_table(
-        ["Violated rule", "Count"],
-        [[k, v] for k, v in sorted(counters["rule_counts"].items())],
-    ))
+    lines.append(
+        markdown_table(
+            ["Violated rule", "Count"],
+            [[k, v] for k, v in sorted(counters["rule_counts"].items())],
+        )
+    )
 
     lines.append("\n## Counts by Input Kind\n")
-    lines.append(markdown_table(
-        ["Input kind", "Count"],
-        [[k, v] for k, v in sorted(counters["input_kind_counts"].items())],
-    ))
+    lines.append(
+        markdown_table(
+            ["Input kind", "Count"],
+            [[k, v] for k, v in sorted(counters["input_kind_counts"].items())],
+        )
+    )
 
     lines.append("\n## Output Files\n")
-    lines.append(markdown_table(
-        ["Name", "Path"],
-        [[k, v] for k, v in output_files.items()],
-    ))
+    lines.append(
+        markdown_table(
+            ["Name", "Path"],
+            [[k, v] for k, v in output_files.items()],
+        )
+    )
 
     lines.append("\n## Build Configuration\n")
     lines.append("```json\n")
@@ -628,10 +660,7 @@ def write_manifest(
         "script": "build_task_datasets.py",
         "description": "Task dataset builder for semiconductor process-sequence learning.",
         "stats": asdict(stats),
-        "counters": {
-            key: dict(sorted(counter.items()))
-            for key, counter in counters.items()
-        },
+        "counters": {key: dict(sorted(counter.items())) for key, counter in counters.items()},
         "output_files": output_files,
         "arguments": vars(args),
     }
@@ -643,13 +672,14 @@ def write_manifest(
 # Main build logic
 # ---------------------------------------------------------------------------
 
+
 def process_sequence_stream(
     path: Path,
     input_kind: str,
-    max_sequences: Optional[int],
+    max_sequences: int | None,
     seen_hashes: set[str],
     args: argparse.Namespace,
-    writers: dict[str, Optional[csv.writer]],
+    writers: dict[str, csv.writer | None],
     stats: BuildStats,
     counters: dict[str, Counter],
 ) -> None:
@@ -751,12 +781,14 @@ def build_datasets(args: argparse.Namespace) -> None:
 
     with (
         open(output_files["next_step_prediction"], "w", newline="", encoding="utf-8") as f_next,
-        open(output_files["sequence_completion"], "w", newline="", encoding="utf-8") as f_completion,
+        open(
+            output_files["sequence_completion"], "w", newline="", encoding="utf-8"
+        ) as f_completion,
         open(output_files["anomaly_detection"], "w", newline="", encoding="utf-8") as f_anomaly,
         open(output_files["rule_attribution"], "w", newline="", encoding="utf-8") as f_rule,
         open(output_files["sequence_summary"], "w", newline="", encoding="utf-8") as f_summary,
     ):
-        writers: dict[str, Optional[csv.writer]] = {
+        writers: dict[str, csv.writer | None] = {
             "next_step": csv.writer(f_next),
             "completion": csv.writer(f_completion),
             "anomaly": csv.writer(f_anomaly),
@@ -765,102 +797,116 @@ def build_datasets(args: argparse.Namespace) -> None:
             "combined_long": None,
         }
 
-        writers["next_step"].writerow([
-            "EXAMPLE_ID",
-            "SEQUENCE_ID",
-            "ORIGIN_ID",
-            "FAMILY",
-            "SPLIT",
-            "TARGET_INDEX",
-            "PREFIX_LENGTH",
-            "CONTEXT_WINDOW",
-            "PREFIX_CONTEXT",
-            "NEXT_STEP",
-            "SOURCE",
-        ])
+        writers["next_step"].writerow(
+            [
+                "EXAMPLE_ID",
+                "SEQUENCE_ID",
+                "ORIGIN_ID",
+                "FAMILY",
+                "SPLIT",
+                "TARGET_INDEX",
+                "PREFIX_LENGTH",
+                "CONTEXT_WINDOW",
+                "PREFIX_CONTEXT",
+                "NEXT_STEP",
+                "SOURCE",
+            ]
+        )
 
-        writers["completion"].writerow([
-            "EXAMPLE_ID",
-            "SEQUENCE_ID",
-            "ORIGIN_ID",
-            "FAMILY",
-            "SPLIT",
-            "CUT_FRACTION",
-            "CUT_INDEX",
-            "SEQUENCE_LENGTH",
-            "CONTEXT_WINDOW",
-            "TARGET_WINDOW",
-            "PREFIX_CONTEXT",
-            "TARGET_SUFFIX",
-            "TARGET_SUFFIX_TRUNCATED",
-            "SOURCE",
-        ])
+        writers["completion"].writerow(
+            [
+                "EXAMPLE_ID",
+                "SEQUENCE_ID",
+                "ORIGIN_ID",
+                "FAMILY",
+                "SPLIT",
+                "CUT_FRACTION",
+                "CUT_INDEX",
+                "SEQUENCE_LENGTH",
+                "CONTEXT_WINDOW",
+                "TARGET_WINDOW",
+                "PREFIX_CONTEXT",
+                "TARGET_SUFFIX",
+                "TARGET_SUFFIX_TRUNCATED",
+                "SOURCE",
+            ]
+        )
 
-        writers["anomaly"].writerow([
-            "EXAMPLE_ID",
-            "SEQUENCE_ID",
-            "ORIGIN_ID",
-            "FAMILY",
-            "SPLIT",
-            "SEQUENCE_LENGTH",
-            "SEQUENCE",
-            "IS_VALID",
-            "VIOLATED_RULE",
-            "VALIDATOR_RULES",
-            "VALIDATOR_VIOLATION_COUNT",
-            "INPUT_KIND",
-            "SOURCE",
-        ])
+        writers["anomaly"].writerow(
+            [
+                "EXAMPLE_ID",
+                "SEQUENCE_ID",
+                "ORIGIN_ID",
+                "FAMILY",
+                "SPLIT",
+                "SEQUENCE_LENGTH",
+                "SEQUENCE",
+                "IS_VALID",
+                "VIOLATED_RULE",
+                "VALIDATOR_RULES",
+                "VALIDATOR_VIOLATION_COUNT",
+                "INPUT_KIND",
+                "SOURCE",
+            ]
+        )
 
-        writers["rule"].writerow([
-            "EXAMPLE_ID",
-            "SEQUENCE_ID",
-            "ORIGIN_ID",
-            "FAMILY",
-            "SPLIT",
-            "SEQUENCE_LENGTH",
-            "SEQUENCE",
-            "VIOLATED_RULE",
-            "VALIDATOR_RULES",
-            "VALIDATOR_VIOLATION_COUNT",
-            "INPUT_KIND",
-            "SOURCE",
-        ])
+        writers["rule"].writerow(
+            [
+                "EXAMPLE_ID",
+                "SEQUENCE_ID",
+                "ORIGIN_ID",
+                "FAMILY",
+                "SPLIT",
+                "SEQUENCE_LENGTH",
+                "SEQUENCE",
+                "VIOLATED_RULE",
+                "VALIDATOR_RULES",
+                "VALIDATOR_VIOLATION_COUNT",
+                "INPUT_KIND",
+                "SOURCE",
+            ]
+        )
 
-        writers["summary"].writerow([
-            "SEQUENCE_ID",
-            "ORIGIN_ID",
-            "FAMILY",
-            "SPLIT",
-            "SEQUENCE_LENGTH",
-            "IS_VALID",
-            "VIOLATED_RULE",
-            "VALIDATOR_RULES",
-            "VALIDATOR_VIOLATION_COUNT",
-            "INPUT_KIND",
-            "SOURCE",
-            "INPUT_FILE",
-        ])
+        writers["summary"].writerow(
+            [
+                "SEQUENCE_ID",
+                "ORIGIN_ID",
+                "FAMILY",
+                "SPLIT",
+                "SEQUENCE_LENGTH",
+                "IS_VALID",
+                "VIOLATED_RULE",
+                "VALIDATOR_RULES",
+                "VALIDATOR_VIOLATION_COUNT",
+                "INPUT_KIND",
+                "SOURCE",
+                "INPUT_FILE",
+            ]
+        )
 
         if args.write_combined_long:
-            f_combined = open(output_files["combined_long_sequences"], "w", newline="", encoding="utf-8")
+            f_combined = open(
+                output_files["combined_long_sequences"], "w", newline="", encoding="utf-8"
+            )
             try:
                 writers["combined_long"] = csv.writer(f_combined)
-                writers["combined_long"].writerow([
-                    "SEQUENCE_ID",
-                    "ORIGIN_ID",
-                    "FAMILY",
-                    "STEP_INDEX",
-                    "STEP",
-                    "IS_VALID",
-                    "VIOLATED_RULE",
-                    "VALIDATOR_RULES",
-                    "VALIDATOR_VIOLATION_COUNT",
-                    "SPLIT",
-                    "INPUT_KIND",
-                    "SOURCE",
-                    "INPUT_FILE",
-                ])
+                writers["combined_long"].writerow(
+                    [
+                        "SEQUENCE_ID",
+                        "ORIGIN_ID",
+                        "FAMILY",
+                        "STEP_INDEX",
+                        "STEP",
+                        "IS_VALID",
+                        "VIOLATED_RULE",
+                        "VALIDATOR_RULES",
+                        "VALIDATOR_VIOLATION_COUNT",
+                        "SPLIT",
+                        "INPUT_KIND",
+                        "SOURCE",
+                        "INPUT_FILE",
+                    ]
+                )
 
                 _process_all_inputs(
                     paths_valid, paths_easy, paths_hard, args, writers, stats, counters, seen_hashes
@@ -913,7 +959,7 @@ def _process_all_inputs(
     paths_easy: list[Path],
     paths_hard: list[Path],
     args: argparse.Namespace,
-    writers: dict[str, Optional[csv.writer]],
+    writers: dict[str, csv.writer | None],
     stats: BuildStats,
     counters: dict[str, Counter],
     seen_hashes: set[str],
@@ -961,6 +1007,7 @@ def _process_all_inputs(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -1032,10 +1079,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--completion-target-window",
         type=int,
         default=96,
-        help=(
-            "Maximum number of suffix steps in completion target. "
-            "Use 0 for full suffix."
-        ),
+        help=("Maximum number of suffix steps in completion target. Use 0 for full suffix."),
     )
 
     parser.add_argument(

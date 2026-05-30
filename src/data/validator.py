@@ -5,10 +5,10 @@ it. This adapter exposes `validate_sequence`, `generate_sequence`,
 `generate_dataset`, and `read_csv_sequences` under a stable import path, plus
 canonical rule indices.
 """
+
 from __future__ import annotations
 
 import sys
-from typing import List
 
 from src.utils.paths import RAW_DATA_DIR
 
@@ -25,7 +25,7 @@ from generate_sequences import (  # noqa: E402  (path mutation above is intentio
 )
 
 # Canonical rule IDs — these strings are what `Violation.rule` returns.
-RULE_IDS: List[str] = [
+RULE_IDS: list[str] = [
     "RULE_DEP_NO_CLEAN",
     "RULE_METAL_ETCH_NO_LITHO",
     "RULE_ETCH_NO_MASK",
@@ -38,15 +38,15 @@ RULE_IDS: List[str] = [
     "RULE_BACKSIDE_BEFORE_PASSIVATION",
 ]
 RULE_TO_IDX = {r: i for i, r in enumerate(RULE_IDS)}
-VALID_CLASS_IDX = len(RULE_IDS)         # index reserved for "valid" in the rule-ID head
-NUM_RULE_CLASSES = len(RULE_IDS) + 1     # 10 rules + valid
+VALID_CLASS_IDX = len(RULE_IDS)  # index reserved for "valid" in the rule-ID head
+NUM_RULE_CLASSES = len(RULE_IDS) + 1  # 10 rules + valid
 
 
-def is_valid(steps: List[str]) -> bool:
+def is_valid(steps: list[str]) -> bool:
     return len(validate_sequence(steps)) == 0
 
 
-def rule_class_index(steps: List[str]) -> int:
+def rule_class_index(steps: list[str]) -> int:
     """Return the rule-class index for the multi-task rule-ID head.
 
     If the sequence is valid → VALID_CLASS_IDX.

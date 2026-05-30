@@ -51,10 +51,9 @@ import random
 import sys
 import time
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Optional
-
 
 # ---------------------------------------------------------------------------
 # Robust local imports
@@ -72,18 +71,17 @@ if str(THIS_DIR) not in sys.path:
 
 try:
     from generate_sequences import (  # type: ignore
-        validate_sequence,
-        DEPOSITION_STEPS,
         CLEAN_STEPS,
-        ETCH_STEPS,
-        METAL_ETCH_STEPS,
-        IMPLANT_STEPS,
-        IMPLANT_OPENER_STEPS,
         CMP_STEPS,
-        FILL_STEPS,
-        PAD_WINDOW_STEPS,
+        DEPOSITION_STEPS,
         ELECTRICAL_TEST_STEPS,
-        BACKSIDE_METAL_STEPS,
+        ETCH_STEPS,
+        FILL_STEPS,
+        IMPLANT_OPENER_STEPS,
+        IMPLANT_STEPS,
+        METAL_ETCH_STEPS,
+        PAD_WINDOW_STEPS,
+        validate_sequence,
     )
 except Exception as exc:
     raise RuntimeError(
@@ -95,9 +93,9 @@ except Exception as exc:
 try:
     from coverage_tracker import (  # type: ignore
         SequenceRecord,
-        read_sequences_from_csv,
-        compute_coverage,
         build_undercovered_targets,
+        compute_coverage,
+        read_sequences_from_csv,
         write_outputs,
     )
 except Exception as exc:
@@ -152,6 +150,7 @@ NEUTRAL_FILLER_STEPS = [
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MutationResult:
     steps: list[str]
@@ -196,6 +195,7 @@ class RuleFamilyStats:
 # General helpers
 # ---------------------------------------------------------------------------
 
+
 def clean_id(value: str) -> str:
     return (
         value.replace(":", "_")
@@ -211,7 +211,7 @@ def sequence_hash(steps: list[str]) -> str:
 
 
 def stable_split(sequence_id: str, seed: int) -> str:
-    h = int(hashlib.md5(f"{sequence_id}|{seed}".encode("utf-8")).hexdigest(), 16) % 100
+    h = int(hashlib.md5(f"{sequence_id}|{seed}".encode()).hexdigest(), 16) % 100
     if h < 80:
         return "train"
     if h < 90:
@@ -232,7 +232,7 @@ def infer_family(record: SequenceRecord) -> str:
     return "unknown"
 
 
-def first_index(steps: list[str], target: str) -> Optional[int]:
+def first_index(steps: list[str], target: str) -> int | None:
     for i, step in enumerate(steps):
         if step == target:
             return i
@@ -287,7 +287,7 @@ def choose_index(
     steps: list[str],
     rng: random.Random,
     predicate: Callable[[int, str], bool],
-) -> Optional[int]:
+) -> int | None:
     candidates = [i for i, step in enumerate(steps) if predicate(i, step)]
     if not candidates:
         return None
@@ -329,12 +329,13 @@ def validator_rule_set(steps: list[str]) -> tuple[list[str], int]:
 # Hard mutators
 # ---------------------------------------------------------------------------
 
+
 def hard_RULE_DEP_NO_CLEAN(
     steps: list[str],
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Pick a real deposition step that currently has a clean in the prior 12 steps.
@@ -370,7 +371,7 @@ def hard_RULE_METAL_ETCH_NO_LITHO(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Pick a real metal etch that currently has lithography/develop nearby.
@@ -383,18 +384,22 @@ def hard_RULE_METAL_ETCH_NO_LITHO(
         lambda i, s: (
             i >= min_mutation_index
             and s in METAL_ETCH_STEPS
-            and bool(previous_indices_within_predicate(
-                steps,
-                i,
-                lambda x: x.startswith("EXPOSE LITHO LEVEL"),
-                15,
-            ))
-            and bool(previous_indices_within(
-                steps,
-                i,
-                frozenset({"DEVELOP PHOTORESIST", "DEVELOP PAD WINDOW"}),
-                15,
-            ))
+            and bool(
+                previous_indices_within_predicate(
+                    steps,
+                    i,
+                    lambda x: x.startswith("EXPOSE LITHO LEVEL"),
+                    15,
+                )
+            )
+            and bool(
+                previous_indices_within(
+                    steps,
+                    i,
+                    frozenset({"DEVELOP PHOTORESIST", "DEVELOP PAD WINDOW"}),
+                    15,
+                )
+            )
         ),
     )
     if index is None:
@@ -417,7 +422,7 @@ def hard_RULE_ETCH_NO_MASK(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Pick a real non-metal patterned etch that currently has DEVELOP PHOTORESIST
@@ -430,12 +435,14 @@ def hard_RULE_ETCH_NO_MASK(
             i >= min_mutation_index
             and s in ETCH_STEPS
             and s not in METAL_ETCH_STEPS
-            and bool(previous_indices_within(
-                steps,
-                i,
-                frozenset({"DEVELOP PHOTORESIST", "DEVELOP PAD WINDOW"}),
-                12,
-            ))
+            and bool(
+                previous_indices_within(
+                    steps,
+                    i,
+                    frozenset({"DEVELOP PHOTORESIST", "DEVELOP PAD WINDOW"}),
+                    12,
+                )
+            )
         ),
     )
     if index is None:
@@ -458,7 +465,7 @@ def hard_RULE_LITHO_LEVEL_SKIP(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Change a real lithography level in the middle of the process to skip or
@@ -516,7 +523,7 @@ def hard_RULE_IMPLANT_NO_MASK(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Pick a real implant that currently has an opener in the prior 15 steps.
@@ -551,7 +558,7 @@ def hard_RULE_CMP_NO_DEP(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Pick a real CMP step that currently has deposition/fill in the prior 6 steps.
@@ -586,7 +593,7 @@ def hard_RULE_PAD_OPEN_BEFORE_DEP(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Move an actual pad-window step to just before CURE PASSIVATION.
@@ -597,16 +604,14 @@ def hard_RULE_PAD_OPEN_BEFORE_DEP(
         return None
 
     passivation_dep_indices = [
-        i for i, s in enumerate(steps)
+        i
+        for i, s in enumerate(steps)
         if s in {"DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER"} and i < cure_idx
     ]
     if not passivation_dep_indices:
         return None
 
-    pad_indices = [
-        i for i, s in enumerate(steps)
-        if s in PAD_WINDOW_STEPS and i > cure_idx
-    ]
+    pad_indices = [i for i, s in enumerate(steps) if s in PAD_WINDOW_STEPS and i > cure_idx]
     if not pad_indices:
         return None
 
@@ -629,7 +634,7 @@ def hard_RULE_TEST_BEFORE_PASSIVATION(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Move an actual electrical test to just before CURE PASSIVATION.
@@ -638,10 +643,7 @@ def hard_RULE_TEST_BEFORE_PASSIVATION(
     if cure_idx is None or cure_idx < min_mutation_index:
         return None
 
-    test_indices = [
-        i for i, s in enumerate(steps)
-        if s in ELECTRICAL_TEST_STEPS and i > cure_idx
-    ]
+    test_indices = [i for i, s in enumerate(steps) if s in ELECTRICAL_TEST_STEPS and i > cure_idx]
     if not test_indices:
         return None
 
@@ -664,7 +666,7 @@ def hard_RULE_SHIP_BEFORE_TEST(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Move the actual SHIP LOT step directly before WAFER SORT TEST.
@@ -695,7 +697,7 @@ def hard_RULE_BACKSIDE_BEFORE_PASSIVATION(
     family: str,
     rng: random.Random,
     min_mutation_index: int,
-) -> Optional[MutationResult]:
+) -> MutationResult | None:
     """
     Hard mutation:
     Move or insert DEPOSIT BACKSIDE METAL into the passivation region before
@@ -732,7 +734,7 @@ def hard_RULE_BACKSIDE_BEFORE_PASSIVATION(
     )
 
 
-HARD_MUTATORS: dict[str, Callable[[list[str], str, random.Random, int], Optional[MutationResult]]] = {
+HARD_MUTATORS: dict[str, Callable[[list[str], str, random.Random, int], MutationResult | None]] = {
     "RULE_DEP_NO_CLEAN": hard_RULE_DEP_NO_CLEAN,
     "RULE_METAL_ETCH_NO_LITHO": hard_RULE_METAL_ETCH_NO_LITHO,
     "RULE_ETCH_NO_MASK": hard_RULE_ETCH_NO_MASK,
@@ -749,6 +751,7 @@ HARD_MUTATORS: dict[str, Callable[[list[str], str, random.Random, int], Optional
 # ---------------------------------------------------------------------------
 # Loading valid seed data
 # ---------------------------------------------------------------------------
+
 
 def load_valid_records(paths: list[Path]) -> list[SequenceRecord]:
     records: list[SequenceRecord] = []
@@ -794,6 +797,7 @@ def load_valid_records(paths: list[Path]) -> list[SequenceRecord]:
 # ---------------------------------------------------------------------------
 # Generation
 # ---------------------------------------------------------------------------
+
 
 def generate_hard_invalid_for_rule_family(
     family: str,
@@ -967,6 +971,7 @@ def generate_hard_invalid_dataset(
 # Writers
 # ---------------------------------------------------------------------------
 
+
 def write_invalid_long_csv(
     path: Path,
     samples: list[InvalidSample],
@@ -976,46 +981,50 @@ def write_invalid_long_csv(
 
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "SEQUENCE_ID",
-            "FAMILY",
-            "STEP_INDEX",
-            "STEP",
-            "IS_VALID",
-            "VIOLATED_RULE",
-            "VALIDATOR_RULES",
-            "VALIDATOR_VIOLATION_COUNT",
-            "MUTATION_TYPE",
-            "MUTATION_INDEX",
-            "TARGET_STEP",
-            "ORIGINAL_INDEX",
-            "SPLIT",
-            "SOURCE",
-            "ORIGINAL_SEQUENCE_ID",
-        ])
+        writer.writerow(
+            [
+                "SEQUENCE_ID",
+                "FAMILY",
+                "STEP_INDEX",
+                "STEP",
+                "IS_VALID",
+                "VIOLATED_RULE",
+                "VALIDATOR_RULES",
+                "VALIDATOR_VIOLATION_COUNT",
+                "MUTATION_TYPE",
+                "MUTATION_INDEX",
+                "TARGET_STEP",
+                "ORIGINAL_INDEX",
+                "SPLIT",
+                "SOURCE",
+                "ORIGINAL_SEQUENCE_ID",
+            ]
+        )
 
         for sample in samples:
             split = stable_split(sample.sequence_id, split_seed)
             validator_rules = "|".join(sample.validator_rules)
 
             for step_index, step in enumerate(sample.steps):
-                writer.writerow([
-                    sample.sequence_id,
-                    sample.family,
-                    step_index,
-                    step,
-                    0,
-                    sample.violated_rule,
-                    validator_rules,
-                    sample.validator_violation_count,
-                    sample.mutation_type,
-                    sample.mutation_index,
-                    sample.target_step,
-                    sample.original_index,
-                    split,
-                    "hard_controlled_invalid_mutation",
-                    sample.original_sequence_id,
-                ])
+                writer.writerow(
+                    [
+                        sample.sequence_id,
+                        sample.family,
+                        step_index,
+                        step,
+                        0,
+                        sample.violated_rule,
+                        validator_rules,
+                        sample.validator_violation_count,
+                        sample.mutation_type,
+                        sample.mutation_index,
+                        sample.target_step,
+                        sample.original_index,
+                        split,
+                        "hard_controlled_invalid_mutation",
+                        sample.original_sequence_id,
+                    ]
+                )
 
 
 def write_invalid_summary_csv(
@@ -1027,38 +1036,42 @@ def write_invalid_summary_csv(
 
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "SEQUENCE_ID",
-            "FAMILY",
-            "LENGTH",
-            "IS_VALID",
-            "VIOLATED_RULE",
-            "VALIDATOR_RULES",
-            "VALIDATOR_VIOLATION_COUNT",
-            "MUTATION_TYPE",
-            "MUTATION_INDEX",
-            "TARGET_STEP",
-            "ORIGINAL_INDEX",
-            "SPLIT",
-            "ORIGINAL_SEQUENCE_ID",
-        ])
+        writer.writerow(
+            [
+                "SEQUENCE_ID",
+                "FAMILY",
+                "LENGTH",
+                "IS_VALID",
+                "VIOLATED_RULE",
+                "VALIDATOR_RULES",
+                "VALIDATOR_VIOLATION_COUNT",
+                "MUTATION_TYPE",
+                "MUTATION_INDEX",
+                "TARGET_STEP",
+                "ORIGINAL_INDEX",
+                "SPLIT",
+                "ORIGINAL_SEQUENCE_ID",
+            ]
+        )
 
         for sample in samples:
-            writer.writerow([
-                sample.sequence_id,
-                sample.family,
-                len(sample.steps),
-                0,
-                sample.violated_rule,
-                "|".join(sample.validator_rules),
-                sample.validator_violation_count,
-                sample.mutation_type,
-                sample.mutation_index,
-                sample.target_step,
-                sample.original_index,
-                stable_split(sample.sequence_id, split_seed),
-                sample.original_sequence_id,
-            ])
+            writer.writerow(
+                [
+                    sample.sequence_id,
+                    sample.family,
+                    len(sample.steps),
+                    0,
+                    sample.violated_rule,
+                    "|".join(sample.validator_rules),
+                    sample.validator_violation_count,
+                    sample.mutation_type,
+                    sample.mutation_index,
+                    sample.target_step,
+                    sample.original_index,
+                    stable_split(sample.sequence_id, split_seed),
+                    sample.original_sequence_id,
+                ]
+            )
 
 
 def write_mixed_csv(
@@ -1066,7 +1079,7 @@ def write_mixed_csv(
     valid_records: list[SequenceRecord],
     invalid_samples: list[InvalidSample],
     split_seed: int,
-    max_valid_sequences: Optional[int],
+    max_valid_sequences: int | None,
     seed: int,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1080,23 +1093,25 @@ def write_mixed_csv(
 
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "SEQUENCE_ID",
-            "FAMILY",
-            "STEP_INDEX",
-            "STEP",
-            "IS_VALID",
-            "VIOLATED_RULE",
-            "VALIDATOR_RULES",
-            "VALIDATOR_VIOLATION_COUNT",
-            "MUTATION_TYPE",
-            "MUTATION_INDEX",
-            "TARGET_STEP",
-            "ORIGINAL_INDEX",
-            "SPLIT",
-            "SOURCE",
-            "ORIGINAL_SEQUENCE_ID",
-        ])
+        writer.writerow(
+            [
+                "SEQUENCE_ID",
+                "FAMILY",
+                "STEP_INDEX",
+                "STEP",
+                "IS_VALID",
+                "VIOLATED_RULE",
+                "VALIDATOR_RULES",
+                "VALIDATOR_VIOLATION_COUNT",
+                "MUTATION_TYPE",
+                "MUTATION_INDEX",
+                "TARGET_STEP",
+                "ORIGINAL_INDEX",
+                "SPLIT",
+                "SOURCE",
+                "ORIGINAL_SEQUENCE_ID",
+            ]
+        )
 
         for record in selected_valid:
             family = infer_family(record)
@@ -1104,46 +1119,50 @@ def write_mixed_csv(
             split = stable_split(seq_id, split_seed)
 
             for step_index, step in enumerate(record.steps):
-                writer.writerow([
-                    seq_id,
-                    family,
-                    step_index,
-                    step,
-                    1,
-                    "",
-                    "",
-                    0,
-                    "",
-                    "",
-                    "",
-                    "",
-                    split,
-                    "valid_seed",
-                    record.sequence_id,
-                ])
+                writer.writerow(
+                    [
+                        seq_id,
+                        family,
+                        step_index,
+                        step,
+                        1,
+                        "",
+                        "",
+                        0,
+                        "",
+                        "",
+                        "",
+                        "",
+                        split,
+                        "valid_seed",
+                        record.sequence_id,
+                    ]
+                )
 
         for sample in invalid_samples:
             split = stable_split(sample.sequence_id, split_seed)
             validator_rules = "|".join(sample.validator_rules)
 
             for step_index, step in enumerate(sample.steps):
-                writer.writerow([
-                    sample.sequence_id,
-                    sample.family,
-                    step_index,
-                    step,
-                    0,
-                    sample.violated_rule,
-                    validator_rules,
-                    sample.validator_violation_count,
-                    sample.mutation_type,
-                    sample.mutation_index,
-                    sample.target_step,
-                    sample.original_index,
-                    split,
-                    "hard_controlled_invalid_mutation",
-                    sample.original_sequence_id,
-                ])
+                writer.writerow(
+                    [
+                        sample.sequence_id,
+                        sample.family,
+                        step_index,
+                        step,
+                        0,
+                        sample.violated_rule,
+                        validator_rules,
+                        sample.validator_violation_count,
+                        sample.mutation_type,
+                        sample.mutation_index,
+                        sample.target_step,
+                        sample.original_index,
+                        split,
+                        "hard_controlled_invalid_mutation",
+                        sample.original_sequence_id,
+                    ]
+                )
 
 
 def write_generation_stats_csv(path: Path, stats: list[RuleFamilyStats]) -> None:
@@ -1188,7 +1207,7 @@ def write_coverage_reports(
     valid_records: list[SequenceRecord],
     invalid_samples: list[InvalidSample],
     invalid_csv_path: Path,
-    mixed_csv_path: Optional[Path],
+    mixed_csv_path: Path | None,
     min_count: int,
     top_k: int,
 ) -> None:
@@ -1258,6 +1277,7 @@ def write_manifest(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -1398,7 +1418,7 @@ def main() -> None:
     invalid_summary_path = output_dir / "hard_invalid_sequence_summary.csv"
     stats_path = output_dir / "hard_invalid_generation_stats.csv"
     manifest_path = output_dir / "hard_invalid_manifest.json"
-    mixed_csv_path: Optional[Path] = None
+    mixed_csv_path: Path | None = None
 
     print("\nWriting hard invalid dataset files...")
 
@@ -1513,7 +1533,9 @@ def main() -> None:
         print("\nAll family × rule targets reached.")
 
     print("\nNext step:")
-    print("  Inspect hard_invalid_generation_stats.csv and coverage_report_mixed/coverage_report.md.")
+    print(
+        "  Inspect hard_invalid_generation_stats.csv and coverage_report_mixed/coverage_report.md."
+    )
     print("  If balanced, we move to build_task_datasets.py.")
 
 

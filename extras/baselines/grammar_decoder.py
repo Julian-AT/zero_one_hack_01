@@ -11,16 +11,13 @@ the same wrapper works on a Transformer or xLSTM at inference time.
 Outputs metrics in the same format as `trigram_baseline.py` so the report
 can show a clean side-by-side: trigram vs grammar-constrained-trigram.
 """
+
 from __future__ import annotations
 
 import argparse
-import csv
 import json
-import random
 import sys
-from collections import Counter
 from pathlib import Path
-from typing import Iterable
 
 REPO = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO / "tracks" / "industrial-infineon" / "training_data"
@@ -28,7 +25,7 @@ OUT_DIR = REPO / "extras" / "results" / "baselines"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 sys.path.insert(0, str(DATA_DIR))
-from generate_sequences import read_csv_sequences, validate_sequence  # noqa: E402
+from generate_sequences import validate_sequence  # noqa: E402
 
 # Reuse the trigram from the existing baseline.
 sys.path.insert(0, str(REPO / "extras" / "baselines"))
@@ -42,10 +39,6 @@ from trigram_baseline import (  # noqa: E402
 )
 
 
-# --------------------------------------------------------------------------- #
-# Grammar mask                                                                #
-# --------------------------------------------------------------------------- #
-
 def candidate_immediately_violates(prefix: list[str], candidate: str) -> bool:
     """True iff appending `candidate` to `prefix` introduces a NEW violation
     located at position `len(prefix)` (the just-added step).
@@ -54,7 +47,7 @@ def candidate_immediately_violates(prefix: list[str], candidate: str) -> bool:
     THIS step caused a violation right now.
     """
     if not prefix and candidate == "SHIP LOT":
-        return True   # SHIP LOT can never be first
+        return True  # SHIP LOT can never be first
     new_prefix = prefix + [candidate]
     new_idx = len(prefix)
     for v in validate_sequence(new_prefix):
@@ -117,12 +110,7 @@ def grammar_complete(
     return out
 
 
-# --------------------------------------------------------------------------- #
-# Eval                                                                        #
-# --------------------------------------------------------------------------- #
-
-def topk_metrics_grammar(model: TrigramBackoff, sequences: list[list[str]]
-                          ) -> dict[str, float]:
+def topk_metrics_grammar(model: TrigramBackoff, sequences: list[list[str]]) -> dict[str, float]:
     n = c1 = c3 = c5 = 0
     rr_sum = 0.0
     for s in sequences:
@@ -146,7 +134,7 @@ def topk_metrics_grammar(model: TrigramBackoff, sequences: list[list[str]]
         "top1": c1 / n if n else 0.0,
         "top3": c3 / n if n else 0.0,
         "top5": c5 / n if n else 0.0,
-        "mrr":  rr_sum / n if n else 0.0,
+        "mrr": rr_sum / n if n else 0.0,
     }
 
 
@@ -189,7 +177,7 @@ def truncated_completion_grammar(
         "top1_at_cut": c1 / n if n else 0.0,
         "top3_at_cut": c3 / n if n else 0.0,
         "top5_at_cut": c5 / n if n else 0.0,
-        "mrr_at_cut":  rr_sum / n if n else 0.0,
+        "mrr_at_cut": rr_sum / n if n else 0.0,
         "completion_exact_match": exact_match / n if n else 0.0,
         "completion_normalized_edit_distance": edit_sum / n if n else 0.0,
     }
@@ -206,20 +194,19 @@ def main() -> None:
 
     results: dict = {"seed": args.seed}
 
-    # ---- Build base trigram on 80% per family ----
     print("\n[1] Training trigram on 80% per family…")
     train_id, test_id = family_split(family_seqs, seed=args.seed, test_fraction=0.2)
     base = TrigramBackoff()
     base.fit(flatten(train_id))
 
-    # ---- ID: trigram vs grammar-trigram ----
     print("\n[2] In-distribution held-out: top-K (grammar-filtered)")
     m_g = topk_metrics_grammar(base, flatten(test_id))
-    print(f"    n={m_g['n']:,}  Top-1={m_g['top1']:.4f}  Top-3={m_g['top3']:.4f}  "
-          f"Top-5={m_g['top5']:.4f}  MRR={m_g['mrr']:.4f}")
+    print(
+        f"    n={m_g['n']:,}  Top-1={m_g['top1']:.4f}  Top-3={m_g['top3']:.4f}  "
+        f"Top-5={m_g['top5']:.4f}  MRR={m_g['mrr']:.4f}"
+    )
     results["id_grammar_topk"] = m_g
 
-    # ---- Truncation @ 0.6 / 0.8 with grammar ----
     print("\n[3] Truncation metrics (grammar-constrained completion)")
     results["truncation"] = {}
     for frac in (0.6, 0.8):
@@ -227,14 +214,15 @@ def main() -> None:
         per_fam = {}
         for fam, seqs in test_id.items():
             m = truncated_completion_grammar(base, seqs, frac)
-            print(f"      {fam.upper():>6}: n={m['n']:,}  "
-                  f"Top-1@cut={m['top1_at_cut']:.4f}  Top-5@cut={m['top5_at_cut']:.4f}  "
-                  f"ExactMatch={m['completion_exact_match']:.4f}  "
-                  f"NED={m['completion_normalized_edit_distance']:.4f}")
+            print(
+                f"      {fam.upper():>6}: n={m['n']:,}  "
+                f"Top-1@cut={m['top1_at_cut']:.4f}  Top-5@cut={m['top5_at_cut']:.4f}  "
+                f"ExactMatch={m['completion_exact_match']:.4f}  "
+                f"NED={m['completion_normalized_edit_distance']:.4f}"
+            )
             per_fam[fam] = m
         results["truncation"][f"{frac}"] = per_fam
 
-    # ---- LoFO with grammar mask (Task 4 proxy) ----
     print("\n[4] LoFO + grammar-constrained completion (Task 4 OOD proxy)")
     results["lofo_truncation"] = {}
     for held_out in family_seqs:
@@ -245,10 +233,12 @@ def main() -> None:
             m = truncated_completion_grammar(m_lofo, test_seqs, frac)
             key = f"{held_out}_{frac}"
             results["lofo_truncation"][key] = m
-            print(f"      held_out={held_out.upper():>6}  frac={frac}  "
-                  f"Top-1@cut={m['top1_at_cut']:.4f}  Top-5@cut={m['top5_at_cut']:.4f}  "
-                  f"ExactMatch={m['completion_exact_match']:.4f}  "
-                  f"NED={m['completion_normalized_edit_distance']:.4f}")
+            print(
+                f"      held_out={held_out.upper():>6}  frac={frac}  "
+                f"Top-1@cut={m['top1_at_cut']:.4f}  Top-5@cut={m['top5_at_cut']:.4f}  "
+                f"ExactMatch={m['completion_exact_match']:.4f}  "
+                f"NED={m['completion_normalized_edit_distance']:.4f}"
+            )
 
     out_json = OUT_DIR / "grammar_decoder_metrics.json"
     with out_json.open("w") as f:

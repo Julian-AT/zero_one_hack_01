@@ -9,37 +9,38 @@
 
 Both implement the same interface so the trainer is tokenization-agnostic.
 """
+
 from __future__ import annotations
 
 import json
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, List, Sequence
 
 from src.data.validator import read_csv_sequences
 from src.utils.paths import FAMILY_FILES
 
 # Special tokens — shared by both tokenizers (identical IDs across modes).
 SPECIAL_TOKENS = [
-    "<PAD>",        # 0
-    "<BOS>",        # 1
-    "<EOS>",        # 2
-    "<MASK>",       # 3
-    "<UNK>",        # 4
-    "<STEP>",       # 5   end-of-step delimiter (compositional only, but reserved in both)
+    "<PAD>",  # 0
+    "<BOS>",  # 1
+    "<EOS>",  # 2
+    "<MASK>",  # 3
+    "<UNK>",  # 4
+    "<STEP>",  # 5   end-of-step delimiter (compositional only, but reserved in both)
     "<FAMILY_MOSFET>",  # 6
-    "<FAMILY_IGBT>",    # 7
-    "<FAMILY_IC>",      # 8
-    "<FAMILY_UNK>",     # 9   used during family-dropout and for OOD
+    "<FAMILY_IGBT>",  # 7
+    "<FAMILY_IC>",  # 8
+    "<FAMILY_UNK>",  # 9   used during family-dropout and for OOD
 ]
 
 FAMILY_TOKEN = {
     "mosfet": "<FAMILY_MOSFET>",
-    "igbt":   "<FAMILY_IGBT>",
-    "ic":     "<FAMILY_IC>",
-    "unk":    "<FAMILY_UNK>",
+    "igbt": "<FAMILY_IGBT>",
+    "ic": "<FAMILY_IC>",
+    "unk": "<FAMILY_UNK>",
 }
 
 # Words that come from the step strings (split on whitespace + a few separators).
@@ -58,10 +59,6 @@ def split_step_to_words(step: str) -> list[str]:
     return parts
 
 
-# --------------------------------------------------------------------------- #
-# Base interface                                                              #
-# --------------------------------------------------------------------------- #
-
 @dataclass
 class BaseTokenizer(ABC):
     """Common interface for step + compositional tokenizers."""
@@ -70,26 +67,37 @@ class BaseTokenizer(ABC):
     id_to_token: list[str] = field(default_factory=list)
     mode: str = "base"  # overridden by subclass
 
-    # ---- accessors ----
     @property
-    def vocab_size(self) -> int: return len(self.id_to_token)
+    def vocab_size(self) -> int:
+        return len(self.id_to_token)
+
     @property
-    def pad_id(self) -> int:  return self.token_to_id["<PAD>"]
+    def pad_id(self) -> int:
+        return self.token_to_id["<PAD>"]
+
     @property
-    def bos_id(self) -> int:  return self.token_to_id["<BOS>"]
+    def bos_id(self) -> int:
+        return self.token_to_id["<BOS>"]
+
     @property
-    def eos_id(self) -> int:  return self.token_to_id["<EOS>"]
+    def eos_id(self) -> int:
+        return self.token_to_id["<EOS>"]
+
     @property
-    def mask_id(self) -> int: return self.token_to_id["<MASK>"]
+    def mask_id(self) -> int:
+        return self.token_to_id["<MASK>"]
+
     @property
-    def unk_id(self) -> int:  return self.token_to_id["<UNK>"]
+    def unk_id(self) -> int:
+        return self.token_to_id["<UNK>"]
+
     @property
-    def step_id(self) -> int: return self.token_to_id["<STEP>"]
+    def step_id(self) -> int:
+        return self.token_to_id["<STEP>"]
 
     def family_id(self, family: str) -> int:
         return self.token_to_id[FAMILY_TOKEN[family.lower()]]
 
-    # ---- encoding / decoding ----
     @abstractmethod
     def encode_steps(self, steps: Sequence[str]) -> list[int]: ...
     @abstractmethod
@@ -99,14 +107,13 @@ class BaseTokenizer(ABC):
         """Prepend [BOS, FAMILY] and append [EOS]."""
         return [self.bos_id, self.family_id(family), *ids, self.eos_id]
 
-    # ---- persistence ----
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w") as f:
             json.dump({"mode": self.mode, "id_to_token": self.id_to_token}, f, indent=2)
 
     @classmethod
-    def load(cls, path: Path) -> "BaseTokenizer":
+    def load(cls, path: Path) -> BaseTokenizer:
         with path.open() as f:
             data = json.load(f)
         if data["mode"] == "step":
@@ -120,10 +127,6 @@ class BaseTokenizer(ABC):
         return tok
 
 
-# --------------------------------------------------------------------------- #
-# Step-as-token tokenizer                                                     #
-# --------------------------------------------------------------------------- #
-
 @dataclass
 class StepTokenizer(BaseTokenizer):
     """Each unique step string maps to exactly one token."""
@@ -131,7 +134,7 @@ class StepTokenizer(BaseTokenizer):
     mode: str = "step"
 
     @classmethod
-    def from_variants_csvs(cls, paths: Iterable[Path] | None = None) -> "StepTokenizer":
+    def from_variants_csvs(cls, paths: Iterable[Path] | None = None) -> StepTokenizer:
         paths = list(paths) if paths is not None else list(FAMILY_FILES.values())
         steps: set[str] = set()
         for p in paths:
@@ -160,10 +163,6 @@ class StepTokenizer(BaseTokenizer):
         return out
 
 
-# --------------------------------------------------------------------------- #
-# Compositional (word-as-token) tokenizer — the OOD lever                     #
-# --------------------------------------------------------------------------- #
-
 @dataclass
 class CompositionalTokenizer(BaseTokenizer):
     """Each step is split into word tokens followed by a <STEP> delimiter.
@@ -180,7 +179,7 @@ class CompositionalTokenizer(BaseTokenizer):
     mode: str = "compositional"
 
     @classmethod
-    def from_variants_csvs(cls, paths: Iterable[Path] | None = None) -> "CompositionalTokenizer":
+    def from_variants_csvs(cls, paths: Iterable[Path] | None = None) -> CompositionalTokenizer:
         paths = list(paths) if paths is not None else list(FAMILY_FILES.values())
         words: set[str] = set()
         for p in paths:
@@ -224,10 +223,6 @@ class CompositionalTokenizer(BaseTokenizer):
         return out
 
 
-# --------------------------------------------------------------------------- #
-# Factory                                                                     #
-# --------------------------------------------------------------------------- #
-
 def build_tokenizer(mode: str) -> BaseTokenizer:
     if mode == "step":
         return StepTokenizer.from_variants_csvs()
@@ -236,19 +231,21 @@ def build_tokenizer(mode: str) -> BaseTokenizer:
     raise ValueError(f"unknown tokenization mode: {mode!r}; choose 'step' or 'compositional'")
 
 
-# --------------------------------------------------------------------------- #
-# CLI smoke test                                                              #
-# --------------------------------------------------------------------------- #
-
 if __name__ == "__main__":
     import argparse
+
     p = argparse.ArgumentParser()
     p.add_argument("--mode", choices=["step", "compositional"], default="step")
     args = p.parse_args()
     tok = build_tokenizer(args.mode)
     print(f"mode={tok.mode}  vocab_size={tok.vocab_size}")
-    sample = ["RECEIVE WAFER LOT", "LOT IDENTIFICATION", "DEPOSIT POLYSILICON",
-              "ALIGN MASK LEVEL 2", "STRIP PHOTORESIST"]
+    sample = [
+        "RECEIVE WAFER LOT",
+        "LOT IDENTIFICATION",
+        "DEPOSIT POLYSILICON",
+        "ALIGN MASK LEVEL 2",
+        "STRIP PHOTORESIST",
+    ]
     ids = tok.encode_steps(sample)
     print(f"encoded: {ids[:30]} ...")
     print(f"roundtrip: {tok.decode_to_steps(ids)}")

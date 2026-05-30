@@ -1,0 +1,99 @@
+{
+  "experiment": "exp03_neural_ranker",
+  "holdout": "none",
+  "device": "cuda",
+  "smoke": false,
+  "config": {
+    "d_model": 128,
+    "layers": 3,
+    "heads": 4,
+    "steps": 2000,
+    "epochs": 8,
+    "batch": 32,
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "role_w": 0.3,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "max_len": 256,
+    "warmup": 50,
+    "seed": 0
+  },
+  "train_metrics": {
+    "n_params": 684507,
+    "train_families": [
+      "mosfet",
+      "igbt",
+      "ic"
+    ],
+    "holdout": null,
+    "device": "cuda",
+    "steps_run": 752,
+    "epochs": 8,
+    "n_examples": 3000,
+    "final_loss": 0.3729933500289917,
+    "first_loss": 6.31953239440918,
+    "final_batch_step_acc": 0.8341538310050964,
+    "wall_sec": 10.2,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "config": {
+      "d_model": 128,
+      "layers": 3,
+      "heads": 4,
+      "steps": 2000,
+      "epochs": 8,
+      "batch": 32,
+      "lr": 0.0003,
+      "weight_decay": 0.01,
+      "role_w": 0.3,
+      "sem_w": 0.0,
+      "mask_train": false,
+      "max_len": 256,
+      "seed": 0,
+      "warmup": 50
+    }
+  },
+  "wall_sec": 523.94,
+  "comparison": {
+    "held_out": null,
+    "train": [
+      "mosfet",
+      "igbt",
+      "ic"
+    ],
+    "n_per_family": 80,
+    "neural": {
+      "id": {
+        "next-step": {
+          "top1": 0.7042,
+          "top3": 0.9958,
+          "top5": 1.0,
+          "mrr": 0.85
+        },
+        "completion": {
+          "ned": 0.2093,
+          "exact_match": 0.0083,
+          "token_acc": 0.4429,
+          "block_acc": 0.6997
+        }
+      }
+    },
+    "ppm": {
+      "id": {
+        "next-step": {
+          "top1": 0.6958,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.8441
+        },
+        "completion": {
+          "ned": 0.6114,
+          "exact_match": 0.0,
+          "token_acc": 0.3494,
+          "block_acc": 0.5926
+        }
+      }
+    }
+  }
+}

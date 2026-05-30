@@ -1,0 +1,23 @@
+# The LoFO x model-size grid driver for exp05_scaling.py.
+# `base` supplies shared defaults; `sweep` lists the axes that exp05 expands.
+base:
+  layers: 3
+  heads: 4
+  steps: 1500
+  epochs: 6
+  batch: 32
+  lr: 3.0e-4
+  weight_decay: 0.01
+  role_w: 0.3
+  sem_w: 0.0
+  mask_train: false
+  max_len: 256
+  warmup: 50
+  seed: 0
+
+sweep:
+  d_model: [64, 128, 256]
+  # data axis: each entry is a list of TRAIN families (2-family vs 3-family runs)
+  data:
+    - [mosfet, igbt]
+    - [mosfet, igbt, ic]

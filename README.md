@@ -10,11 +10,25 @@ decoder Transformer (optionally xLSTM) on it, and emits organizer-format predict
 
 ## The four tasks
 
+<<<<<<< HEAD
 1. **Next-step prediction** — given a partial sequence, rank the 5 most likely next steps.
 2. **Sequence completion** — given a partial sequence, generate the remaining suffix.
 3. **Anomaly detection** — given a full sequence, classify valid vs. invalid.
 4. **Rule attribution** — given an invalid sequence, identify which of the 10 process
    rules was violated.
+=======
+## 👉 Our submission — Industrial AI (Infineon)
+
+This repo is our team's entry for the **Industrial AI** track. Start here:
+
+- **[`REPORT.md`](./REPORT.md)** — executive summary: approach, results, final files, how to run.
+- **[`ssl_results/README.md`](./ssl_results/README.md)** — full technical write-up.
+- **[`participant_files/predictions/`](./participant_files/predictions/)** — final submission CSVs.
+
+---
+
+## Quick links
+>>>>>>> f01e5a4c56f1276157f37bc9a6dafa71f58ad107
 
 ## Repository layout
 

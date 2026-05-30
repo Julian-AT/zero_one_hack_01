@@ -4,6 +4,7 @@ Requires the `xlstm` package + CUDA + Triton; lazily imported so module load
 on CPU-only dev hosts (Mac) doesn't crash. On hosts without the library, the
 factory raises a clear error explaining the situation.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,13 +41,13 @@ def _build_xlstm_stack(cfg: XLSTMConfig) -> nn.Module:
     won't have it; that's expected. We only build the stack on CUDA hosts.
     """
     from xlstm import (
-        xLSTMBlockStack,
-        xLSTMBlockStackConfig,
+        FeedForwardConfig,
         mLSTMBlockConfig,
         mLSTMLayerConfig,
         sLSTMBlockConfig,
         sLSTMLayerConfig,
-        FeedForwardConfig,
+        xLSTMBlockStack,
+        xLSTMBlockStackConfig,
     )
 
     mlstm_cfg = mLSTMBlockConfig(
@@ -66,7 +67,6 @@ def _build_xlstm_stack(cfg: XLSTMConfig) -> nn.Module:
         feedforward=FeedForwardConfig(proj_factor=1.3, act_fn="gelu"),
     )
 
-    # Pattern → indices for slstm_at
     slstm_at = [i for i, p in enumerate(cfg.block_pattern) if p == "slstm"]
     stack_cfg = xLSTMBlockStackConfig(
         mlstm_block=mlstm_cfg,
@@ -86,7 +86,7 @@ class XLSTMModel(nn.Module):
         self.cfg = cfg
         self.embed = nn.Embedding(cfg.vocab_size, cfg.d_model)
         self.drop = nn.Dropout(cfg.dropout)
-        self.stack = _build_xlstm_stack(cfg)            # imports xlstm lazily
+        self.stack = _build_xlstm_stack(cfg)
         self.norm_out = nn.LayerNorm(cfg.d_model)
         self.lm_head = LMHead(cfg.d_model, cfg.vocab_size, tied_embedding=self.embed)
 
@@ -97,10 +97,11 @@ class XLSTMModel(nn.Module):
 
         nn.init.normal_(self.embed.weight, mean=0.0, std=0.02)
 
-    def forward(self, input_ids: torch.Tensor, attn_mask: torch.Tensor | None = None,
-                **kwargs) -> dict[str, torch.Tensor]:
-        x = self.drop(self.embed(input_ids))            # [B, L, D]
-        x = self.stack(x)                                # [B, L, D]
+    def forward(
+        self, input_ids: torch.Tensor, attn_mask: torch.Tensor | None = None, **kwargs
+    ) -> dict[str, torch.Tensor]:
+        x = self.drop(self.embed(input_ids))
+        x = self.stack(x)
         x = self.norm_out(x)
         lm_logits = self.lm_head(x)
         out: dict[str, torch.Tensor] = {"lm_logits": lm_logits, "hidden": x}
@@ -119,8 +120,9 @@ class XLSTMModel(nn.Module):
         return sum(p.numel() for p in self.parameters())
 
 
-def build_xlstm(model_cfg: dict, vocab_size: int,
-                  enable_multitask_heads: bool = False) -> XLSTMModel:
+def build_xlstm(
+    model_cfg: dict, vocab_size: int, enable_multitask_heads: bool = False
+) -> XLSTMModel:
     mlstm = model_cfg.get("mlstm", {})
     slstm = model_cfg.get("slstm", {})
     cfg = XLSTMConfig(

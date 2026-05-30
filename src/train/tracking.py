@@ -7,6 +7,7 @@ W&B is enabled if:
 
 If anything fails, we fall back silently to TB-only and log a warning.
 """
+
 from __future__ import annotations
 
 import logging
@@ -47,7 +48,6 @@ class Tracker:
         except ImportError:
             logger.info("wandb not installed; falling back to TB only.")
             return
-        # Opportunistic: only if API key present
         has_key = bool(os.environ.get("WANDB_API_KEY")) or Path("~/.netrc").expanduser().exists()
         if self.cfg.wandb_mode == "opportunistic" and not has_key:
             logger.info("W&B opportunistic mode: no API key found; TB only.")
@@ -57,8 +57,11 @@ class Tracker:
                 project=self.cfg.wandb_project,
                 entity=self.cfg.wandb_entity,
                 name=self.cfg.run_name,
-                mode="online" if self.cfg.wandb_mode == "online" else "offline"
-                     if self.cfg.wandb_mode == "offline" else "online",
+                mode="online"
+                if self.cfg.wandb_mode == "online"
+                else "offline"
+                if self.cfg.wandb_mode == "offline"
+                else "online",
                 reinit=True,
             )
         except Exception as e:
@@ -80,12 +83,14 @@ class Tracker:
         if self.wandb_run is not None:
             try:
                 import wandb
+
                 self.wandb_run.log({tag: wandb.Html(f"<pre>{text}</pre>")}, step=step)
             except Exception:
                 pass
 
     def log_config(self, cfg: dict[str, Any]) -> None:
         import json
+
         text = json.dumps(cfg, indent=2, default=str)
         self.writer.add_text("config", text, 0)
         if self.wandb_run is not None:

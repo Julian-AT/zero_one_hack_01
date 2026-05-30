@@ -1,5 +1,8 @@
 # Self-Supervised Process Transformer — Results and Eval Pipeline
 
+> This is the **detailed technical write-up**. For the concise executive summary (and the
+> document the jury reads first), see the root [`REPORT.md`](../REPORT.md).
+
 ## TL;DR
 
 We built a complete synthetic semiconductor process-sequence learning pipeline for the Industrial Infineon hackathon task.
@@ -619,13 +622,17 @@ If it hurts internal Top-1:
     keep the previous predictions_nextstep.csv
 ```
 
-The active final next-step file remains:
+**Outcome: the learned reranker improved internal metrics, so it was adopted.** On the held-out
+test split it raised Top-1 from 0.7993 to **0.8044** (+0.0052) and MRR from 0.8947 to **0.8979**
+(+0.0033), with consistent gains on validation. The active next-step file is therefore the
+learned-reranked output:
 
 ```text
 participant_files/predictions/predictions_nextstep.csv
+  == participant_files/predictions/predictions_nextstep_learned_reranked.csv  (byte-identical)
 ```
 
-Only the active file should be submitted.
+Only this active file should be submitted.
 
 ---
 

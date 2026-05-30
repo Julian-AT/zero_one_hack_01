@@ -15,14 +15,13 @@ import argparse
 import csv
 import random
 import sys
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "training_data"))
 
 from generate_sequences import generate_dataset, validate_sequence  # noqa: E402
-
 
 FAMILIES = ["mosfet", "igbt", "ic"]
 
@@ -40,69 +39,122 @@ RULES = [
 ]
 
 CLEAN_STEPS = {
-    "PRE CLEAN WAFER", "WAFER CLEAN PRE PROCESS", "WAFER SURFACE CLEAN",
-    "RCA CLEAN 1", "RCA CLEAN 2", "WET CLEAN RCA1", "WET CLEAN RCA2",
-    "HF DIP", "OXIDE STRIP", "SURFACE PREP FOR DEPOSITION",
-    "FRONTSIDE CLEAN", "BACKSIDE CLEAN", "FRONTSIDE CLEAN FINAL",
-    "BACKSIDE CLEAN FINAL", "WAFER CLEAN PRE-GRIND",
-    "DRY WAFER", "DRY WAFER BACKSIDE",
-    "CLEAN AFTER ETCH", "CLEAN AFTER OXIDE ETCH", "CLEAN AFTER POLY ETCH",
-    "CLEAN AFTER VIA ETCH", "CLEAN AFTER METAL ETCH",
-    "CLEAN AFTER WINDOW ETCH", "CLEAN AFTER FIELD ETCH",
-    "CLEAN PAD OPENING", "BACKSIDE ETCH CLEAN", "BACKSIDE RINSE",
-    "THERMAL OXIDATION", "GATE OXIDE PREP", "RAPID THERMAL ANNEAL",
-    "EPITAXY ANNEAL", "ANNEAL OXIDE",
+    "PRE CLEAN WAFER",
+    "WAFER CLEAN PRE PROCESS",
+    "WAFER SURFACE CLEAN",
+    "RCA CLEAN 1",
+    "RCA CLEAN 2",
+    "WET CLEAN RCA1",
+    "WET CLEAN RCA2",
+    "HF DIP",
+    "OXIDE STRIP",
+    "SURFACE PREP FOR DEPOSITION",
+    "FRONTSIDE CLEAN",
+    "BACKSIDE CLEAN",
+    "FRONTSIDE CLEAN FINAL",
+    "BACKSIDE CLEAN FINAL",
+    "WAFER CLEAN PRE-GRIND",
+    "DRY WAFER",
+    "DRY WAFER BACKSIDE",
+    "CLEAN AFTER ETCH",
+    "CLEAN AFTER OXIDE ETCH",
+    "CLEAN AFTER POLY ETCH",
+    "CLEAN AFTER VIA ETCH",
+    "CLEAN AFTER METAL ETCH",
+    "CLEAN AFTER WINDOW ETCH",
+    "CLEAN AFTER FIELD ETCH",
+    "CLEAN PAD OPENING",
+    "BACKSIDE ETCH CLEAN",
+    "BACKSIDE RINSE",
+    "THERMAL OXIDATION",
+    "GATE OXIDE PREP",
+    "RAPID THERMAL ANNEAL",
+    "EPITAXY ANNEAL",
+    "ANNEAL OXIDE",
 }
 
 DEPOSITION_STEPS = {
-    "THERMAL OXIDATION", "GATE OXIDE GROWTH", "DEPOSIT PAD OXIDE",
-    "EPITAXIAL DEPOSITION", "DEPOSIT POLYSILICON",
-    "DEPOSIT SPACER DIELECTRIC", "DEPOSIT FIELD OXIDE",
+    "THERMAL OXIDATION",
+    "GATE OXIDE GROWTH",
+    "DEPOSIT PAD OXIDE",
+    "EPITAXIAL DEPOSITION",
+    "DEPOSIT POLYSILICON",
+    "DEPOSIT SPACER DIELECTRIC",
+    "DEPOSIT FIELD OXIDE",
     "DEPOSIT GATE OXIDE OR DIELECTRIC",
-    "DEPOSIT INTERLAYER DIELECTRIC", "DEPOSIT INTERLEVEL DIELECTRIC",
-    "DEPOSIT BARRIER METAL", "DEPOSIT METAL SEED", "DEPOSIT METAL 1",
-    "DEPOSIT TOP METAL", "DEPOSIT BACKSIDE METAL",
-    "DEPOSIT TUNGSTEN SEED", "DEPOSIT PASSIVATION",
-    "DEPOSIT PASSIVATION LAYER", "DEPOSIT BACKSIDE PROTECTION",
+    "DEPOSIT INTERLAYER DIELECTRIC",
+    "DEPOSIT INTERLEVEL DIELECTRIC",
+    "DEPOSIT BARRIER METAL",
+    "DEPOSIT METAL SEED",
+    "DEPOSIT METAL 1",
+    "DEPOSIT TOP METAL",
+    "DEPOSIT BACKSIDE METAL",
+    "DEPOSIT TUNGSTEN SEED",
+    "DEPOSIT PASSIVATION",
+    "DEPOSIT PASSIVATION LAYER",
+    "DEPOSIT BACKSIDE PROTECTION",
 }
 
 ETCH_STEPS = {
-    "OXIDE ETCH", "OXIDE ETCH DRY",
-    "POLYSILICON ETCH", "POLYSILICON ETCH DRY",
-    "ETCH SILICON OR OXIDE WINDOW", "FIELD OXIDE ETCH",
-    "VIA ETCH", "VIA ETCH THROUGH DIELECTRIC", "DIELECTRIC ETCH VIA",
-    "METAL ETCH", "METAL ETCH DRY",
-    "PASSIVATION ETCH PAD OPENING", "PASSIVATION ETCH",
+    "OXIDE ETCH",
+    "OXIDE ETCH DRY",
+    "POLYSILICON ETCH",
+    "POLYSILICON ETCH DRY",
+    "ETCH SILICON OR OXIDE WINDOW",
+    "FIELD OXIDE ETCH",
+    "VIA ETCH",
+    "VIA ETCH THROUGH DIELECTRIC",
+    "DIELECTRIC ETCH VIA",
+    "METAL ETCH",
+    "METAL ETCH DRY",
+    "PASSIVATION ETCH PAD OPENING",
+    "PASSIVATION ETCH",
 }
 
 METAL_ETCH_STEPS = {"METAL ETCH", "METAL ETCH DRY"}
 
 IMPLANT_STEPS = {
-    "IMPLANT WELL", "IMPLANT SOURCE DRAIN", "IMPLANT SOURCE REGION",
-    "IMPLANT LDD", "IMPLANT P BODY", "IMPLANT N BUFFER",
-    "IMPLANT CHANNEL STOP", "IMPLANT DRAIN / CATHODE REGION", "IMPLANT N-TYPE",
+    "IMPLANT WELL",
+    "IMPLANT SOURCE DRAIN",
+    "IMPLANT SOURCE REGION",
+    "IMPLANT LDD",
+    "IMPLANT P BODY",
+    "IMPLANT N BUFFER",
+    "IMPLANT CHANNEL STOP",
+    "IMPLANT DRAIN / CATHODE REGION",
+    "IMPLANT N-TYPE",
 }
 
 IMPLANT_OPENER_STEPS = {
-    "OXIDE ETCH", "OXIDE ETCH DRY", "ETCH SILICON OR OXIDE WINDOW",
+    "OXIDE ETCH",
+    "OXIDE ETCH DRY",
+    "ETCH SILICON OR OXIDE WINDOW",
     "DEVELOP PHOTORESIST",
 }
 
 CMP_STEPS = {
-    "CMP DIELECTRIC", "CMP INTERLAYER DIELECTRIC", "CMP METAL", "CMP VIA FILL",
+    "CMP DIELECTRIC",
+    "CMP INTERLAYER DIELECTRIC",
+    "CMP METAL",
+    "CMP VIA FILL",
 }
 
 FILL_OR_DEP_STEPS = {"FILL VIA METAL", "FILL VIA TUNGSTEN"} | DEPOSITION_STEPS
 
 PAD_WINDOW_STEPS = {
-    "OPEN PAD WINDOW", "OPEN BOND PAD WINDOW",
-    "PAD WINDOW LITHO", "OPEN PAD WINDOW LITHO",
+    "OPEN PAD WINDOW",
+    "OPEN BOND PAD WINDOW",
+    "PAD WINDOW LITHO",
+    "OPEN PAD WINDOW LITHO",
 }
 
 ELECTRICAL_TEST_STEPS = {
-    "PARAMETRIC TEST", "ELECTRICAL PARAMETRIC TEST",
-    "THRESHOLD VOLTAGE TEST", "BREAKDOWN VOLTAGE TEST",
-    "LEAKAGE TEST", "SWITCHING TEST",
+    "PARAMETRIC TEST",
+    "ELECTRICAL PARAMETRIC TEST",
+    "THRESHOLD VOLTAGE TEST",
+    "BREAKDOWN VOLTAGE TEST",
+    "LEAKAGE TEST",
+    "SWITCHING TEST",
 }
 
 
@@ -160,7 +212,12 @@ def corrupt_once(seq, target_rule, rng):
             return None, "failed"
         idx = rng.choice(idxs)
         out = remove_prior_targets(seq, idx, {"DEVELOP PHOTORESIST", "DEVELOP PAD WINDOW"}, 15)
-        out = remove_prior_targets(out, min(idx, len(out)-1), set([s for s in out if s.startswith("EXPOSE LITHO LEVEL")]), 15)
+        out = remove_prior_targets(
+            out,
+            min(idx, len(out) - 1),
+            set([s for s in out if s.startswith("EXPOSE LITHO LEVEL")]),
+            15,
+        )
         return out, "remove_litho_before_metal_etch"
 
     if target_rule == "RULE_ETCH_NO_MASK":
@@ -201,7 +258,9 @@ def corrupt_once(seq, target_rule, rng):
 
     if target_rule == "RULE_PAD_OPEN_BEFORE_DEP":
         pad_idx = first_idx(seq, lambda s: s in PAD_WINDOW_STEPS)
-        dep_idx = first_idx(seq, lambda s: s in {"DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER"})
+        dep_idx = first_idx(
+            seq, lambda s: s in {"DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER"}
+        )
         out = move_step_before(seq, pad_idx, dep_idx)
         return out, "move_pad_window_before_passivation"
 
@@ -242,19 +301,24 @@ def make_single_rule_invalid(base_sequences, family, rule, n, rng, max_attempts_
         if rule not in detected:
             continue
 
-        rows.append({
-            "FAMILY": family.upper(),
-            "SEQUENCE": "|".join(bad),
-            "IS_VALID": 0,
-            "RULE_LABELS": ";".join(detected),
-            "PRIMARY_RULE": rule,
-            "NUM_VIOLATIONS": len(detected),
-            "CORRUPTION_TYPE": corruption_type,
-            "BASE_SEQUENCE_ID": base_id,
-        })
+        rows.append(
+            {
+                "FAMILY": family.upper(),
+                "SEQUENCE": "|".join(bad),
+                "IS_VALID": 0,
+                "RULE_LABELS": ";".join(detected),
+                "PRIMARY_RULE": rule,
+                "NUM_VIOLATIONS": len(detected),
+                "CORRUPTION_TYPE": corruption_type,
+                "BASE_SEQUENCE_ID": base_id,
+            }
+        )
 
     if len(rows) < n:
-        print(f"[WARN] {family} {rule}: only produced {len(rows)}/{n} examples after {attempts} attempts", file=sys.stderr)
+        print(
+            f"[WARN] {family} {rule}: only produced {len(rows)}/{n} examples after {attempts} attempts",
+            file=sys.stderr,
+        )
 
     return rows
 
@@ -281,19 +345,24 @@ def make_multi_rule_invalid(base_sequences, family, n, rng):
         if len(detected) < 2:
             continue
 
-        rows.append({
-            "FAMILY": family.upper(),
-            "SEQUENCE": "|".join(bad),
-            "IS_VALID": 0,
-            "RULE_LABELS": ";".join(detected),
-            "PRIMARY_RULE": detected[0],
-            "NUM_VIOLATIONS": len(detected),
-            "CORRUPTION_TYPE": "+".join(corruptions),
-            "BASE_SEQUENCE_ID": base_id,
-        })
+        rows.append(
+            {
+                "FAMILY": family.upper(),
+                "SEQUENCE": "|".join(bad),
+                "IS_VALID": 0,
+                "RULE_LABELS": ";".join(detected),
+                "PRIMARY_RULE": detected[0],
+                "NUM_VIOLATIONS": len(detected),
+                "CORRUPTION_TYPE": "+".join(corruptions),
+                "BASE_SEQUENCE_ID": base_id,
+            }
+        )
 
     if len(rows) < n:
-        print(f"[WARN] {family} multi-rule: only produced {len(rows)}/{n} examples after {attempts} attempts", file=sys.stderr)
+        print(
+            f"[WARN] {family} multi-rule: only produced {len(rows)}/{n} examples after {attempts} attempts",
+            file=sys.stderr,
+        )
 
     return rows
 
@@ -301,9 +370,15 @@ def make_multi_rule_invalid(base_sequences, family, n, rng):
 def write_rows(path, rows):
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = [
-        "EXAMPLE_ID", "FAMILY", "SEQUENCE", "IS_VALID",
-        "RULE_LABELS", "PRIMARY_RULE", "NUM_VIOLATIONS",
-        "CORRUPTION_TYPE", "BASE_SEQUENCE_ID",
+        "EXAMPLE_ID",
+        "FAMILY",
+        "SEQUENCE",
+        "IS_VALID",
+        "RULE_LABELS",
+        "PRIMARY_RULE",
+        "NUM_VIOLATIONS",
+        "CORRUPTION_TYPE",
+        "BASE_SEQUENCE_ID",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
@@ -371,16 +446,18 @@ def main():
             detected = rules_of(seq)
             if detected:
                 raise RuntimeError(f"Generated invalid valid-sequence {sid}: {detected}")
-            all_rows.append({
-                "FAMILY": family.upper(),
-                "SEQUENCE": "|".join(seq),
-                "IS_VALID": 1,
-                "RULE_LABELS": "",
-                "PRIMARY_RULE": "",
-                "NUM_VIOLATIONS": 0,
-                "CORRUPTION_TYPE": "none",
-                "BASE_SEQUENCE_ID": sid,
-            })
+            all_rows.append(
+                {
+                    "FAMILY": family.upper(),
+                    "SEQUENCE": "|".join(seq),
+                    "IS_VALID": 1,
+                    "RULE_LABELS": "",
+                    "PRIMARY_RULE": "",
+                    "NUM_VIOLATIONS": 0,
+                    "CORRUPTION_TYPE": "none",
+                    "BASE_SEQUENCE_ID": sid,
+                }
+            )
 
     print("[2/3] Generating single-rule invalid sequences...")
     for family in FAMILIES:

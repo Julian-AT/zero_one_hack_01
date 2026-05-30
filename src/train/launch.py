@@ -9,12 +9,12 @@ Usage:
 
 Reads, merges via OmegaConf, runs `src.train.trainer.train()`.
 """
+
 from __future__ import annotations
 
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from omegaconf import OmegaConf
 
@@ -29,16 +29,28 @@ logging.basicConfig(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Launch a training cell.")
-    parser.add_argument("--arch-config", required=True,
-                        help="YAML with arch + model settings")
-    parser.add_argument("--train-config", default="configs/train/default.yaml",
-                        help="YAML with train/data/loss/tracking settings")
-    parser.add_argument("--token-config", default="configs/token/compositional.yaml",
-                        help="YAML with tokenization mode")
-    parser.add_argument("--run-name", default=None,
-                        help="Run identifier (default: derived from configs + timestamp)")
-    parser.add_argument("--override", nargs="*", default=[],
-                        help="OmegaConf-style overrides, e.g. train.max_steps=100")
+    parser.add_argument("--arch-config", required=True, help="YAML with arch + model settings")
+    parser.add_argument(
+        "--train-config",
+        default="configs/train/default.yaml",
+        help="YAML with train/data/loss/tracking settings",
+    )
+    parser.add_argument(
+        "--token-config",
+        default="configs/token/compositional.yaml",
+        help="YAML with tokenization mode",
+    )
+    parser.add_argument(
+        "--run-name",
+        default=None,
+        help="Run identifier (default: derived from configs + timestamp)",
+    )
+    parser.add_argument(
+        "--override",
+        nargs="*",
+        default=[],
+        help="OmegaConf-style overrides, e.g. train.max_steps=100",
+    )
     args = parser.parse_args()
 
     arch_cfg = OmegaConf.load(args.arch_config)

@@ -1,0 +1,69 @@
+{
+  "splits": [
+    {
+      "held_out": "mosfet",
+      "train": [
+        "igbt",
+        "ic"
+      ],
+      "id": {
+        "next-step": {
+          "top1": 0.6875,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.8438
+        },
+        "completion": {
+          "ned": 0.8657,
+          "exact_match": 0.0,
+          "token_acc": 0.2676,
+          "block_acc": 0.533
+        }
+      },
+      "ood": {
+        "next-step": {
+          "top1": 0.5,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.75
+        },
+        "completion": {
+          "ned": 0.7934,
+          "exact_match": 0.0,
+          "token_acc": 0.1955,
+          "block_acc": 0.7344
+        }
+      },
+      "drop": {
+        "next-step": {
+          "top1": 0.1875,
+          "top3": 0.0,
+          "top5": 0.0,
+          "mrr": 0.0938
+        },
+        "completion": {
+          "ned": 0.07230000000000003,
+          "exact_match": 0.0,
+          "token_acc": 0.0721,
+          "block_acc": -0.20140000000000002
+        }
+      }
+    }
+  ],
+  "mean_drop": {
+    "next-step": {
+      "top1": 0.1875,
+      "top3": 0.0,
+      "top5": 0.0,
+      "mrr": 0.0938
+    },
+    "completion": {
+      "ned": 0.07230000000000003,
+      "exact_match": 0.0,
+      "token_acc": 0.0721,
+      "block_acc": -0.20140000000000002
+    }
+  },
+  "n_per_family": 8,
+  "smoke": true
+}
