@@ -1,0 +1,17 @@
+# ~1M-param constrained neural ranker (CPU-friendly smoke / debug config).
+# Keys mirror nspe.model.DEFAULT_CONFIG; the experiment scripts merge this over
+# the model defaults, so only overrides need to be listed.
+d_model: 64
+layers: 2
+heads: 2
+steps: 800
+epochs: 6
+batch: 32
+lr: 3.0e-4
+weight_decay: 0.01
+role_w: 0.3
+sem_w: 0.0
+mask_train: false
+max_len: 256
+warmup: 50
+seed: 0
