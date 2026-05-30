@@ -7,11 +7,14 @@
 #
 # Sub-commands (positional):
 #   probe          – verify SSH key works (installs key if needed)
-#   bootstrap      – clone/pull the repo at $SCRATCH and run setup_env.sh
+#   bootstrap      – rsync the repo to $SCRATCH and run setup_env.sh
 #   smoke          – submit a tiny transformer_small / 100-step job
 #   grid           – submit the full 7-cell scaling grid array
 #   status         – `squeue --me`
 #   tail JOBID     – tail the slurm log for a job id
+#   run "cmd"      – run arbitrary command on Leonardo
+#   pull-light     – rsync extras/logs + extras/results (no .pt) from $SCRATCH
+#   pull           – full rsync of extras/ including checkpoints
 #
 # Usage:
 #   bash scripts/leonardo/deploy.sh probe
@@ -210,6 +213,44 @@ run_cmd() {
     leo "$*"
 }
 
+# Resolve remote SCRATCH once for pull commands.
+_remote_scratch() { leo 'echo $SCRATCH'; }
+
+pull_light_cmd() {
+    # Fast pull: just logs + summaries + result CSVs, no model .pt files.
+    # Safe to run every few minutes during a long grid run.
+    local remote_scratch
+    remote_scratch="$(_remote_scratch)"
+    local remote_dir="${remote_scratch}/zero_one_hack_01"
+    echo "[leo] pulling logs + results (no .pt files) → ${REPO_ROOT}/extras/"
+    rsync -avz \
+          -e "ssh -i ${LEO_KEY} -o BatchMode=yes" \
+          --include='extras/' \
+          --include='extras/logs/***' \
+          --include='extras/results/***' \
+          --include='extras/checkpoints/' \
+          --include='extras/checkpoints/*/' \
+          --include='extras/checkpoints/*/summary.json' \
+          --include='extras/checkpoints/*/*.txt' \
+          --exclude='*.pt' \
+          --exclude='*.safetensors' \
+          --exclude='*.bin' \
+          --exclude='*' \
+          "${Username}@${LEO_HOST}:${remote_dir}/" "${REPO_ROOT}/"
+}
+
+pull_cmd() {
+    # Full pull: includes the .pt checkpoints. Heavier.
+    local remote_scratch
+    remote_scratch="$(_remote_scratch)"
+    local remote_dir="${remote_scratch}/zero_one_hack_01"
+    echo "[leo] pulling extras/ (logs + results + checkpoints) → ${REPO_ROOT}/extras/"
+    mkdir -p "${REPO_ROOT}/extras"
+    rsync -avz --progress \
+          -e "ssh -i ${LEO_KEY} -o BatchMode=yes" \
+          "${Username}@${LEO_HOST}:${remote_dir}/extras/" "${REPO_ROOT}/extras/"
+}
+
 # ---------- 5. Dispatch -------------------------------------------------
 
 case "${1:-default}" in
@@ -220,6 +261,8 @@ case "${1:-default}" in
     status)     status_cmd ;;
     tail)       shift; tail_cmd "$@" ;;
     run)        shift; run_cmd "$@" ;;
+    pull)       pull_cmd ;;
+    pull-light) pull_light_cmd ;;
     default|"") probe_cmd; bootstrap_cmd ;;
     *)
         echo "Unknown command: $1" >&2
