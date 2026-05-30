@@ -1,0 +1,956 @@
+{
+  "experiments": [
+    "exp03_ic.json",
+    "exp03_igbt.json",
+    "exp03_mosfet.json",
+    "exp03_none.json",
+    "exp04.json",
+    "exp05.json"
+  ],
+  "exp03": [
+    "ic",
+    "igbt",
+    "mosfet",
+    "none"
+  ],
+  "n_exp05_cells": 6,
+  "n_exp04_cells": 4,
+  "merged": {
+    "exp03_ic.json": {
+      "experiment": "exp03_neural_ranker",
+      "holdout": "ic",
+      "device": "cuda",
+      "smoke": false,
+      "config": {
+        "d_model": 128,
+        "layers": 3,
+        "heads": 4,
+        "steps": 2000,
+        "epochs": 8,
+        "batch": 32,
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "role_w": 0.3,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "max_len": 256,
+        "warmup": 50,
+        "seed": 0
+      },
+      "train_metrics": {
+        "n_params": 676926,
+        "train_families": [
+          "mosfet",
+          "igbt"
+        ],
+        "holdout": "ic",
+        "device": "cuda",
+        "steps_run": 504,
+        "epochs": 8,
+        "n_examples": 2000,
+        "final_loss": 0.39513155817985535,
+        "first_loss": 6.248391151428223,
+        "final_batch_step_acc": 0.8193812370300293,
+        "wall_sec": 7.27,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "config": {
+          "d_model": 128,
+          "layers": 3,
+          "heads": 4,
+          "steps": 2000,
+          "epochs": 8,
+          "batch": 32,
+          "lr": 0.0003,
+          "weight_decay": 0.01,
+          "role_w": 0.3,
+          "sem_w": 0.0,
+          "mask_train": false,
+          "max_len": 256,
+          "seed": 0,
+          "warmup": 50
+        }
+      },
+      "wall_sec": 468.14,
+      "comparison": {
+        "held_out": "ic",
+        "train": [
+          "mosfet",
+          "igbt"
+        ],
+        "n_per_family": 80,
+        "neural": {
+          "id": {
+            "next-step": {
+              "top1": 0.7531,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.876
+            },
+            "completion": {
+              "ned": 0.1851,
+              "exact_match": 0.0125,
+              "token_acc": 0.491,
+              "block_acc": 0.7176
+            }
+          },
+          "ood": {
+            "next-step": {
+              "top1": 0.625,
+              "top3": 0.9437,
+              "top5": 0.9688,
+              "mrr": 0.7896
+            },
+            "completion": {
+              "ned": 0.4638,
+              "exact_match": 0.0,
+              "token_acc": 0.1839,
+              "block_acc": 0.4091
+            }
+          },
+          "drop": {
+            "next-step": {
+              "top1": 0.1281,
+              "top3": 0.05630000000000002,
+              "top5": 0.031200000000000006,
+              "mrr": 0.08640000000000003
+            },
+            "completion": {
+              "ned": -0.2787,
+              "exact_match": 0.0125,
+              "token_acc": 0.3071,
+              "block_acc": 0.3085
+            }
+          }
+        },
+        "ppm": {
+          "id": {
+            "next-step": {
+              "top1": 0.7281,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.8589
+            },
+            "completion": {
+              "ned": 0.5169,
+              "exact_match": 0.0,
+              "token_acc": 0.4204,
+              "block_acc": 0.6317
+            }
+          },
+          "ood": {
+            "next-step": {
+              "top1": 0.625,
+              "top3": 0.9625,
+              "top5": 0.9688,
+              "mrr": 0.7922
+            },
+            "completion": {
+              "ned": 0.9169,
+              "exact_match": 0.0,
+              "token_acc": 0.1529,
+              "block_acc": 0.3983
+            }
+          },
+          "drop": {
+            "next-step": {
+              "top1": 0.10309999999999997,
+              "top3": 0.03749999999999998,
+              "top5": 0.031200000000000006,
+              "mrr": 0.06669999999999998
+            },
+            "completion": {
+              "ned": -0.4,
+              "exact_match": 0.0,
+              "token_acc": 0.26749999999999996,
+              "block_acc": 0.23340000000000005
+            }
+          }
+        }
+      }
+    },
+    "exp03_igbt.json": {
+      "experiment": "exp03_neural_ranker",
+      "holdout": "igbt",
+      "device": "cuda",
+      "smoke": false,
+      "config": {
+        "d_model": 128,
+        "layers": 3,
+        "heads": 4,
+        "steps": 2000,
+        "epochs": 8,
+        "batch": 32,
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "role_w": 0.3,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "max_len": 256,
+        "warmup": 50,
+        "seed": 0
+      },
+      "train_metrics": {
+        "n_params": 677440,
+        "train_families": [
+          "mosfet",
+          "ic"
+        ],
+        "holdout": "igbt",
+        "device": "cuda",
+        "steps_run": 504,
+        "epochs": 8,
+        "n_examples": 2000,
+        "final_loss": 0.4151952564716339,
+        "first_loss": 6.290508270263672,
+        "final_batch_step_acc": 0.8102114796638489,
+        "wall_sec": 6.9,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "config": {
+          "d_model": 128,
+          "layers": 3,
+          "heads": 4,
+          "steps": 2000,
+          "epochs": 8,
+          "batch": 32,
+          "lr": 0.0003,
+          "weight_decay": 0.01,
+          "role_w": 0.3,
+          "sem_w": 0.0,
+          "mask_train": false,
+          "max_len": 256,
+          "seed": 0,
+          "warmup": 50
+        }
+      },
+      "wall_sec": 411.01,
+      "comparison": {
+        "held_out": "igbt",
+        "train": [
+          "mosfet",
+          "ic"
+        ],
+        "n_per_family": 80,
+        "neural": {
+          "id": {
+            "next-step": {
+              "top1": 0.6875,
+              "top3": 0.9969,
+              "top5": 1.0,
+              "mrr": 0.8424
+            },
+            "completion": {
+              "ned": 0.2051,
+              "exact_match": 0.0031,
+              "token_acc": 0.4193,
+              "block_acc": 0.7183
+            }
+          },
+          "ood": {
+            "next-step": {
+              "top1": 0.7188,
+              "top3": 0.9625,
+              "top5": 0.9625,
+              "mrr": 0.8406
+            },
+            "completion": {
+              "ned": 0.3704,
+              "exact_match": 0.0,
+              "token_acc": 0.1628,
+              "block_acc": 0.6115
+            }
+          },
+          "drop": {
+            "next-step": {
+              "top1": -0.031299999999999994,
+              "top3": 0.034399999999999986,
+              "top5": 0.03749999999999998,
+              "mrr": 0.0018000000000000238
+            },
+            "completion": {
+              "ned": -0.1653,
+              "exact_match": 0.0031,
+              "token_acc": 0.2565,
+              "block_acc": 0.1068
+            }
+          }
+        },
+        "ppm": {
+          "id": {
+            "next-step": {
+              "top1": 0.6875,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.8432
+            },
+            "completion": {
+              "ned": 0.4828,
+              "exact_match": 0.0,
+              "token_acc": 0.3686,
+              "block_acc": 0.6128
+            }
+          },
+          "ood": {
+            "next-step": {
+              "top1": 0.675,
+              "top3": 0.9625,
+              "top5": 0.9625,
+              "mrr": 0.8115
+            },
+            "completion": {
+              "ned": 0.6238,
+              "exact_match": 0.0,
+              "token_acc": 0.1204,
+              "block_acc": 0.583
+            }
+          },
+          "drop": {
+            "next-step": {
+              "top1": 0.012499999999999956,
+              "top3": 0.03749999999999998,
+              "top5": 0.03749999999999998,
+              "mrr": 0.03169999999999995
+            },
+            "completion": {
+              "ned": -0.14100000000000001,
+              "exact_match": 0.0,
+              "token_acc": 0.24819999999999998,
+              "block_acc": 0.02980000000000005
+            }
+          }
+        }
+      }
+    },
+    "exp03_mosfet.json": {
+      "experiment": "exp03_neural_ranker",
+      "holdout": "mosfet",
+      "device": "cuda",
+      "smoke": false,
+      "config": {
+        "d_model": 128,
+        "layers": 3,
+        "heads": 4,
+        "steps": 2000,
+        "epochs": 8,
+        "batch": 32,
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "role_w": 0.3,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "max_len": 256,
+        "warmup": 50,
+        "seed": 0
+      },
+      "train_metrics": {
+        "n_params": 679239,
+        "train_families": [
+          "igbt",
+          "ic"
+        ],
+        "holdout": "mosfet",
+        "device": "cuda",
+        "steps_run": 504,
+        "epochs": 8,
+        "n_examples": 2000,
+        "final_loss": 0.4240955412387848,
+        "first_loss": 6.178364276885986,
+        "final_batch_step_acc": 0.8015984892845154,
+        "wall_sec": 7.18,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "config": {
+          "d_model": 128,
+          "layers": 3,
+          "heads": 4,
+          "steps": 2000,
+          "epochs": 8,
+          "batch": 32,
+          "lr": 0.0003,
+          "weight_decay": 0.01,
+          "role_w": 0.3,
+          "sem_w": 0.0,
+          "mask_train": false,
+          "max_len": 256,
+          "seed": 0,
+          "warmup": 50
+        }
+      },
+      "wall_sec": 611.35,
+      "comparison": {
+        "held_out": "mosfet",
+        "train": [
+          "igbt",
+          "ic"
+        ],
+        "n_per_family": 80,
+        "neural": {
+          "id": {
+            "next-step": {
+              "top1": 0.6469,
+              "top3": 0.9969,
+              "top5": 1.0,
+              "mrr": 0.8206
+            },
+            "completion": {
+              "ned": 0.2582,
+              "exact_match": 0.0,
+              "token_acc": 0.4076,
+              "block_acc": 0.6969
+            }
+          },
+          "ood": {
+            "next-step": {
+              "top1": 0.7,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.849
+            },
+            "completion": {
+              "ned": 0.3854,
+              "exact_match": 0.0,
+              "token_acc": 0.2125,
+              "block_acc": 0.6675
+            }
+          },
+          "drop": {
+            "next-step": {
+              "top1": -0.053099999999999925,
+              "top3": -0.0030999999999999917,
+              "top5": 0.0,
+              "mrr": -0.02839999999999998
+            },
+            "completion": {
+              "ned": -0.12720000000000004,
+              "exact_match": 0.0,
+              "token_acc": 0.19510000000000002,
+              "block_acc": 0.02939999999999998
+            }
+          }
+        },
+        "ppm": {
+          "id": {
+            "next-step": {
+              "top1": 0.6719,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.8302
+            },
+            "completion": {
+              "ned": 0.8345,
+              "exact_match": 0.0,
+              "token_acc": 0.2594,
+              "block_acc": 0.5333
+            }
+          },
+          "ood": {
+            "next-step": {
+              "top1": 0.675,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.8375
+            },
+            "completion": {
+              "ned": 0.8052,
+              "exact_match": 0.0,
+              "token_acc": 0.2175,
+              "block_acc": 0.7114
+            }
+          },
+          "drop": {
+            "next-step": {
+              "top1": -0.0030999999999999917,
+              "top3": 0.0,
+              "top5": 0.0,
+              "mrr": -0.007299999999999973
+            },
+            "completion": {
+              "ned": 0.029299999999999993,
+              "exact_match": 0.0,
+              "token_acc": 0.04190000000000002,
+              "block_acc": -0.17810000000000004
+            }
+          }
+        }
+      }
+    },
+    "exp03_none.json": {
+      "experiment": "exp03_neural_ranker",
+      "holdout": "none",
+      "device": "cuda",
+      "smoke": false,
+      "config": {
+        "d_model": 128,
+        "layers": 3,
+        "heads": 4,
+        "steps": 2000,
+        "epochs": 8,
+        "batch": 32,
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "role_w": 0.3,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "max_len": 256,
+        "warmup": 50,
+        "seed": 0
+      },
+      "train_metrics": {
+        "n_params": 684507,
+        "train_families": [
+          "mosfet",
+          "igbt",
+          "ic"
+        ],
+        "holdout": null,
+        "device": "cuda",
+        "steps_run": 752,
+        "epochs": 8,
+        "n_examples": 3000,
+        "final_loss": 0.3729933500289917,
+        "first_loss": 6.31953239440918,
+        "final_batch_step_acc": 0.8341538310050964,
+        "wall_sec": 10.2,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "config": {
+          "d_model": 128,
+          "layers": 3,
+          "heads": 4,
+          "steps": 2000,
+          "epochs": 8,
+          "batch": 32,
+          "lr": 0.0003,
+          "weight_decay": 0.01,
+          "role_w": 0.3,
+          "sem_w": 0.0,
+          "mask_train": false,
+          "max_len": 256,
+          "seed": 0,
+          "warmup": 50
+        }
+      },
+      "wall_sec": 523.94,
+      "comparison": {
+        "held_out": null,
+        "train": [
+          "mosfet",
+          "igbt",
+          "ic"
+        ],
+        "n_per_family": 80,
+        "neural": {
+          "id": {
+            "next-step": {
+              "top1": 0.7042,
+              "top3": 0.9958,
+              "top5": 1.0,
+              "mrr": 0.85
+            },
+            "completion": {
+              "ned": 0.2093,
+              "exact_match": 0.0083,
+              "token_acc": 0.4429,
+              "block_acc": 0.6997
+            }
+          }
+        },
+        "ppm": {
+          "id": {
+            "next-step": {
+              "top1": 0.6958,
+              "top3": 1.0,
+              "top5": 1.0,
+              "mrr": 0.8441
+            },
+            "completion": {
+              "ned": 0.6114,
+              "exact_match": 0.0,
+              "token_acc": 0.3494,
+              "block_acc": 0.5926
+            }
+          }
+        }
+      }
+    },
+    "exp04.json": {
+      "experiment": "exp04_constraint_loss",
+      "holdout": "ic",
+      "train_families": [
+        "mosfet",
+        "igbt"
+      ],
+      "device": "cuda",
+      "smoke": false,
+      "base_config": {
+        "d_model": 128,
+        "layers": 3,
+        "heads": 4,
+        "steps": 2000,
+        "epochs": 8,
+        "batch": 32,
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "role_w": 0.3,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "max_len": 256,
+        "warmup": 50,
+        "seed": 0
+      },
+      "n_per_family": 60,
+      "cells": [
+        {
+          "mask_train": false,
+          "sem_w": 0.0,
+          "n_params": 676926,
+          "train_wall_sec": 7.31,
+          "final_loss": 0.39513158798217773,
+          "free_generation": {
+            "invalid_rate": 0.0,
+            "mean_violations": 0.0,
+            "n": 60
+          },
+          "id_next_step": {
+            "top1": 0.7583,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8792
+          },
+          "ood_next_step": {
+            "top1": 0.6333,
+            "top3": 0.95,
+            "top5": 0.975,
+            "mrr": 0.7979
+          }
+        },
+        {
+          "mask_train": false,
+          "sem_w": 0.5,
+          "n_params": 676926,
+          "train_wall_sec": 112.93,
+          "final_loss": 0.4033295214176178,
+          "free_generation": {
+            "invalid_rate": 0.0,
+            "mean_violations": 0.0,
+            "n": 60
+          },
+          "id_next_step": {
+            "top1": 0.7542,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8771
+          },
+          "ood_next_step": {
+            "top1": 0.6333,
+            "top3": 0.95,
+            "top5": 0.975,
+            "mrr": 0.7979
+          }
+        },
+        {
+          "mask_train": true,
+          "sem_w": 0.0,
+          "n_params": 676926,
+          "train_wall_sec": 6.44,
+          "final_loss": 0.3951316177845001,
+          "free_generation": {
+            "invalid_rate": 0.0,
+            "mean_violations": 0.0,
+            "n": 60
+          },
+          "id_next_step": {
+            "top1": 0.7583,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8792
+          },
+          "ood_next_step": {
+            "top1": 0.6333,
+            "top3": 0.95,
+            "top5": 0.975,
+            "mrr": 0.7979
+          }
+        },
+        {
+          "mask_train": true,
+          "sem_w": 0.5,
+          "n_params": 676926,
+          "train_wall_sec": 113.92,
+          "final_loss": 0.4033295512199402,
+          "free_generation": {
+            "invalid_rate": 0.0,
+            "mean_violations": 0.0,
+            "n": 60
+          },
+          "id_next_step": {
+            "top1": 0.7542,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8771
+          },
+          "ood_next_step": {
+            "top1": 0.6333,
+            "top3": 0.95,
+            "top5": 0.975,
+            "mrr": 0.7979
+          }
+        }
+      ],
+      "semantic_loss_contrast": {
+        "mask_train=False": {
+          "invalid_rate_sem0": 0.0,
+          "invalid_rate_sem0.5": 0.0,
+          "invalid_rate_reduction": 0.0,
+          "mean_violations_sem0": 0.0,
+          "mean_violations_sem0.5": 0.0,
+          "mean_violations_reduction": 0.0,
+          "ood_top1_sem0": 0.6333,
+          "ood_top1_sem0.5": 0.6333
+        },
+        "mask_train=True": {
+          "invalid_rate_sem0": 0.0,
+          "invalid_rate_sem0.5": 0.0,
+          "invalid_rate_reduction": 0.0,
+          "mean_violations_sem0": 0.0,
+          "mean_violations_sem0.5": 0.0,
+          "mean_violations_reduction": 0.0,
+          "ood_top1_sem0": 0.6333,
+          "ood_top1_sem0.5": 0.6333
+        }
+      },
+      "wall_sec": 331.83
+    },
+    "exp05.json": {
+      "experiment": "exp05_scaling",
+      "device": "cuda",
+      "smoke": false,
+      "base_config": {
+        "d_model": 128,
+        "layers": 3,
+        "heads": 4,
+        "steps": 2000,
+        "epochs": 8,
+        "batch": 32,
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "role_w": 0.3,
+        "sem_w": 0.0,
+        "mask_train": false,
+        "max_len": 256,
+        "warmup": 50,
+        "seed": 0
+      },
+      "d_models": [
+        64,
+        128,
+        256
+      ],
+      "data_axes": [
+        [
+          "mosfet",
+          "igbt"
+        ],
+        [
+          "mosfet",
+          "igbt",
+          "ic"
+        ]
+      ],
+      "n_per_family": 60,
+      "cells": [
+        {
+          "d_model": 64,
+          "train_families": [
+            "mosfet",
+            "igbt"
+          ],
+          "n_train_families": 2,
+          "ood_family": "ic",
+          "n_params": 191102,
+          "train_wall_sec": 6.75,
+          "steps_run": 504,
+          "final_loss": 0.6280046105384827,
+          "id_next_step": {
+            "top1": 0.6875,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8424
+          },
+          "ood_next_step": {
+            "top1": 0.5417,
+            "top3": 0.9667,
+            "top5": 0.975,
+            "mrr": 0.7507
+          },
+          "drop_next_step": {
+            "top1": 0.14580000000000004,
+            "top3": 0.033299999999999996,
+            "top5": 0.025000000000000022,
+            "mrr": 0.0917
+          }
+        },
+        {
+          "d_model": 128,
+          "train_families": [
+            "mosfet",
+            "igbt"
+          ],
+          "n_train_families": 2,
+          "ood_family": "ic",
+          "n_params": 676926,
+          "train_wall_sec": 6.3,
+          "steps_run": 504,
+          "final_loss": 0.3951316177845001,
+          "id_next_step": {
+            "top1": 0.7583,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8792
+          },
+          "ood_next_step": {
+            "top1": 0.6333,
+            "top3": 0.95,
+            "top5": 0.975,
+            "mrr": 0.7979
+          },
+          "drop_next_step": {
+            "top1": 0.125,
+            "top3": 0.050000000000000044,
+            "top5": 0.025000000000000022,
+            "mrr": 0.08129999999999993
+          }
+        },
+        {
+          "d_model": 256,
+          "train_families": [
+            "mosfet",
+            "igbt"
+          ],
+          "n_train_families": 2,
+          "ood_family": "ic",
+          "n_params": 2533310,
+          "train_wall_sec": 6.87,
+          "steps_run": 504,
+          "final_loss": 0.36023080348968506,
+          "id_next_step": {
+            "top1": 0.7167,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8583
+          },
+          "ood_next_step": {
+            "top1": 0.6,
+            "top3": 0.975,
+            "top5": 0.975,
+            "mrr": 0.7847
+          },
+          "drop_next_step": {
+            "top1": 0.11670000000000003,
+            "top3": 0.025000000000000022,
+            "top5": 0.025000000000000022,
+            "mrr": 0.0736
+          }
+        },
+        {
+          "d_model": 64,
+          "train_families": [
+            "mosfet",
+            "igbt",
+            "ic"
+          ],
+          "n_train_families": 3,
+          "ood_family": "diode",
+          "n_params": 194907,
+          "train_wall_sec": 9.32,
+          "steps_run": 752,
+          "final_loss": 0.4809935688972473,
+          "id_next_step": {
+            "top1": 0.7111,
+            "top3": 0.9972,
+            "top5": 1.0,
+            "mrr": 0.8544
+          },
+          "ood_next_step": {
+            "top1": 0.775,
+            "top3": 0.875,
+            "top5": 0.875,
+            "mrr": 0.8222
+          },
+          "drop_next_step": {
+            "top1": -0.06390000000000007,
+            "top3": 0.12219999999999998,
+            "top5": 0.125,
+            "mrr": 0.032200000000000006
+          }
+        },
+        {
+          "d_model": 128,
+          "train_families": [
+            "mosfet",
+            "igbt",
+            "ic"
+          ],
+          "n_train_families": 3,
+          "ood_family": "diode",
+          "n_params": 684507,
+          "train_wall_sec": 9.37,
+          "steps_run": 752,
+          "final_loss": 0.3729933202266693,
+          "id_next_step": {
+            "top1": 0.7222,
+            "top3": 0.9972,
+            "top5": 1.0,
+            "mrr": 0.8595
+          },
+          "ood_next_step": {
+            "top1": 0.9167,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.9556
+          },
+          "drop_next_step": {
+            "top1": -0.1945,
+            "top3": -0.0028000000000000247,
+            "top5": 0.0,
+            "mrr": -0.09609999999999996
+          }
+        },
+        {
+          "d_model": 256,
+          "train_families": [
+            "mosfet",
+            "igbt",
+            "ic"
+          ],
+          "n_train_families": 3,
+          "ood_family": "diode",
+          "n_params": 2548443,
+          "train_wall_sec": 10.29,
+          "steps_run": 752,
+          "final_loss": 0.3485363721847534,
+          "id_next_step": {
+            "top1": 0.7167,
+            "top3": 0.9972,
+            "top5": 1.0,
+            "mrr": 0.8576
+          },
+          "ood_next_step": {
+            "top1": 0.8333,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.9153
+          },
+          "drop_next_step": {
+            "top1": -0.11660000000000004,
+            "top3": -0.0028000000000000247,
+            "top5": 0.0,
+            "mrr": -0.057699999999999974
+          }
+        }
+      ],
+      "wall_sec": 69.24
+    }
+  }
+}

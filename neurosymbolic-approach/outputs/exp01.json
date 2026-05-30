@@ -1,0 +1,227 @@
+{
+  "config": {
+    "n": 200,
+    "seed": 20240530,
+    "out_dir": "/leonardo_scratch/large/usertrain/a08trc11/nspe_outputs"
+  },
+  "id": {
+    "metrics": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "auc": 1.0,
+      "rule_attr": 1.0
+    },
+    "n_invalid": 240,
+    "n_valid": 360,
+    "returncode": 0,
+    "per_rule": {
+      "RULE_SHIP_BEFORE_TEST": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_CMP_NO_DEP": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_METAL_ETCH_NO_LITHO": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_PAD_OPEN_BEFORE_DEP": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_IMPLANT_NO_MASK": {
+        "n": 15,
+        "detected": 15,
+        "attributed": 15
+      },
+      "RULE_TEST_BEFORE_PASSIVATION": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_LITHO_LEVEL_SKIP": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_ETCH_NO_MASK": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_DEP_NO_CLEAN": {
+        "n": 26,
+        "detected": 26,
+        "attributed": 26
+      },
+      "RULE_BACKSIDE_BEFORE_PASSIVATION": {
+        "n": 17,
+        "detected": 17,
+        "attributed": 17
+      }
+    }
+  },
+  "ood": {
+    "n_per_family": 200,
+    "n_total": 600,
+    "families": [
+      "diode",
+      "schottky",
+      "sic_mosfet"
+    ],
+    "modes": {
+      "roles_off": {
+        "recall": 0.1917,
+        "precision": 1.0,
+        "f1": 0.3217,
+        "accuracy": 0.6767,
+        "auc": 0.5958,
+        "rule_attr": 0.5652,
+        "fp_on_valids": 0,
+        "novel_capable_n": 214,
+        "novel_capable_detected": 20,
+        "returncode": 0
+      },
+      "roles_on": {
+        "recall": 1.0,
+        "precision": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0,
+        "auc": 1.0,
+        "rule_attr": 1.0,
+        "fp_on_valids": 0,
+        "novel_capable_n": 214,
+        "novel_capable_detected": 214,
+        "returncode": 0
+      }
+    },
+    "novel_capable_rules": [
+      "RULE_BACKSIDE_BEFORE_PASSIVATION",
+      "RULE_CMP_NO_DEP",
+      "RULE_DEP_NO_CLEAN",
+      "RULE_ETCH_NO_MASK",
+      "RULE_IMPLANT_NO_MASK",
+      "RULE_METAL_ETCH_NO_LITHO",
+      "RULE_PAD_OPEN_BEFORE_DEP",
+      "RULE_SHIP_BEFORE_TEST",
+      "RULE_TEST_BEFORE_PASSIVATION"
+    ],
+    "n_novel_capable_invalid": 214,
+    "per_rule": {
+      "roles_off": {
+        "RULE_METAL_ETCH_NO_LITHO": {
+          "n": 26,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_TEST_BEFORE_PASSIVATION": {
+          "n": 26,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_PAD_OPEN_BEFORE_DEP": {
+          "n": 26,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_IMPLANT_NO_MASK": {
+          "n": 25,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_DEP_NO_CLEAN": {
+          "n": 27,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_SHIP_BEFORE_TEST": {
+          "n": 26,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_ETCH_NO_MASK": {
+          "n": 27,
+          "detected": 20,
+          "attributed": 0
+        },
+        "RULE_BACKSIDE_BEFORE_PASSIVATION": {
+          "n": 27,
+          "detected": 0,
+          "attributed": 0
+        },
+        "RULE_CMP_NO_DEP": {
+          "n": 4,
+          "detected": 0,
+          "attributed": 0
+        }
+      },
+      "roles_on": {
+        "RULE_METAL_ETCH_NO_LITHO": {
+          "n": 26,
+          "detected": 26,
+          "attributed": 26
+        },
+        "RULE_TEST_BEFORE_PASSIVATION": {
+          "n": 26,
+          "detected": 26,
+          "attributed": 26
+        },
+        "RULE_PAD_OPEN_BEFORE_DEP": {
+          "n": 26,
+          "detected": 26,
+          "attributed": 26
+        },
+        "RULE_IMPLANT_NO_MASK": {
+          "n": 25,
+          "detected": 25,
+          "attributed": 25
+        },
+        "RULE_DEP_NO_CLEAN": {
+          "n": 27,
+          "detected": 27,
+          "attributed": 27
+        },
+        "RULE_SHIP_BEFORE_TEST": {
+          "n": 26,
+          "detected": 26,
+          "attributed": 26
+        },
+        "RULE_ETCH_NO_MASK": {
+          "n": 27,
+          "detected": 27,
+          "attributed": 27
+        },
+        "RULE_BACKSIDE_BEFORE_PASSIVATION": {
+          "n": 27,
+          "detected": 27,
+          "attributed": 27
+        },
+        "RULE_CMP_NO_DEP": {
+          "n": 4,
+          "detected": 4,
+          "attributed": 4
+        }
+      }
+    }
+  },
+  "rules": [
+    "RULE_DEP_NO_CLEAN",
+    "RULE_METAL_ETCH_NO_LITHO",
+    "RULE_ETCH_NO_MASK",
+    "RULE_LITHO_LEVEL_SKIP",
+    "RULE_IMPLANT_NO_MASK",
+    "RULE_CMP_NO_DEP",
+    "RULE_PAD_OPEN_BEFORE_DEP",
+    "RULE_TEST_BEFORE_PASSIVATION",
+    "RULE_SHIP_BEFORE_TEST",
+    "RULE_BACKSIDE_BEFORE_PASSIVATION"
+  ]
+}
