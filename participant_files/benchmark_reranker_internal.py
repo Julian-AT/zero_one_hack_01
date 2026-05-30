@@ -13,10 +13,22 @@ import random
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-NEXT_STEP_DATA = ROOT / "tracks" / "industrial-infineon" / "data" / "task_datasets_v1" / "next_step_prediction.csv"
+from src.data.sequence_io import norm
+from src.data.sequence_io import read_csv as read_rows
+from src.eval.metrics import reciprocal_rank
+
+NEXT_STEP_DATA = (
+    ROOT
+    / "tracks"
+    / "industrial-infineon"
+    / "data"
+    / "task_datasets_v1"
+    / "next_step_prediction.csv"
+)
 PRED_MOD_PATH = ROOT / "participant_files" / "make_eval_predictions.py"
 RERANK_MOD_PATH = ROOT / "participant_files" / "rerank_nextstep_with_rules.py"
 
@@ -37,23 +49,6 @@ def load_module(path: Path, name: str):
 
 pred_mod = load_module(PRED_MOD_PATH, "make_eval_predictions_mod")
 rerank_mod = load_module(RERANK_MOD_PATH, "rerank_nextstep_mod")
-
-
-def norm(x: str) -> str:
-    return str(x or "").strip().upper()
-
-
-def read_rows(path: Path):
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
-
-
-def reciprocal_rank(truth: str, ranks: list[str]) -> float:
-    truth = norm(truth)
-    ranks = [norm(r) for r in ranks]
-    if truth in ranks:
-        return 1.0 / (ranks.index(truth) + 1)
-    return 0.0
 
 
 def metric_summary(rows, key_prefix: str):
@@ -97,16 +92,19 @@ def main():
     print(f"Benchmark examples: {len(rows):,}")
 
     print("Loading model predictor...")
-    predictor = pred_mod.HybridPredictor(pred_mod.CHECKPOINT, pred_mod.VOCAB_JSON)
+    run_dir = pred_mod.DEFAULT_RUN_DIR
+    predictor = pred_mod.HybridPredictor(run_dir / "checkpoint_best.pt", run_dir / "vocab.json")
 
     print("Building valid n-gram counts...")
     valid_counts = rerank_mod.build_valid_ngram_counts(rerank_mod.VALID_TRAIN)
 
     print("Building invalid-context penalties...")
-    bad_counts = rerank_mod.build_invalid_bad_context_counts([
-        rerank_mod.EASY_INVALID,
-        rerank_mod.HARD_INVALID,
-    ])
+    bad_counts = rerank_mod.build_invalid_bad_context_counts(
+        [
+            rerank_mod.EASY_INVALID,
+            rerank_mod.HARD_INVALID,
+        ]
+    )
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -116,25 +114,27 @@ def main():
 
     with OUT_CSV.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "EXAMPLE_ID",
-            "FAMILY",
-            "TRUTH",
-            "MODEL_RANK_1",
-            "MODEL_RANK_2",
-            "MODEL_RANK_3",
-            "MODEL_RANK_4",
-            "MODEL_RANK_5",
-            "RERANK_RANK_1",
-            "RERANK_RANK_2",
-            "RERANK_RANK_3",
-            "RERANK_RANK_4",
-            "RERANK_RANK_5",
-            "MODEL_HIT1",
-            "RERANK_HIT1",
-            "MODEL_RR",
-            "RERANK_RR",
-        ])
+        writer.writerow(
+            [
+                "EXAMPLE_ID",
+                "FAMILY",
+                "TRUTH",
+                "MODEL_RANK_1",
+                "MODEL_RANK_2",
+                "MODEL_RANK_3",
+                "MODEL_RANK_4",
+                "MODEL_RANK_5",
+                "RERANK_RANK_1",
+                "RERANK_RANK_2",
+                "RERANK_RANK_3",
+                "RERANK_RANK_4",
+                "RERANK_RANK_5",
+                "MODEL_HIT1",
+                "RERANK_HIT1",
+                "MODEL_RR",
+                "RERANK_RR",
+            ]
+        )
 
         for i, r in enumerate(rows, start=1):
             eid = r["EXAMPLE_ID"]
@@ -188,17 +188,19 @@ def main():
             }
             results.append(result)
 
-            writer.writerow([
-                eid,
-                family,
-                truth,
-                *(model_ranks + [""] * 5)[:5],
-                *(rerank_ranks + [""] * 5)[:5],
-                model_hit1,
-                rerank_hit1,
-                f"{model_rr:.4f}",
-                f"{rerank_rr:.4f}",
-            ])
+            writer.writerow(
+                [
+                    eid,
+                    family,
+                    truth,
+                    *(model_ranks + [""] * 5)[:5],
+                    *(rerank_ranks + [""] * 5)[:5],
+                    model_hit1,
+                    rerank_hit1,
+                    f"{model_rr:.4f}",
+                    f"{rerank_rr:.4f}",
+                ]
+            )
 
             if i % 1000 == 0:
                 print(f"Processed {i:,}/{len(rows):,}")

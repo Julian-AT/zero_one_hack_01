@@ -26,9 +26,16 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 TRACK = ROOT / "tracks" / "industrial-infineon"
+
+# Put repo root on the path so `src` is importable when this script is run
+# directly (`python participant_files/rerank_nextstep_with_rules.py`).
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.sequence_io import iter_grouped_sequences, norm, read_csv, split_steps
+from src.data.validator import validate_sequence
 
 VALID_TRAIN = TRACK / "data" / "coverage_guided_v1" / "coverage_guided_sequences.csv"
 EASY_INVALID = TRACK / "data" / "easy_invalid_v1" / "invalid_sequences.csv"
@@ -38,68 +45,6 @@ EVAL_VALID = ROOT / "participant_files" / "eval_input_valid.csv"
 PRED_IN = ROOT / "participant_files" / "predictions" / "predictions_nextstep.csv"
 PRED_OUT = ROOT / "participant_files" / "predictions" / "predictions_nextstep_reranked.csv"
 REPORT = ROOT / "participant_files" / "predictions" / "rerank_nextstep_report.md"
-
-sys.path.insert(0, str(TRACK / "training_data"))
-from generate_sequences import validate_sequence  # type: ignore
-
-
-def norm(x: str) -> str:
-    return str(x or "").strip().upper()
-
-
-def split_steps(s: str) -> list[str]:
-    s = str(s or "").strip()
-    if not s:
-        return []
-    if "|||" in s:
-        return [norm(x) for x in s.split("|||") if x.strip()]
-    return [norm(x) for x in s.split("|") if x.strip()]
-
-
-def read_csv(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
-
-
-def normalized_row(row: dict[str, str]) -> dict[str, str]:
-    return {str(k).strip().lstrip("\ufeff").strip('"'): (v or "").strip().strip('"') for k, v in row.items()}
-
-
-def iter_grouped_sequences(path: Path):
-    """Yield (sequence_id, family, steps, first_row) from long-format sequence CSV."""
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        current_id = None
-        current_family = None
-        current_steps = []
-        first_row = None
-
-        for raw in reader:
-            row = normalized_row(raw)
-            sid = row.get("SEQUENCE_ID", "")
-            fam = norm(row.get("FAMILY", "UNKNOWN"))
-            step = norm(row.get("STEP", ""))
-
-            if not sid or not step:
-                continue
-
-            if current_id is None:
-                current_id = sid
-                current_family = fam
-                current_steps = []
-                first_row = row
-
-            elif sid != current_id:
-                yield current_id, current_family, current_steps, first_row
-                current_id = sid
-                current_family = fam
-                current_steps = []
-                first_row = row
-
-            current_steps.append(step)
-
-        if current_id is not None:
-            yield current_id, current_family, current_steps, first_row
 
 
 def build_valid_ngram_counts(path: Path):
@@ -239,7 +184,6 @@ def score_candidate(
 
     details = {"base": base}
 
-    # Valid evidence
     prior = valid_counts["prior"].get(candidate, 0)
     fam_prior = valid_counts["fam_prior"].get(family, Counter()).get(candidate, 0)
 
@@ -378,7 +322,9 @@ def main():
 
     report = []
     report.append("# Next-step Reranking Report\n")
-    report.append("Reranked the model's Top-5 predictions using valid-sequence n-gram evidence, invalid-mutation context penalties, and process-rule validator penalties.\n")
+    report.append(
+        "Reranked the model's Top-5 predictions using valid-sequence n-gram evidence, invalid-mutation context penalties, and process-rule validator penalties.\n"
+    )
     report.append("| Metric | Value |")
     report.append("|---|---:|")
     report.append(f"| Examples | {total} |")

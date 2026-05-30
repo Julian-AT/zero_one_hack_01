@@ -28,8 +28,13 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.sequence_io import iter_grouped_sequences, norm, read_csv, split_steps
+from src.data.validator import validate_sequence
+
 TRACK = ROOT / "tracks" / "industrial-infineon"
 
 EVAL_VALID = ROOT / "participant_files" / "eval_input_valid.csv"
@@ -48,76 +53,6 @@ VALID_SOURCES = [
     TRACK / "data" / "retrieval_bank_v1" / "IGBT_retrieval.csv",
     TRACK / "data" / "retrieval_bank_v1" / "IC_retrieval.csv",
 ]
-
-sys.path.insert(0, str(TRACK / "training_data"))
-from generate_sequences import validate_sequence  # type: ignore
-
-
-def norm(x: str) -> str:
-    return str(x or "").strip().upper()
-
-
-def split_steps(s: str) -> list[str]:
-    s = str(s or "").strip()
-    if not s:
-        return []
-    if "|||" in s:
-        return [norm(x) for x in s.split("|||") if x.strip()]
-    return [norm(x) for x in s.split("|") if x.strip()]
-
-
-def read_csv(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
-
-
-def row_norm(row: dict[str, str]) -> dict[str, str]:
-    return {
-        str(k).strip().lstrip("\ufeff").strip('"'): (v or "").strip().strip('"')
-        for k, v in row.items()
-    }
-
-
-def iter_sequences(path: Path):
-    """
-    Stream long-format CSV:
-      SEQUENCE_ID,FAMILY,STEP_INDEX,STEP,...
-    """
-    if not path.exists():
-        print(f"[WARN] missing valid source: {path}")
-        return
-
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-
-        cur_id = None
-        cur_family = None
-        steps = []
-
-        for raw in reader:
-            row = row_norm(raw)
-            sid = row.get("SEQUENCE_ID", "")
-            fam = norm(row.get("FAMILY", "UNKNOWN"))
-            step = norm(row.get("STEP", ""))
-
-            if not sid or not step:
-                continue
-
-            if cur_id is None:
-                cur_id = sid
-                cur_family = fam
-                steps = []
-
-            elif sid != cur_id:
-                yield cur_id, cur_family, steps
-                cur_id = sid
-                cur_family = fam
-                steps = []
-
-            steps.append(step)
-
-        if cur_id is not None:
-            yield cur_id, cur_family, steps
 
 
 def model_next_rows():
@@ -175,7 +110,7 @@ def retrieve_matches(prefix_to_eids, lengths_by_family):
 
         print(f"Scanning valid source: {source}")
 
-        for sid, family, steps in iter_sequences(source):
+        for _sid, family, steps, _first in iter_grouped_sequences(source, warn_missing=True):
             scanned += 1
             family = norm(family)
 
@@ -265,7 +200,6 @@ def main():
 
     exact_matched = sum(1 for r in eval_rows if match_counts[r["EXAMPLE_ID"].strip()] > 0)
 
-    # Write next-step predictions.
     changed_next_top1 = 0
     changed_next_any = 0
 
@@ -295,7 +229,6 @@ def main():
 
             writer.writerow([eid] + new_ranks)
 
-    # Write completion predictions.
     changed_completion = 0
     validator_valid = 0
     validator_invalid = 0
@@ -331,12 +264,12 @@ def main():
 
             writer.writerow([eid, "|".join(suffix)])
 
-    # Report.
     match_values = [match_counts[r["EXAMPLE_ID"].strip()] for r in eval_rows]
     avg_matches = sum(match_values) / len(match_values) if match_values else 0
     max_matches = max(match_values) if match_values else 0
 
-    report = f"""# Retrieval-Augmented Eval Prediction Report
+    report = (
+        """# Retrieval-Augmented Eval Prediction Report
 
 This run uses a large synthetic valid-sequence retrieval bank to improve official eval predictions.
 
@@ -344,9 +277,9 @@ This run uses a large synthetic valid-sequence retrieval bank to improve officia
 
 | Source | Exists |
 |---|---:|
-""" + "\n".join(
-        f"| `{p}` | `{p.exists()}` |" for p in VALID_SOURCES
-    ) + f"""
+"""
+        + "\n".join(f"| `{p}` | `{p.exists()}` |" for p in VALID_SOURCES)
+        + f"""
 
 ## Retrieval Coverage
 
@@ -395,6 +328,7 @@ Recommended:
 - If exact prefix match rate is below 10%, keep model-only predictions.
 - If completion validator-invalid count increases substantially, keep model-only completion.
 """
+    )
 
     REPORT.write_text(report, encoding="utf-8")
 

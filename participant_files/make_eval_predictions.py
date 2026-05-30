@@ -16,6 +16,7 @@ Run from repo root:
 
 from __future__ import annotations
 
+import argparse
 import csv
 import importlib.util
 import json
@@ -24,16 +25,18 @@ from pathlib import Path
 
 import torch
 
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.sequence_io import norm as norm_step
+from src.data.sequence_io import read_csv, split_steps
 
 TRACK_DIR = ROOT / "tracks" / "industrial-infineon"
 TRAIN_SCRIPT = TRACK_DIR / "scripts" / "train_ssl_hybrid_process_transformer.py"
 GEN_SCRIPT = TRACK_DIR / "training_data" / "generate_sequences.py"
 
-RUN_DIR = TRACK_DIR / "runs" / "ssl_hybrid_new_coverage_guided_v1"
-CHECKPOINT = RUN_DIR / "checkpoint_best.pt"
-VOCAB_JSON = RUN_DIR / "vocab.json"
+DEFAULT_RUN_DIR = TRACK_DIR / "runs" / "ssl_hybrid_new_coverage_guided_v1"
 
 EVAL_VALID = ROOT / "participant_files" / "eval_input_valid.csv"
 EVAL_ANOMALY = ROOT / "participant_files" / "eval_input_anomaly.csv"
@@ -58,26 +61,6 @@ def load_module(path: Path, name: str):
 
 train_mod = load_module(TRAIN_SCRIPT, "ssl_hybrid_train_mod")
 gen_mod = load_module(GEN_SCRIPT, "generate_sequences_mod")
-
-
-def norm_step(s: str) -> str:
-    return str(s).strip().upper()
-
-
-def split_steps(s: str) -> list[str]:
-    s = str(s).strip()
-    if not s:
-        return []
-    if "|||" in s:
-        return [norm_step(x) for x in s.split("|||") if x.strip()]
-    return [norm_step(x) for x in s.split("|") if x.strip()]
-
-
-def read_csv(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        raise FileNotFoundError(path)
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
 
 
 def build_token_feature_table(token_to_id, feature_to_id):
@@ -130,10 +113,7 @@ class HybridPredictor:
         self.unk_id = self.token_to_id["<UNK>"]
         self.mask_id = self.token_to_id["<MASK>"]
 
-        feature_vocab_sizes = [
-            len(self.feature_to_id[name])
-            for name in train_mod.FEATURE_NAMES
-        ]
+        feature_vocab_sizes = [len(self.feature_to_id[name]) for name in train_mod.FEATURE_NAMES]
 
         self.model = train_mod.HybridProcessTransformerLM(
             vocab_size=len(self.token_to_id),
@@ -181,7 +161,7 @@ class HybridPredictor:
         ids += [self.token_to_id.get(norm_step(s), self.unk_id) for s in steps]
 
         if len(ids) > self.max_len:
-            ids = [self.bos_id] + ids[-(self.max_len - 1):]
+            ids = [self.bos_id] + ids[-(self.max_len - 1) :]
 
         return ids
 
@@ -239,9 +219,10 @@ def make_nextstep_and_completion(predictor: HybridPredictor):
     rows = read_csv(EVAL_VALID)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    with OUT_NEXT.open("w", newline="", encoding="utf-8") as f_next, \
-         OUT_COMPLETION.open("w", newline="", encoding="utf-8") as f_comp:
-
+    with (
+        OUT_NEXT.open("w", newline="", encoding="utf-8") as f_next,
+        OUT_COMPLETION.open("w", newline="", encoding="utf-8") as f_comp,
+    ):
         next_writer = csv.writer(f_next)
         comp_writer = csv.writer(f_comp)
 
@@ -295,12 +276,36 @@ def make_anomaly_predictions():
 
 
 def main():
-    print(f"Using checkpoint: {CHECKPOINT}")
-    print(f"Using vocab:      {VOCAB_JSON if VOCAB_JSON.exists() else 'not found, reconstructing'}")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--run-dir",
+        type=Path,
+        default=DEFAULT_RUN_DIR,
+        help="Directory holding checkpoint_best.pt and vocab.json.",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Checkpoint path (defaults to <run-dir>/checkpoint_best.pt).",
+    )
+    parser.add_argument(
+        "--vocab",
+        type=Path,
+        default=None,
+        help="vocab.json path (defaults to <run-dir>/vocab.json).",
+    )
+    args = parser.parse_args()
+
+    checkpoint = args.checkpoint or args.run_dir / "checkpoint_best.pt"
+    vocab = args.vocab or args.run_dir / "vocab.json"
+
+    print(f"Using checkpoint: {checkpoint}")
+    print(f"Using vocab:      {vocab if vocab.exists() else 'not found, reconstructing'}")
     print(f"Eval valid:       {EVAL_VALID}")
     print(f"Eval anomaly:     {EVAL_ANOMALY}")
 
-    predictor = HybridPredictor(CHECKPOINT, VOCAB_JSON)
+    predictor = HybridPredictor(checkpoint, vocab)
 
     make_nextstep_and_completion(predictor)
     make_anomaly_predictions()

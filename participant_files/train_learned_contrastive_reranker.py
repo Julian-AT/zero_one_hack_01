@@ -29,8 +29,13 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.sequence_io import norm, read_csv  # noqa: E402
+from src.eval.metrics import reciprocal_rank  # noqa: E402
+
 TRACK = ROOT / "tracks" / "industrial-infineon"
 
 NEXT_STEP_DATA = TRACK / "data" / "task_datasets_v1" / "next_step_prediction.csv"
@@ -79,10 +84,6 @@ pred_mod = load_module(PRED_MOD_PATH, "make_eval_predictions_mod")
 rerank_mod = load_module(RERANK_MOD_PATH, "rerank_nextstep_mod")
 
 
-def norm(x: str) -> str:
-    return str(x or "").strip().upper()
-
-
 def block(step: str) -> str:
     s = norm(step)
     if "LITHO" in s or s.startswith("SPIN COAT PHOTORESIST") or "MASK LEVEL" in s:
@@ -108,27 +109,12 @@ def block(step: str) -> str:
     return "OTHER"
 
 
-def read_csv(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        raise FileNotFoundError(path)
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
-
-
 def log1p_count(x: int) -> float:
     return math.log1p(max(0, int(x)))
 
 
 def cget(counter_map, key, cand) -> int:
     return counter_map.get(key, {}).get(cand, 0)
-
-
-def reciprocal_rank(truth: str, ranks: list[str]) -> float:
-    truth = norm(truth)
-    ranks = [norm(r) for r in ranks]
-    if truth in ranks:
-        return 1.0 / (ranks.index(truth) + 1)
-    return 0.0
 
 
 def make_features(
@@ -256,7 +242,9 @@ def build_candidate_dataset(rows, predictor, valid_counts, bad_counts, include_t
             candidates.append(truth)
 
         for rank_idx, cand in enumerate(candidates):
-            X.append(make_features(family, partial, cand, min(rank_idx, 5), valid_counts, bad_counts))
+            X.append(
+                make_features(family, partial, cand, min(rank_idx, 5), valid_counts, bad_counts)
+            )
             y.append(1.0 if cand == truth else 0.0)
 
         if i % 1000 == 0:
@@ -266,7 +254,9 @@ def build_candidate_dataset(rows, predictor, valid_counts, bad_counts, include_t
 
 
 @torch.no_grad()
-def evaluate_rows(rows, predictor, reranker, valid_counts, bad_counts, device, write_examples: bool = False):
+def evaluate_rows(
+    rows, predictor, reranker, valid_counts, bad_counts, device, write_examples: bool = False
+):
     results = []
     changed_top1 = 0
     changed_order = 0
@@ -287,7 +277,7 @@ def evaluate_rows(rows, predictor, reranker, valid_counts, bad_counts, device, w
         x = torch.tensor(feats, dtype=torch.float32, device=device)
         scores = reranker(x).detach().cpu().tolist()
 
-        scored = sorted(zip(scores, model_ranks), key=lambda z: z[0], reverse=True)
+        scored = sorted(zip(scores, model_ranks, strict=True), key=lambda z: z[0], reverse=True)
         learned_ranks = [cand for _, cand in scored]
 
         if model_ranks[0] != learned_ranks[0]:
@@ -311,17 +301,19 @@ def evaluate_rows(rows, predictor, reranker, valid_counts, bad_counts, device, w
         results.append(row_result)
 
         if write_examples:
-            example_rows.append([
-                eid,
-                family,
-                truth,
-                *(model_ranks + [""] * 5)[:5],
-                *(learned_ranks + [""] * 5)[:5],
-                row_result["model_hit1"],
-                row_result["learned_hit1"],
-                f"{model_rr:.4f}",
-                f"{learned_rr:.4f}",
-            ])
+            example_rows.append(
+                [
+                    eid,
+                    family,
+                    truth,
+                    *(model_ranks + [""] * 5)[:5],
+                    *(learned_ranks + [""] * 5)[:5],
+                    row_result["model_hit1"],
+                    row_result["learned_hit1"],
+                    f"{model_rr:.4f}",
+                    f"{learned_rr:.4f}",
+                ]
+            )
 
         if i % 1000 == 0:
             print(f"  evaluated {i:,}/{len(rows):,}", flush=True)
@@ -354,7 +346,7 @@ def write_official_predictions(predictor, reranker, valid_counts, bad_counts, de
             x = torch.tensor(feats, dtype=torch.float32, device=device)
             scores = reranker(x).detach().cpu().tolist()
 
-            scored = sorted(zip(scores, model_ranks), key=lambda z: z[0], reverse=True)
+            scored = sorted(zip(scores, model_ranks, strict=True), key=lambda z: z[0], reverse=True)
             learned_ranks = [cand for _, cand in scored]
 
             if model_ranks[0] != learned_ranks[0]:
@@ -387,7 +379,8 @@ def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Loading SSL predictor checkpoint...", flush=True)
-    predictor = pred_mod.HybridPredictor(pred_mod.CHECKPOINT, pred_mod.VOCAB_JSON)
+    run_dir = pred_mod.DEFAULT_RUN_DIR
+    predictor = pred_mod.HybridPredictor(run_dir / "checkpoint_best.pt", run_dir / "vocab.json")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Reranker device:", device, flush=True)
@@ -396,10 +389,12 @@ def main():
     valid_counts = rerank_mod.build_valid_ngram_counts(rerank_mod.VALID_TRAIN)
 
     print("Building invalid-context counts...", flush=True)
-    bad_counts = rerank_mod.build_invalid_bad_context_counts([
-        rerank_mod.EASY_INVALID,
-        rerank_mod.HARD_INVALID,
-    ])
+    bad_counts = rerank_mod.build_invalid_bad_context_counts(
+        [
+            rerank_mod.EASY_INVALID,
+            rerank_mod.HARD_INVALID,
+        ]
+    )
 
     print("Loading next-step task dataset...", flush=True)
     all_rows = read_csv(NEXT_STEP_DATA)
@@ -514,25 +509,27 @@ def main():
 
     with OUT_INTERNAL_EXAMPLES.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "EXAMPLE_ID",
-            "FAMILY",
-            "TRUTH",
-            "MODEL_RANK_1",
-            "MODEL_RANK_2",
-            "MODEL_RANK_3",
-            "MODEL_RANK_4",
-            "MODEL_RANK_5",
-            "LEARNED_RANK_1",
-            "LEARNED_RANK_2",
-            "LEARNED_RANK_3",
-            "LEARNED_RANK_4",
-            "LEARNED_RANK_5",
-            "MODEL_HIT1",
-            "LEARNED_HIT1",
-            "MODEL_RR",
-            "LEARNED_RR",
-        ])
+        writer.writerow(
+            [
+                "EXAMPLE_ID",
+                "FAMILY",
+                "TRUTH",
+                "MODEL_RANK_1",
+                "MODEL_RANK_2",
+                "MODEL_RANK_3",
+                "MODEL_RANK_4",
+                "MODEL_RANK_5",
+                "LEARNED_RANK_1",
+                "LEARNED_RANK_2",
+                "LEARNED_RANK_3",
+                "LEARNED_RANK_4",
+                "LEARNED_RANK_5",
+                "MODEL_HIT1",
+                "LEARNED_HIT1",
+                "MODEL_RR",
+                "LEARNED_RR",
+            ]
+        )
         writer.writerows(example_rows)
 
     report = f"""# Learned Contrastive Reranker Report
