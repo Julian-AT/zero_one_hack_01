@@ -95,3 +95,12 @@ participant_files/gen_retrieval_bank_*.out
 participant_files/gen_retrieval_bank_*.err
 participant_files/retrieval_eval_*.out
 participant_files/retrieval_eval_*.err
+
+# Learned reranker runtime/model artifacts
+participant_files/learn_rerank_*.out
+participant_files/learn_rerank_*.err
+participant_files/predictions/learned_reranker.pt
+participant_files/predictions/learned_reranker_internal_examples.csv
+
+# Final zip can be regenerated
+participant_eval_predictions_final.zip
