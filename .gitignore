@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.python-version
+.venv/
+venv/
+env/
+.eggs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Experiment artifacts (large; regenerate from configs/seeds)
+extras/checkpoints/*.pt
+extras/checkpoints/*.safetensors
+extras/checkpoints/*.bin
+extras/logs/
+runs/
+tb_logs/
+wandb/
+lightning_logs/
+
+# Generated data (large; regenerated from generate_sequences.py)
+data/generated/
+data/processed/
+
+# Local config overrides (per-machine paths, secrets)
+configs/local/
+.env
+.env.local
+.env.*
+
+# Build
+build/
+dist/
+
+# Misc
+*.log
+*.tmp

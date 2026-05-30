@@ -1,0 +1,308 @@
+{
+  "length_stats": {
+    "mosfet": {
+      "count": 1000,
+      "mean": 125.26,
+      "std": 2.5104581255221126,
+      "min": 117,
+      "max": 134,
+      "p25": 124.0,
+      "p50": 125.0,
+      "p75": 127.0
+    },
+    "igbt": {
+      "count": 1000,
+      "mean": 147.959,
+      "std": 2.850143680588752,
+      "min": 139,
+      "max": 155,
+      "p25": 146.0,
+      "p50": 148.0,
+      "p75": 150.0
+    },
+    "ic": {
+      "count": 1000,
+      "mean": 115.075,
+      "std": 2.459954267867596,
+      "min": 107,
+      "max": 122,
+      "p25": 113.0,
+      "p50": 115.0,
+      "p75": 117.0
+    }
+  },
+  "vocab": {
+    "total_unique_steps": 198,
+    "per_family_unique": {
+      "mosfet": 137,
+      "igbt": 147,
+      "ic": 130
+    },
+    "shared_all_three": 94,
+    "exclusive": {
+      "mosfet_only": [
+        "ANISOTROPIC ETCH SPACER",
+        "DEPOSIT SPACER DIELECTRIC",
+        "EPITAXIAL DEPOSITION",
+        "EPITAXY ANNEAL",
+        "EPITAXY PREP",
+        "GATE OXIDE GROWTH",
+        "GATE OXIDE PREP",
+        "IMPLANT LDD",
+        "IMPLANT SOURCE DRAIN",
+        "IMPLANT WELL",
+        "LIGHT ANNEAL",
+        "MEASURE GATE OXIDE THICKNESS",
+        "MEASURE JUNCTION PROFILE",
+        "MEASURE SPACER WIDTH",
+        "METAL ETCH",
+        "OXIDE ETCH",
+        "PATTERN INSPECTION LEVEL 1",
+        "POLYSILICON ETCH",
+        "SUBSTRATE CHECK",
+        "WAFER SURFACE CLEAN"
+      ],
+      "igbt_only": [
+        "ALIGN MASK LEVEL 5",
+        "ALIGN MASK LEVEL 6",
+        "ANNEAL DIELECTRIC",
+        "BREAKDOWN VOLTAGE TEST",
+        "CLEAN AFTER FIELD ETCH",
+        "CLEAN AFTER OXIDE ETCH",
+        "CLEAN AFTER WINDOW ETCH",
+        "DEPOSIT FIELD OXIDE",
+        "DEPOSIT GATE OXIDE OR DIELECTRIC",
+        "EPITAXIAL LAYER PREP",
+        "EPITAXIAL REWORK CHECK",
+        "EPITAXIAL WAFER CHECK",
+        "ETCH SILICON OR OXIDE WINDOW",
+        "EXPOSE LITHO LEVEL 5",
+        "EXPOSE LITHO LEVEL 6",
+        "FIELD OXIDE ETCH",
+        "FIELD PATTERN INSPECTION",
+        "IMPLANT CHANNEL STOP",
+        "IMPLANT DRAIN / CATHODE REGION",
+        "IMPLANT N BUFFER",
+        "IMPLANT P BODY",
+        "IMPLANT SOURCE REGION",
+        "MEASURE DEVICE PARAMETER",
+        "MEASURE OXIDE QUALITY",
+        "MEASURE SURFACE UNIFORMITY",
+        "MEASURE WINDOW CD",
+        "P BODY WINDOW INSPECTION"
+      ],
+      "ic_only": [
+        "ANNEAL OXIDE",
+        "ANNEAL POLYSILICON",
+        "BACKSIDE CLEAN FINAL",
+        "BACKSIDE THINNING CHECK",
+        "DEPOSIT BACKSIDE PROTECTION",
+        "DEPOSIT PAD OXIDE",
+        "DEPOSIT TUNGSTEN SEED",
+        "DRY WAFER BACKSIDE",
+        "ETCH WET BACKSIDE",
+        "FILL VIA TUNGSTEN",
+        "FINAL ELECTRICAL TEST PREP",
+        "FINAL OXIDE CHECK",
+        "FRONTSIDE CLEAN FINAL",
+        "GRINDING WAFER BACKSIDE",
+        "IMPLANT N-TYPE",
+        "MEASURE BACKSIDE ROUGHNESS",
+        "MEASURE CD LEVEL 1",
+        "MEASURE CD LEVEL 2",
+        "MEASURE GEOMETRY",
+        "MEASURE INITIAL GEOMETRY",
+        "MEASURE SURFACE DEFECTS",
+        "OXIDE STRIP",
+        "PACKAGE PREPARATION",
+        "PATTERN INSPECTION LEVEL 2",
+        "RINSE WET WAFER_EDGE",
+        "STRIP RESIST LEVEL 2",
+        "SURFACE PREP FOR DEPOSITION",
+        "WAFER CLEAN PRE PROCESS",
+        "WAFER CLEAN PRE-GRIND"
+      ]
+    }
+  },
+  "top30_steps": [
+    [
+      "DEVELOP PHOTORESIST",
+      15517
+    ],
+    [
+      "SPIN COAT PHOTORESIST",
+      14000
+    ],
+    [
+      "SOFT BAKE",
+      14000
+    ],
+    [
+      "STRIP RESIST",
+      8486
+    ],
+    [
+      "STRIP PHOTORESIST",
+      8012
+    ],
+    [
+      "RAPID THERMAL ANNEAL",
+      7000
+    ],
+    [
+      "THERMAL OXIDATION",
+      5000
+    ],
+    [
+      "HARD BAKE",
+      4875
+    ],
+    [
+      "PRE ANNEAL CHECK",
+      4780
+    ],
+    [
+      "BACKSIDE CLEAN",
+      4490
+    ],
+    [
+      "POST EXPOSE BAKE",
+      4232
+    ],
+    [
+      "HF DIP",
+      4000
+    ],
+    [
+      "MEASURE OXIDE THICKNESS",
+      3489
+    ],
+    [
+      "RECEIVE WAFER LOT",
+      3000
+    ],
+    [
+      "LOT IDENTIFICATION",
+      3000
+    ],
+    [
+      "ALIGN MASK LEVEL 1",
+      3000
+    ],
+    [
+      "EXPOSE LITHO LEVEL 1",
+      3000
+    ],
+    [
+      "DEPOSIT POLYSILICON",
+      3000
+    ],
+    [
+      "ALIGN MASK LEVEL 2",
+      3000
+    ],
+    [
+      "EXPOSE LITHO LEVEL 2",
+      3000
+    ],
+    [
+      "CLEAN AFTER POLY ETCH",
+      3000
+    ],
+    [
+      "ALIGN MASK LEVEL 3",
+      3000
+    ],
+    [
+      "EXPOSE LITHO LEVEL 3",
+      3000
+    ],
+    [
+      "CLEAN AFTER VIA ETCH",
+      3000
+    ],
+    [
+      "DEPOSIT BARRIER METAL",
+      3000
+    ],
+    [
+      "ALIGN MASK LEVEL 4",
+      3000
+    ],
+    [
+      "EXPOSE LITHO LEVEL 4",
+      3000
+    ],
+    [
+      "METAL PATTERN INSPECTION",
+      3000
+    ],
+    [
+      "CLEAN AFTER METAL ETCH",
+      3000
+    ],
+    [
+      "CURE PASSIVATION",
+      3000
+    ]
+  ],
+  "position_entropy": {
+    "mosfet": {
+      "mean_entropy_bits": 2.922823326189567,
+      "max_entropy_bits": 4.095656849318459,
+      "fraction_deterministic": 0.022388059701492536
+    },
+    "igbt": {
+      "mean_entropy_bits": 3.0616730830903194,
+      "max_entropy_bits": 4.2282588361353,
+      "fraction_deterministic": 0.01935483870967742
+    },
+    "ic": {
+      "mean_entropy_bits": 2.786405366274002,
+      "max_entropy_bits": 3.953413768071685,
+      "fraction_deterministic": 0.02459016393442623
+    }
+  },
+  "bigram_coverage": {
+    "mosfet_to_mosfet": 1.0,
+    "mosfet_to_igbt": 0.7586206896551724,
+    "mosfet_to_ic": 0.6551724137931034,
+    "igbt_to_mosfet": 0.668918918918919,
+    "igbt_to_igbt": 1.0,
+    "igbt_to_ic": 0.6114864864864865,
+    "ic_to_mosfet": 0.6173285198555957,
+    "ic_to_igbt": 0.6534296028880866,
+    "ic_to_ic": 1.0
+  },
+  "lofo_bigram_coverage": {
+    "mosfet": 0.7854406130268199,
+    "igbt": 0.7263513513513513,
+    "ic": 0.6787003610108303
+  },
+  "duplicate_stats": {
+    "mosfet": {
+      "exact_duplicate_sequences": 0,
+      "n_sequences": 1000,
+      "unique_5grams": 1121,
+      "mean_5grams_per_seq": 121.26
+    },
+    "igbt": {
+      "exact_duplicate_sequences": 0,
+      "n_sequences": 1000,
+      "unique_5grams": 1135,
+      "mean_5grams_per_seq": 143.959
+    },
+    "ic": {
+      "exact_duplicate_sequences": 0,
+      "n_sequences": 1000,
+      "unique_5grams": 1539,
+      "mean_5grams_per_seq": 111.075
+    }
+  },
+  "trigram_backoff_topk": {
+    "top1": 0.7220176094838004,
+    "top3": 0.9679121304545716,
+    "top5": 0.9930210780184884,
+    "n_predictions": 382294
+  }
+}

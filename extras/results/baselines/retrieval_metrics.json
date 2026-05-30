@@ -1,0 +1,71 @@
+{
+  "seed": 42,
+  "id_retrieval": {
+    "0.6": {
+      "mosfet": {
+        "n": 200,
+        "exact_match": 0.0,
+        "normalized_edit_distance": 0.22999460538206568
+      },
+      "igbt": {
+        "n": 200,
+        "exact_match": 0.0,
+        "normalized_edit_distance": 0.29743336959659666
+      },
+      "ic": {
+        "n": 200,
+        "exact_match": 0.0,
+        "normalized_edit_distance": 0.3230503502350493
+      }
+    },
+    "0.8": {
+      "mosfet": {
+        "n": 200,
+        "exact_match": 0.015,
+        "normalized_edit_distance": 0.15980833333333333
+      },
+      "igbt": {
+        "n": 200,
+        "exact_match": 0.0,
+        "normalized_edit_distance": 0.24051223581757505
+      },
+      "ic": {
+        "n": 200,
+        "exact_match": 0.0,
+        "normalized_edit_distance": 0.3477902173913043
+      }
+    }
+  },
+  "lofo_retrieval": {
+    "mosfet_0.6": {
+      "n": 1000,
+      "exact_match": 0.0,
+      "normalized_edit_distance": 0.42813704299344824
+    },
+    "mosfet_0.8": {
+      "n": 1000,
+      "exact_match": 0.0,
+      "normalized_edit_distance": 0.26056296296296283
+    },
+    "igbt_0.6": {
+      "n": 1000,
+      "exact_match": 0.0,
+      "normalized_edit_distance": 0.4172295188902918
+    },
+    "igbt_0.8": {
+      "n": 1000,
+      "exact_match": 0.0,
+      "normalized_edit_distance": 0.31918409608559856
+    },
+    "ic_0.6": {
+      "n": 1000,
+      "exact_match": 0.0,
+      "normalized_edit_distance": 0.6447540612195777
+    },
+    "ic_0.8": {
+      "n": 1000,
+      "exact_match": 0.0,
+      "normalized_edit_distance": 0.7624717325428202
+    }
+  }
+}
