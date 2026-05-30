@@ -1,0 +1,203 @@
+{
+  "checkpoint": "extras/checkpoints/lofo-xlstm-medium-multitask-fdp00-held_ic/final.pt",
+  "config": {
+    "arch": "xlstm",
+    "model": {
+      "d_model": 512,
+      "num_blocks": 8,
+      "block_pattern": [
+        "mlstm",
+        "slstm",
+        "mlstm",
+        "slstm",
+        "mlstm",
+        "slstm",
+        "mlstm",
+        "slstm"
+      ],
+      "dropout": 0.1,
+      "max_seq_len": 256,
+      "mlstm": {
+        "num_heads": 8,
+        "conv1d_kernel_size": 4,
+        "qkv_proj_blocksize": 4
+      },
+      "slstm": {
+        "num_heads": 8,
+        "conv1d_kernel_size": 4,
+        "backend": "cuda"
+      }
+    },
+    "train": {
+      "batch_size": 32,
+      "grad_accum": 1,
+      "max_steps": 8000,
+      "warmup_steps": 300,
+      "lr": 0.0002,
+      "weight_decay": 0.1,
+      "beta1": 0.9,
+      "beta2": 0.95,
+      "grad_clip": 1.0,
+      "precision": "bf16",
+      "log_every": 25,
+      "eval_every": 500,
+      "save_every": 2000,
+      "seed": 42,
+      "family_dropout": 0.0,
+      "max_len": 256
+    },
+    "data": {
+      "use_online_generator": true,
+      "families": [
+        "mosfet",
+        "igbt"
+      ],
+      "corrupt_fraction": 0.4,
+      "canonicalize": false,
+      "num_workers": 2
+    },
+    "loss": {
+      "lm_weight": 1.0,
+      "validity_weight": 0.5,
+      "rule_id_weight": 0.3
+    },
+    "tracking": {
+      "tensorboard_dir": "extras/logs/tb",
+      "wandb_project": "zero-one-process-logic",
+      "wandb_entity": null,
+      "wandb_mode": "opportunistic"
+    },
+    "out": {
+      "checkpoint_dir": "extras/checkpoints"
+    },
+    "tokenization": {
+      "mode": "compositional"
+    },
+    "run_name": "lofo-xlstm-medium-multitask-fdp00-held_ic"
+  },
+  "grammar": true,
+  "canonicalize": false,
+  "held_out_family": "ic",
+  "per_family": {
+    "mosfet": {
+      "0.6": {
+        "n": 100,
+        "top1_at_cut": 0.64,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8183333333333332,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.2750805449610903,
+        "wall_seconds": 536.9
+      },
+      "0.8": {
+        "n": 100,
+        "top1_at_cut": 0.63,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.815,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.251511457061457,
+        "wall_seconds": 275.2
+      }
+    },
+    "igbt": {
+      "0.6": {
+        "n": 100,
+        "top1_at_cut": 0.74,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.87,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.33214817843742167,
+        "wall_seconds": 673.2
+      },
+      "0.8": {
+        "n": 100,
+        "top1_at_cut": 0.7,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8399999999999999,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.29147202138178235,
+        "wall_seconds": 336.4
+      }
+    },
+    "ic": {
+      "0.6": {
+        "n": 100,
+        "top1_at_cut": 0.61,
+        "top3_at_cut": 0.95,
+        "top5_at_cut": 0.95,
+        "mrr_at_cut": 0.7716666666666668,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.5071456874331601,
+        "wall_seconds": 584.4
+      },
+      "0.8": {
+        "n": 100,
+        "top1_at_cut": 0.49,
+        "top3_at_cut": 0.99,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.7408333333333335,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.5922653642653645,
+        "wall_seconds": 319.8
+      }
+    }
+  },
+  "anomaly": {
+    "n": 300,
+    "binary_accuracy": 0.88,
+    "precision_valid": 0.7567567567567568,
+    "recall_valid": 1.0,
+    "tp": 112,
+    "fp": 36,
+    "tn": 152,
+    "fn": 0,
+    "roc_auc": 0.7567567567567568,
+    "rule_attribution_accuracy": 0.9078947368421053,
+    "rule_attribution_n": 152,
+    "per_family": {
+      "igbt": {
+        "n": 100,
+        "binary_accuracy": 1.0,
+        "precision_valid": 1.0,
+        "recall_valid": 1.0,
+        "tp": 50,
+        "fp": 0,
+        "tn": 50,
+        "fn": 0,
+        "roc_auc": 1.0,
+        "rule_attribution_accuracy": 0.88,
+        "rule_attribution_n": 50
+      },
+      "ic": {
+        "n": 100,
+        "binary_accuracy": 0.64,
+        "precision_valid": 0.28,
+        "recall_valid": 1.0,
+        "tp": 14,
+        "fp": 36,
+        "tn": 50,
+        "fn": 0,
+        "roc_auc": 0.28,
+        "rule_attribution_accuracy": 0.96,
+        "rule_attribution_n": 50
+      },
+      "mosfet": {
+        "n": 100,
+        "binary_accuracy": 1.0,
+        "precision_valid": 1.0,
+        "recall_valid": 1.0,
+        "tp": 48,
+        "fp": 0,
+        "tn": 52,
+        "fn": 0,
+        "roc_auc": 1.0,
+        "rule_attribution_accuracy": 0.8846153846153846,
+        "rule_attribution_n": 52
+      }
+    }
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "checkpoint": "extras/checkpoints/v3-transformer-small-multitask-ood25-held_ic/final.pt",
+  "config": {
+    "arch": "transformer",
+    "model": {
+      "d_model": 256,
+      "n_layers": 4,
+      "n_heads": 4,
+      "d_ff": 1024,
+      "dropout": 0.1,
+      "max_seq_len": 768,
+      "rope": true,
+      "rmsnorm": true
+    },
+    "train": {
+      "batch_size": 32,
+      "grad_accum": 1,
+      "max_steps": 6000,
+      "warmup_steps": 400,
+      "lr": 0.0002,
+      "weight_decay": 0.1,
+      "beta1": 0.9,
+      "beta2": 0.95,
+      "grad_clip": 1.0,
+      "precision": "bf16",
+      "log_every": 25,
+      "eval_every": 500,
+      "save_every": 2000,
+      "seed": 42,
+      "family_dropout": 0.2,
+      "max_len": 768
+    },
+    "data": {
+      "use_online_generator": true,
+      "families": [
+        "mosfet",
+        "igbt"
+      ],
+      "corrupt_fraction": 0.4,
+      "canonicalize": false,
+      "num_workers": 2,
+      "ood_family_prob": 0.25
+    },
+    "loss": {
+      "lm_weight": 1.0,
+      "validity_weight": 0.5,
+      "rule_id_weight": 0.3
+    },
+    "tracking": {
+      "tensorboard_dir": "extras/logs/tb",
+      "wandb_project": "zero-one-process-logic",
+      "wandb_entity": null,
+      "wandb_mode": "opportunistic"
+    },
+    "out": {
+      "checkpoint_dir": "extras/checkpoints"
+    },
+    "tokenization": {
+      "mode": "compositional"
+    },
+    "run_name": "v3-transformer-small-multitask-ood25-held_ic"
+  },
+  "grammar": true,
+  "canonicalize": false,
+  "held_out_family": "ic",
+  "per_family": {
+    "mosfet": {
+      "0.6": {
+        "n": 60,
+        "top1_at_cut": 0.9333333333333333,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.9666666666666667,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.19190840235465256,
+        "completion_token_acc": 0.33895548889609056,
+        "completion_block_acc": 0.42488713070756406,
+        "wall_seconds": 87.4
+      },
+      "0.8": {
+        "n": 60,
+        "top1_at_cut": 0.5,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.75,
+        "completion_exact_match": 0.016666666666666666,
+        "completion_ned": 0.1218164428164428,
+        "completion_token_acc": 0.6854159544159545,
+        "completion_block_acc": 0.9719169719169716,
+        "wall_seconds": 41.1
+      }
+    },
+    "igbt": {
+      "0.6": {
+        "n": 60,
+        "top1_at_cut": 0.65,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.825,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.2501502508163858,
+        "completion_token_acc": 0.3104754068104218,
+        "completion_block_acc": 0.5110079732273868,
+        "wall_seconds": 93.2
+      },
+      "0.8": {
+        "n": 60,
+        "top1_at_cut": 0.6,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.7972222222222223,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.23216260892144644,
+        "completion_token_acc": 0.5932060313929058,
+        "completion_block_acc": 0.8840095745900697,
+        "wall_seconds": 52.2
+      }
+    },
+    "ic": {
+      "0.6": {
+        "n": 60,
+        "top1_at_cut": 0.7333333333333333,
+        "top3_at_cut": 0.9333333333333333,
+        "top5_at_cut": 0.9666666666666667,
+        "mrr_at_cut": 0.8333333333333334,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.5218644336302496,
+        "completion_token_acc": 0.14190703481001812,
+        "completion_block_acc": 0.3725324815084065,
+        "wall_seconds": 75.7
+      },
+      "0.8": {
+        "n": 60,
+        "top1_at_cut": 0.55,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.775,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.580787417137992,
+        "completion_token_acc": 0.1996980676328502,
+        "completion_block_acc": 0.44345134032634026,
+        "wall_seconds": 43.4
+      }
+    }
+  },
+  "anomaly": {
+    "n": 300,
+    "binary_accuracy": 0.99,
+    "precision_valid": 0.9797297297297297,
+    "recall_valid": 1.0,
+    "f1_valid": 0.9897610921501706,
+    "precision_invalid": 1.0,
+    "recall_invalid": 0.9806451612903225,
+    "f1_invalid": 0.990228013029316,
+    "tp": 145,
+    "fp": 3,
+    "tn": 152,
+    "fn": 0,
+    "roc_auc": 0.9797297297297297,
+    "rule_attribution_accuracy": 0.9078947368421053,
+    "rule_attribution_n": 152,
+    "per_family": {
+      "igbt": {
+        "n": 100,
+        "binary_accuracy": 1.0,
+        "precision_valid": 1.0,
+        "recall_valid": 1.0,
+        "f1_valid": 1.0,
+        "precision_invalid": 1.0,
+        "recall_invalid": 1.0,
+        "f1_invalid": 1.0,
+        "tp": 50,
+        "fp": 0,
+        "tn": 50,
+        "fn": 0,
+        "roc_auc": 1.0,
+        "rule_attribution_accuracy": 0.88,
+        "rule_attribution_n": 50
+      },
+      "ic": {
+        "n": 100,
+        "binary_accuracy": 0.97,
+        "precision_valid": 0.94,
+        "recall_valid": 1.0,
+        "f1_valid": 0.9690721649484536,
+        "precision_invalid": 1.0,
+        "recall_invalid": 0.9433962264150944,
+        "f1_invalid": 0.970873786407767,
+        "tp": 47,
+        "fp": 3,
+        "tn": 50,
+        "fn": 0,
+        "roc_auc": 0.94,
+        "rule_attribution_accuracy": 0.96,
+        "rule_attribution_n": 50
+      },
+      "mosfet": {
+        "n": 100,
+        "binary_accuracy": 1.0,
+        "precision_valid": 1.0,
+        "recall_valid": 1.0,
+        "f1_valid": 1.0,
+        "precision_invalid": 1.0,
+        "recall_invalid": 1.0,
+        "f1_invalid": 1.0,
+        "tp": 48,
+        "fp": 0,
+        "tn": 52,
+        "fn": 0,
+        "roc_auc": 1.0,
+        "rule_attribution_accuracy": 0.8846153846153846,
+        "rule_attribution_n": 52
+      }
+    }
+  }
+}

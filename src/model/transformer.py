@@ -23,6 +23,10 @@ import torch.nn.functional as F
 from src.data.validator import NUM_RULE_CLASSES
 from src.model.heads import LMHead, RuleIDHead, ValidityHead
 
+# --------------------------------------------------------------------------- #
+# Building blocks                                                              #
+# --------------------------------------------------------------------------- #
+
 
 class RMSNorm(nn.Module):
     def __init__(self, d: int, eps: float = 1e-6):
@@ -31,6 +35,7 @@ class RMSNorm(nn.Module):
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: [..., D]
         var = x.pow(2).mean(dim=-1, keepdim=True)
         x = x * torch.rsqrt(var + self.eps)
         return x * self.weight
@@ -79,7 +84,7 @@ class CausalSelfAttention(nn.Module):
         d_model: int,
         n_heads: int,
         dropout: float = 0.0,
-        max_seq_len: int = 256,
+        max_seq_len: int = 768,
         use_rope: bool = True,
     ):
         super().__init__()
@@ -103,6 +108,7 @@ class CausalSelfAttention(nn.Module):
         # x: [B, L, D]
         B, L, _ = x.shape
         qkv = self.qkv(x).view(B, L, 3, self.n_heads, self.head_dim).permute(2, 0, 3, 1, 4)
+        # q,k,v: [B, H, L, D_head]
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         if self.use_rope and rope is not None:
@@ -174,6 +180,11 @@ class Block(nn.Module):
         return x
 
 
+# --------------------------------------------------------------------------- #
+# Full model                                                                  #
+# --------------------------------------------------------------------------- #
+
+
 @dataclass
 class TransformerConfig:
     vocab_size: int
@@ -182,7 +193,7 @@ class TransformerConfig:
     n_heads: int = 4
     d_ff: int = 1024
     dropout: float = 0.1
-    max_seq_len: int = 256
+    max_seq_len: int = 768
     rope: bool = True
     rmsnorm: bool = True
 
@@ -228,12 +239,13 @@ class DecoderTransformer(nn.Module):
     def forward(
         self, input_ids: torch.Tensor, attn_mask: torch.Tensor | None = None, **kwargs
     ) -> dict[str, torch.Tensor]:
+        # input_ids: [B, L]
         x = self.drop(self.embed(input_ids))
         rope = self._rope(input_ids.device) if self.cfg.rope else None
         for block in self.blocks:
             x = block(x, attn_mask, rope)
-        x = self.norm_out(x)
-        lm_logits = self.lm_head(x)
+        x = self.norm_out(x)  # [B, L, D]
+        lm_logits = self.lm_head(x)  # [B, L, V]
 
         out: dict[str, torch.Tensor] = {"lm_logits": lm_logits, "hidden": x}
         if self.has_multitask:

@@ -71,3 +71,51 @@ def canonicalize_step(step: str) -> str:
 def canonicalize_sequence(steps: list[str]) -> list[str]:
     """Canonicalize every step in a sequence."""
     return [CANONICAL.get(s, s) for s in steps]
+
+
+# Inverse map: canonical_form -> [all_synonyms_including_self]
+# Built once. Used by training-time synonym randomization to teach the
+# model that synonyms are equivalent classes.
+import random as _random
+from collections import defaultdict as _defaultdict
+
+_SYNONYM_GROUPS: dict[str, list[str]] | None = None
+
+
+def _build_synonym_groups() -> dict[str, list[str]]:
+    """Group every step by its canonical form. The canonical form itself is
+    a synonym of itself in each group."""
+    groups: dict[str, list[str]] = _defaultdict(list)
+    # Every alias maps to its canonical form
+    for alias, canon in CANONICAL.items():
+        groups[canon].append(alias)
+    # The canonical form itself is a valid synonym
+    for canon in list(groups.keys()):
+        if canon not in groups[canon]:
+            groups[canon].append(canon)
+    return dict(groups)
+
+
+def randomize_synonyms(steps: list[str], rng: _random.Random,
+                        prob: float = 0.5) -> list[str]:
+    """Per step, with probability `prob`, swap to a random synonym from its
+    equivalence class. Used at training time to teach the model that
+    e.g. STRIP RESIST and STRIP PHOTORESIST are interchangeable.
+
+    This is the *inverse* of `canonicalize_sequence`: rather than
+    collapsing synonyms onto a single form, we expand the model's
+    exposure to all surface forms during training.
+    """
+    global _SYNONYM_GROUPS
+    if _SYNONYM_GROUPS is None:
+        _SYNONYM_GROUPS = _build_synonym_groups()
+    out: list[str] = []
+    for s in steps:
+        # Find the equivalence class containing this step
+        canon = CANONICAL.get(s, s)
+        group = _SYNONYM_GROUPS.get(canon, [canon])
+        if rng.random() < prob and len(group) > 1:
+            out.append(rng.choice(group))
+        else:
+            out.append(s)
+    return out

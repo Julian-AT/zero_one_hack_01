@@ -3,7 +3,7 @@ train:
   batch_size: 32
   grad_accum: 1
   max_steps: 6000              # ~7 epochs at 10k seqs/family / bs=32
-  warmup_steps: 200
+  warmup_steps: 400            # 6.7% of max_steps — long sequences need longer warmup
   lr: 3.0e-4                   # AdamW
   weight_decay: 0.1
   beta1: 0.9
@@ -15,7 +15,7 @@ train:
   save_every: 2000
   seed: 42
   family_dropout: 0.2          # OOD discipline
-  max_len: 256                 # sequence length
+  max_len: 768                 # compositional sequences are 444-604 tokens; 256 truncated 100%
 
 # Online generator settings — Stage 1 of the chain
 data:

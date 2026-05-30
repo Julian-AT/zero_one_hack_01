@@ -23,7 +23,7 @@ class XLSTMConfig:
     num_blocks: int = 4
     block_pattern: tuple[str, ...] = ("mlstm", "slstm", "mlstm", "slstm")
     dropout: float = 0.1
-    max_seq_len: int = 256
+    max_seq_len: int = 768
     # mLSTM
     mlstm_num_heads: int = 4
     mlstm_conv1d_kernel_size: int = 4
@@ -131,7 +131,7 @@ def build_xlstm(
         num_blocks=model_cfg["num_blocks"],
         block_pattern=tuple(model_cfg["block_pattern"]),
         dropout=model_cfg.get("dropout", 0.1),
-        max_seq_len=model_cfg.get("max_seq_len", 256),
+        max_seq_len=model_cfg.get("max_seq_len", 768),
         mlstm_num_heads=mlstm.get("num_heads", 4),
         mlstm_conv1d_kernel_size=mlstm.get("conv1d_kernel_size", 4),
         mlstm_qkv_proj_blocksize=mlstm.get("qkv_proj_blocksize", 4),
