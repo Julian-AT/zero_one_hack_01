@@ -149,6 +149,20 @@ constraint machinery is unnecessary here.
 | --- | --- |
 | ![scaling](outputs/charts/exp05_scaling.png) | ![ablation](outputs/charts/exp04_constraint_loss.png) |
 
+**Training length (`exp07`, holdout=IC).** Training the same `d_model=128` model
+longer (504 → 2520 → 7560 optimizer steps) cleanly separates the two questions. The
+training loss keeps dropping (0.395 → 0.332 → 0.272) and **in-distribution Top-1
+climbs 75.3% → 89.7%** as the model fits the training families better — but
+**held-out-family (OOD) Top-1 does *not* improve**; it is flat-to-slightly-down
+(62.5% → 60.6%), the classic ID↑/OOD↓ divergence of a model memorizing the families
+it has seen. Top-5 is unchanged throughout (100% ID / 96.9% OOD): the legal
+candidate set already contains the answer, so extra gradient steps only sharpen
+*in-distribution* ranking. **More training helps Task 1 in-distribution but not the
+hidden-family abstraction** — the lever for the 4th family is training-data
+diversity (the 2→3-family jump above), not training length.
+
+![training length](outputs/charts/train_length.png)
+
 ---
 
 ## 6. Official-format submissions
