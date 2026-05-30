@@ -79,3 +79,12 @@ tracks/industrial-infineon/data/hard_invalid_*/
 tracks/industrial-infineon/data/task_datasets_*/
 tracks/industrial-infineon/data/generated/
 tracks/industrial-infineon/runs/*/checkpoint_*.pt
+
+# Participant eval/reranker runtime logs
+participant_files/bench_rerank_*.out
+participant_files/bench_rerank_*.err
+participant_files/rerank_next_*.out
+participant_files/rerank_next_*.err
+
+# Large internal debug outputs
+participant_files/predictions/internal_reranker_benchmark_examples.csv
