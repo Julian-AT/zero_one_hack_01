@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.eval.metrics import normalized_edit_distance, reciprocal_rank
+from transformer_xlstm.eval.metrics import normalized_edit_distance, reciprocal_rank
 
 
 def test_edit_distance_identical_is_zero():

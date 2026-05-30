@@ -26,7 +26,7 @@ provided 3000 sequences (1k per family).
 3. **LoFO drops Top-1 by ~25pp** (0.72 → ~0.48). This is the OOD challenge stated quantitatively — and the n-gram cannot recover the family-exclusive bigrams it never saw. **This is the gap that compositional tokenization + physics features are meant to close on Task 4.**
 4. **Completion exact-match is 0** (model drifts after one wrong step), but MOSFET NED at frac=0.8 is **0.126** — meaning 87% of remaining steps still match. Grammar-constrained beam search should lift exact-match into double digits.
 
-Artefacts: `extras/results/baselines/trigram_metrics.{json,md}`, two sample submission CSVs.
+Artefacts: `shared/extras/results/baselines/trigram_metrics.{json,md}`, two sample submission CSVs.
 
 ---
 
@@ -70,7 +70,7 @@ Artefacts: `extras/results/baselines/trigram_metrics.{json,md}`, two sample subm
 
 **What:** xLSTM's sLSTM block JIT-compiles a custom CUDA kernel on first use. Leonardo compute nodes have the CUDA *runtime* via the driver but **no `nvcc` / headers / toolkit** on `$PATH` by default. First xLSTM array attempt failed with `compilation terminated. ninja: build stopped: subcommand failed.`
 
-**Fix:** add `module load cuda/12.6` to `scripts/slurm/{train,grid}.sbatch`. The available CUDA modules on Leonardo are `cuda/12.2` (default), `12.3`, `12.6`. We picked 12.6 because our PyTorch was conda-forge `pytorch-gpu` 2.5.1 with CUDA-12-anything compatibility.
+**Fix:** add `module load cuda/12.6` to `shared/scripts/slurm/{train,grid}.sbatch`. The available CUDA modules on Leonardo are `cuda/12.2` (default), `12.3`, `12.6`. We picked 12.6 because our PyTorch was conda-forge `pytorch-gpu` 2.5.1 with CUDA-12-anything compatibility.
 
 After the fix, the slstm extension JIT-compiles successfully (~2-5 min one-time cost), is cached at `~/.cache/torch_extensions/py312_cu126/`, and subsequent runs reuse the cached build.
 
@@ -108,7 +108,7 @@ Same fix at frac=0.6: NED drops from ~0.97 → 0.51 (IGBT) and ~0.97 → 0.87 (M
 3. **All wins are free** — the validator is the organizers' code; using it at inference time costs O(N) per candidate (N = sequence length) and has zero training cost.
 4. **The technique transfers** to the trained Transformer / xLSTM at inference time. The Transformer's logits get the same prefix-validator mask before argmax.
 
-Artefact: `extras/results/baselines/grammar_decoder_metrics.json`.
+Artefact: `shared/extras/results/baselines/grammar_decoder_metrics.json`.
 
 ---
 
@@ -137,7 +137,7 @@ Compare against the raw trigram which had NED ~0.96–0.99 everywhere.
 2. **Retrieval is interpretable** — for any prediction we can show "we are completing this sequence because we saw this near-identical training sequence". Great for the demo.
 3. **Ensemble opportunity.** For Task 2, the final submission can be: try retrieval first (fast, no params); if NED to gold-validator-acceptable region is low, ship it; otherwise fall back to the grammar-constrained Transformer beam.
 
-Artefact: `extras/results/baselines/retrieval_metrics.json`.
+Artefact: `shared/extras/results/baselines/retrieval_metrics.json`.
 
 ---
 
@@ -165,7 +165,7 @@ Artefact: `extras/results/baselines/retrieval_metrics.json`.
 
 ## 2026-05-30 ~03:10 · Physics features lookup is alive
 
-**What:** `src/data/physics.py` parses the three `*_longdescription_parameters.csv` reference files into a `step_string → 10-d feature vector` lookup at `data/processed/physics_features.json`. 136 step strings covered.
+**What:** `models/transformer_xlstm/data/physics.py` parses the three `*_longdescription_parameters.csv` reference files into a `step_string → 10-d feature vector` lookup at `data/processed/physics_features.json`. 136 step strings covered.
 
 **Coverage of each feature across the 136 steps:**
 
@@ -239,7 +239,7 @@ Artefact: `data/processed/physics_features.json` (also lists tool taxonomy).
 4. **NED 0.34–0.54 for completion** — the transformer reproduces 46-66% of the remaining suffix correctly. Lower than k-NN retrieval (NED 0.16–0.35) but the transformer generalizes; retrieval needs the training set in scope. **Combining them via a wrapper that prefers retrieval when prefix similarity is high and falls back to transformer beam is the production strategy.**
 5. **Multi-task heads don't materially change Top-K** but added confidence calibration via the validity head (P_valid > 0.5 cross-check). On Task 4 OOD where the validator's known rules may not transfer, the trained heads carry weight.
 
-Artefacts: `extras/results/eval/{baseline_medium,multitask_medium}/metrics.{json,md}`.
+Artefacts: `shared/extras/results/eval/{baseline_medium,multitask_medium}/metrics.{json,md}`.
 
 ---
 
@@ -279,7 +279,7 @@ corruptions across all three known families) act as the second line of defense.
 2. **Validity and rule-ID heads converged to ~0.11 loss on a constantly-changing (online generator) batch.** That's not memorization — the model is actually learning to recognize rule-violation *types*.
 3. **End-to-end eval (see "anomaly is 100% solved" section above) doesn't show a head improvement on ID** because the symbolic validator already saturates. The heads' job is OOD on Task 4, where the validator's rule set may be incomplete.
 
-Artefact: `extras/checkpoints/multitask-transformer_medium-20260530-030653/summary.json` + the same checkpoint's TB events.
+Artefact: `shared/extras/checkpoints/multitask-transformer_medium-20260530-030653/summary.json` + the same checkpoint's TB events.
 
 ---
 
@@ -307,7 +307,7 @@ Artefact: `extras/checkpoints/multitask-transformer_medium-20260530-030653/summa
 2. **Compositional tokenization's known weakness shows up here:** because the model emits step strings by beam-searching word tokens, 3.3 % of rank-1 predictions are word-combinations that look syntactically plausible but aren't real vocabulary (e.g. `CLEAN AFTER CONTACT`). These are guaranteed wrong on Top-1. A vocab-restriction filter at decode time would lift Top-1 by up to 3.3 pp — not done in this submission, flagged as a one-line fix for next iteration.
 3. **The 78.7 % real-step rate in completions** means roughly 1 step in 5 of each predicted suffix is hallucinated wording. NED degrades accordingly. Grammar-mask + retrieval fallback would close this further.
 
-Artefacts: `extras/results/submission/{nextstep,completion,anomaly}.csv` + `extras/results/eval_inputs/`.
+Artefacts: `shared/extras/results/submission/{nextstep,completion,anomaly}.csv` + `shared/extras/results/eval_inputs/`.
 
 ---
 
@@ -340,7 +340,7 @@ What the autonomous-loop pass produced, in order:
 
 1. EDA + trigram baseline → identified ID saturation + 25pp LoFO drop.
 2. Plan.md + branch `abb` set up.
-3. Repo scaffolded; Leonardo SSH + pixi + SLURM pipeline working end-to-end via `scripts/leonardo/deploy.sh`.
+3. Repo scaffolded; Leonardo SSH + pixi + SLURM pipeline working end-to-end via `shared/scripts/leonardo/deploy.sh`.
 4. Storage discipline (`$SCRATCH` + `$HOME` backup, gitignored `.pt`).
 5. 7-cell scaling grid landed; all transformer sizes converge to LM ≈ 0.106.
 6. xLSTM cells required `module load gcc/12.2.0 cuda/12.6` — documented.
@@ -380,12 +380,12 @@ running at write time.
 
 1. **All recipes converge to the same LM loss band (~0.10–0.12).** Confirms the prior "bigger isn't better on ID" finding — but now also confirms it across architectures (xLSTM converges to the same loss as transformer) and LoFO folds. The held-out family being absent from training does not measurably change the loss the model can reach on the *trained* families. So loss alone won't pick winners — the OOD eval is the discriminator.
 2. **xLSTM is 3-4× slower per step at the same param count** (transformer-small 85 sps vs xlstm-small 31 sps; transformer-medium 24 sps vs xlstm-medium 11 sps). The sLSTM block's sequential CUDA kernel dominates. With identical convergence and 4× slower wall, **xLSTM is not pulling its weight for this task** — recommendation: drop it from Phase 2 grids unless we add a specific xLSTM-favoring axis (e.g. very long sequences).
-3. **Multitask wall time is 30–50% higher** at the same architecture because we trained 8k steps instead of 6k. The heads converge by step ~4k (visible in `extras/plots/training/heads_loss.png`). **Recommendation: drop multitask `max_steps` to 6000** to match lm_only — likely no quality loss, ~30% wall savings per cell.
+3. **Multitask wall time is 30–50% higher** at the same architecture because we trained 8k steps instead of 6k. The heads converge by step ~4k (visible in `shared/extras/plots/training/heads_loss.png`). **Recommendation: drop multitask `max_steps` to 6000** to match lm_only — likely no quality loss, ~30% wall savings per cell.
 4. **Per-fold loss ordering is consistent**: `held_ic` < `held_igbt` < `held_mosfet`. IC is easier as the held-out (training-side loss is lower when IC is excluded — i.e. MOSFET+IGBT is a slightly easier pair to fit than MOSFET+IC or IGBT+IC). This will matter when interpreting OOD numbers — MOSFET-held should be expected to be hardest.
 5. **No overfitting anywhere.** Train/val gap < 0.005 across every cell. We could safely train 2× longer if we suspected undertraining — but current loss is already at the n-gram-equivalent floor on ID, so longer is unlikely to help.
 
-Artefact: `extras/checkpoints/{lofo,final}-*/summary.json`, `extras/logs/tb/*`.
-Plots: `extras/plots/training/{train,val}_lm_loss_by_arch.png`,
+Artefact: `shared/extras/checkpoints/{lofo,final}-*/summary.json`, `shared/extras/logs/tb/*`.
+Plots: `shared/extras/plots/training/{train,val}_lm_loss_by_arch.png`,
 `heads_loss.png`, `throughput.png`, `scaling_curve.png`,
 `per_fold_overlay.png`.
 
@@ -442,8 +442,8 @@ Negative means the held-out family is actually *easier* than the trained ones.)
    multitask training is providing genuine generalization, not just
    memorization.
 
-Artefact: `extras/results/lofo_ablation.{csv,md}`,
-`extras/results/eval/lofo-transformer-small-*/metrics.{json,md}`.
+Artefact: `shared/extras/results/lofo_ablation.{csv,md}`,
+`shared/extras/results/eval/lofo-transformer-small-*/metrics.{json,md}`.
 
 ---
 
@@ -549,7 +549,7 @@ trained on IGBT+IC, evaluated on held-out MOSFET, n=60):**
    false positives on held-out MOSFET, dropping AUC from 1.000 to 0.31.
    Phase-1's AUC=1.000 was misleading — the head was undertrained so it
    never disagreed with the validator. **Fix landed in
-   `src/eval/predict.py`**: only let the learned head override the
+   `models/transformer_xlstm/eval/predict.py`**: only let the learned head override the
    validator when P_valid < 0.1 (was 0.5). Validator-dominant ensemble
    now matches the validator's known-rule performance on ID, with the
    head only acting as a backstop for very-confident disagreement.
@@ -562,8 +562,8 @@ trained on IGBT+IC, evaluated on held-out MOSFET, n=60):**
 progress (~24/64 cells done). Phase-2 train array (16 cells) queued
 behind it. Phase-2 eval array chained `afterok` on Phase-2 train.
 
-Artefact: `extras/checkpoints/v2-transformer-small-multitask-held_mosfet/`,
-`extras/results/eval/v2-transformer-small-multitask-held_mosfet/metrics.{json,md}`.
+Artefact: `shared/extras/checkpoints/v2-transformer-small-multitask-held_mosfet/`,
+`shared/extras/results/eval/v2-transformer-small-multitask-held_mosfet/metrics.{json,md}`.
 
 ---
 
@@ -602,7 +602,7 @@ to dramatically better LoFO numbers without any tuning.
 
 ## 2026-05-30 ~19:30 · Submission format check
 
-Audited `extras/results/submission/{nextstep,completion,anomaly}.csv`
+Audited `shared/extras/results/submission/{nextstep,completion,anomaly}.csv`
 against `generation_rules.md §5.3`:
 
 | File | Schema match | Row count | Status |
@@ -633,7 +633,7 @@ discoveries that change the picture:**
 
 ### Found: organizers' eval files were already shipped
 
-`participant_files/` at repo root contains:
+`competition/participant-files/` at repo root contains:
 
 - `eval_metrics.py` (23 kB) — the official scoring script
 - `eval_input_valid.csv` (1.0 MB, 600 rows) — real input for Tasks 1+2
@@ -658,7 +658,7 @@ doesn't compute this yet — to be added.
 
 ### Found: teammate prior work with synthetic OOD families
 
-`tracks/industrial-infineon/scripts/` contains 2902 lines of prior
+`competition/track-details/scripts/` contains 2902 lines of prior
 work from a teammate:
 
 - `generate_ood_families.py` (544 lines) — generates **DIODE,
@@ -668,14 +668,14 @@ work from a teammate:
 - `train_ssl_process_transformer.py` (840 lines) + `_hybrid_` (1097
   lines) — full SSL pretraining with family_dropout (p=0.25),
   input_step_masking (3%), label_smoothing (0.05).
-- `ssl_results/` — measured Original (MOSFET+IGBT+IC) vs Augmented
+- `models/self-supervised/` — measured Original (MOSFET+IGBT+IC) vs Augmented
   (+DIODE+SCHOTTKY+SIC_MOSFET) on 30-epoch runs. Both converge to
   test_top1 ≈ 0.812 / top5 ≈ 0.999 / MRR ≈ 0.903 (essentially
   identical on ID).
 
 **Integrated their approach into our pipeline:**
 
-- New `src/data/ood_generator.py` — refactored from the teammate's
+- New `models/transformer_xlstm/data/ood_generator.py` — refactored from the teammate's
   script. Three generators `generate_{diode, schottky, sic_mosfet}`
   + a `generate_ood_sequence(family, rng)` retry wrapper. Smoke test:
   **50/50 validator-clean** for each family, avg lengths 79/79/128.
@@ -684,7 +684,7 @@ work from a teammate:
   one of the 3 known; the family token is `<FAMILY_UNK>` so the model
   treats them as "unknown family" examples — encouraging
   backbone-level learning rather than family-token shortcuts.
-- New Phase-3 grid (`src/experiments/phase3_grid.py`): 8 cells
+- New Phase-3 grid (`models/transformer_xlstm/experiments/phase3_grid.py`): 8 cells
   (transformer multitask × {small, medium} × {3 LoFO folds + all3})
   trained with `ood_family_prob=0.25`. Direct A/B vs Phase-2 (which
   had the same recipe but `ood_family_prob=0.0`).
@@ -759,7 +759,7 @@ These are the "what didn't work" entries the rubric explicitly rewards:
 
 ### 🎉 Headline result — organizers' own validator confirms 600/600 valid
 
-Ran `tracks/industrial-infineon/training_data/generate_sequences.py --validate`
+Ran `competition/track-details/training_data/generate_sequences.py --validate`
 (the organizers' own script, the one referenced in their self-eval
 guidance) on our v2 completion submission. The script reconstructs
 `partial + predicted` per row and runs the full 10-rule validator:

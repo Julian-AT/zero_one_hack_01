@@ -39,7 +39,7 @@ How does your solution work? 3–5 bullets is enough.
 - {Which model / framework / API / data source you chose and why}
 - {Where the system runs — local, Leonardo, the partner API}
 
-A small diagram or architecture sketch in `extras/` helps but is not required.
+A small diagram or architecture sketch in `shared/extras/` helps but is not required.
 
 ---
 
@@ -68,7 +68,7 @@ The numbers. This is the section the jury reads most carefully.
 - **Headline metric**: {what you measured, the number, and what it means}
 - **Baseline comparison**: {what you compared against — without this, "we improved X" is meaningless}
 - **Per-{persona / family / domain} breakdown** if relevant
-- **Where the data came from** to produce these numbers (`extras/results/` is a good place for raw output files)
+- **Where the data came from** to produce these numbers (`shared/extras/results/` is a good place for raw output files)
 
 If you used the track's official scoring script (Infineon `eval_metrics.py`), paste the scores here. If you defined your own metrics, explain what they measure and why they are the right metrics for what you built.
 
@@ -99,11 +99,11 @@ Each track has additional required outputs beyond this report. Confirm yours are
 ### 🧾 Insurance AI (UNIQA)
 - [ ] Working Conversion Coach prototype runs
 - [ ] Simulation across at least three personas
-- [ ] Hypotheses document in `extras/hypotheses.md` with 2–3 validated logics
+- [ ] Hypotheses document in `shared/extras/hypotheses.md` with 2–3 validated logics
 - [ ] Demo video shows the prototype handling at least one persona from each segment
 
 ### ⚙️ Industrial AI (Infineon)
-- [ ] Eval submission files in `extras/results/`:
+- [ ] Eval submission files in `shared/extras/results/`:
   - `nextstep.csv` (Task 1 format)
   - `completion.csv` (Task 2 format)
   - `anomaly.csv` (Task 3 format)

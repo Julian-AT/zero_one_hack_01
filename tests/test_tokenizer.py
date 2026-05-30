@@ -7,8 +7,7 @@ uses), so these are deterministic and need no network or checkpoints.
 from __future__ import annotations
 
 import pytest
-
-from src.data.tokenizer import (
+from transformer_xlstm.data.tokenizer import (
     SPECIAL_TOKENS,
     CompositionalTokenizer,
     StepTokenizer,

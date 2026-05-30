@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.data.canonicalize import CANONICAL, canonicalize_sequence, canonicalize_step
+from transformer_xlstm.data.canonicalize import CANONICAL, canonicalize_sequence, canonicalize_step
 
 
 def test_known_synonym_maps_to_canonical():

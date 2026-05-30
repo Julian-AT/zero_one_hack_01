@@ -10,11 +10,11 @@
 
 | Branch | Owner | What they built | Headline result | Where the artifacts live |
 |---|---|---|---|---|
-| **emil** | Emil | SSL Transformer (840 LoC), OOD-family generator (DIODE/SCHOTTKY/SIC_MOSFET), augmented-vs-original ablation | ID Top-1 **0.812** in their own held-out | `tracks/industrial-infineon/scripts/train_ssl_*.py`, `ssl_results/` |
+| **emil** | Emil | SSL Transformer (840 LoC), OOD-family generator (DIODE/SCHOTTKY/SIC_MOSFET), augmented-vs-original ablation | ID Top-1 **0.812** in their own held-out | `competition/track-details/scripts/train_ssl_*.py`, `models/self-supervised/` |
 | **julian** | Julian | SSL with hybrid tokenizer, learned contrastive reranker for Task 1 | (merged into `main`) | (merged into `main`) |
-| **main** | merged | Coverage-guided SSL Transformer + learned reranker (the team's current "official" pick per `main/REPORT.md`); cross-model benchmark harness; consolidated handover | ID Top-1 **0.8044** (best ID overall) | `participant_files/predictions/predictions_*.csv` |
-| **neurosymbolic-model** | (Tobias?) | Symbolic engine (10 rules + role-induction anchors) + tiny constrained neural ranker (~0.68M params). Every completion rule-valid by construction. | LoFO held-out Top-1 **0.681** (best OOD), OOD anomaly F1 **100%** with role-induction | `neurosymbolic-approach/outputs/` |
-| **abb** | abb | LoFO ablation grid (96 trained checkpoints), max_len=256→768 bug fix (+19pp), Phase-3 OOD-family aug, Phase-4 synonym aug, validator-clean submissions | LoFO held-out Top-1 **0.658**, Top-1 drop **−0.013** (best generalization gap) | `extras/results/submission_v2_real/`, `submission/EVERYTHING_WE_DID.md` |
+| **main** | merged | Coverage-guided SSL Transformer + learned reranker (the team's current "official" pick per `main/REPORT.md`); cross-model benchmark harness; consolidated handover | ID Top-1 **0.8044** (best ID overall) | `competition/participant-files/predictions/predictions_*.csv` |
+| **neurosymbolic-model** | (Tobias?) | Symbolic engine (10 rules + role-induction anchors) + tiny constrained neural ranker (~0.68M params). Every completion rule-valid by construction. | LoFO held-out Top-1 **0.681** (best OOD), OOD anomaly F1 **100%** with role-induction | `models/neurosymbolic/outputs/` |
+| **abb** | abb | LoFO ablation grid (96 trained checkpoints), max_len=256→768 bug fix (+19pp), Phase-3 OOD-family aug, Phase-4 synonym aug, validator-clean submissions | LoFO held-out Top-1 **0.658**, Top-1 drop **−0.013** (best generalization gap) | `shared/extras/results/submission_v2_real/`, `submission/EVERYTHING_WE_DID.md` |
 | **leonardo-prep** | abb | Leonardo deployment scaffolding | (subsumed into `main` / `abb`) | (subsumed) |
 
 ---
@@ -113,7 +113,7 @@ DIODE/SCHOTTKY/SIC_MOSFET aug at p=0.25 slightly hurts ID LoFO (capacity dilutio
 
 ### Recommended: **Neurosymbolic approach**
 
-**For all three tasks (1, 2, 3).** Use the submission CSVs from `neurosymbolic-approach/outputs/submission_task{1,2,3}.csv` if they exist, or regenerate via `exp06_make_submission.py` against the real eval inputs in `participant_files/`.
+**For all three tasks (1, 2, 3).** Use the submission CSVs from `models/neurosymbolic/outputs/submission_task{1,2,3}.csv` if they exist, or regenerate via `exp06_make_submission.py` against the real eval inputs in `competition/participant-files/`.
 
 ### Why
 
@@ -136,14 +136,14 @@ We give up the ~12pp ID Top-1 advantage of the SSL Transformer (0.804 vs 0.696).
 
 ### If the team disagrees and wants higher ID
 
-Fallback: ship the **SSL Transformer + reranker** submission from `participant_files/predictions/predictions_*.csv` (main branch). It's the team's currently-staged choice and has the highest ID Top-1.
+Fallback: ship the **SSL Transformer + reranker** submission from `competition/participant-files/predictions/predictions_*.csv` (main branch). It's the team's currently-staged choice and has the highest ID Top-1.
 
 ### If we want to be greedy and hedge
 
 Submit a **per-task best-of-each** package:
-- Task 1 nextstep.csv: SSL Transformer + reranker (highest ID)  → `main/participant_files/predictions/predictions_nextstep.csv`
-- Task 2 completion.csv: Neurosymbolic (constrained decode, 100% rule-valid + best NED) → `neurosymbolic-approach/outputs/submission_task2.csv`
-- Task 3 anomaly.csv: Neurosymbolic with role-induction (100% F1) → `neurosymbolic-approach/outputs/submission_task3.csv`
+- Task 1 nextstep.csv: SSL Transformer + reranker (highest ID)  → `main/competition/participant-files/predictions/predictions_nextstep.csv`
+- Task 2 completion.csv: Neurosymbolic (constrained decode, 100% rule-valid + best NED) → `models/neurosymbolic/outputs/submission_task2.csv`
+- Task 3 anomaly.csv: Neurosymbolic with role-induction (100% F1) → `models/neurosymbolic/outputs/submission_task3.csv`
 
 This is the strongest theoretical submission. Verify each CSV matches the documented format (`generation_rules.md §5.3`) before bundling.
 

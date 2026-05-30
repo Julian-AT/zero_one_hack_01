@@ -21,15 +21,15 @@ decoder Transformer (optionally xLSTM) on it, and emits organizer-format predict
 This repo is our team's entry for the **Industrial AI** track. Start here:
 
 - **[`REPORT.md`](./REPORT.md)** — executive summary: approach, results, final files, how to run.
-- **[`ssl_results/README.md`](./ssl_results/README.md)** — full technical write-up.
-- **[`participant_files/predictions/`](./participant_files/predictions/)** — final submission CSVs.
+- **[`models/self-supervised/README.md`](./models/self-supervised/README.md)** — full technical write-up.
+- **[`competition/participant-files/predictions/`](./competition/participant-files/predictions/)** — final submission CSVs.
 
 ---
 
 ## Repository layout
 
 ```text
-src/                    # the library — clean, typed, tested
+models/transformer_xlstm/                    # the library — clean, typed, tested
   data/                 #   tokenizers, validator adapter, corrupters, CSV/sequence I/O
   model/                #   decoder Transformer, xLSTM, heads, build_model registry
   train/                #   launch CLI, training loop, losses, tracking
@@ -37,9 +37,9 @@ src/                    # the library — clean, typed, tested
   utils/                #   paths, seeding
 configs/                # OmegaConf YAML: arch/ token/ train/ (nothing hardcoded)
 tests/                  # pure-logic pytest suite (tokenizer, validator, corrupt, metrics, io)
-baselines (extras/)     # trigram, grammar-decoder, retrieval reference baselines
-participant_files/      # competition submission pipeline (hybrid model + rerankers)
-tracks/industrial-infineon/   # organizer data + the canonical generate_sequences.py grammar
+baselines (shared/extras/)     # trigram, grammar-decoder, retrieval reference baselines
+competition/participant-files/      # competition submission pipeline (hybrid model + rerankers)
+competition/track-details/   # organizer data + the canonical generate_sequences.py grammar
 docs/                   # results.md (full results narrative), leonardo.md (HPC guide)
 ```
 
@@ -68,7 +68,7 @@ Training streams freshly generated sequences from the rule-based simulator (with
 corruption); no static training CSV is loaded. Configs are merged at launch via OmegaConf.
 
 ```bash
-python -m src.train.launch \
+python -m transformer_xlstm.train.launch \
     --arch-config  configs/arch/transformer_small.yaml \
     --train-config configs/train/default.yaml \
     --token-config configs/token/compositional.yaml \
@@ -78,11 +78,11 @@ python -m src.train.launch \
 Override any config value inline:
 
 ```bash
-python -m src.train.launch ... --override train.max_steps=100 train.batch_size=16
+python -m transformer_xlstm.train.launch ... --override train.max_steps=100 train.batch_size=16
 ```
 
-Checkpoints are written to `extras/checkpoints/<run-name>/` (gitignored; only `summary.json`
-is committed). On Leonardo, submit via `scripts/slurm/train.sbatch`.
+Checkpoints are written to `shared/extras/checkpoints/<run-name>/` (gitignored; only `summary.json`
+is committed). On Leonardo, submit via `shared/scripts/slurm/train.sbatch`.
 
 ## Evaluate
 
@@ -90,9 +90,9 @@ Run the internal metric suite against a checkpoint (next-step top-k / MRR, compl
 EM / normalized edit distance, anomaly precision/recall):
 
 ```bash
-python -m src.eval.run_eval \
-    --checkpoint extras/checkpoints/my-run-001/final.pt \
-    --output-dir extras/results/eval/my-run-001
+python -m transformer_xlstm.eval.run_eval \
+    --checkpoint shared/extras/checkpoints/my-run-001/final.pt \
+    --output-dir shared/extras/results/eval/my-run-001
 ```
 
 This writes `metrics.json` + `metrics.md`. The official organizer eval inputs are
@@ -113,5 +113,5 @@ pixi run test          # pytest
   honest account of what the results can and cannot claim.
 - [`docs/leonardo.md`](docs/leonardo.md) — authenticating, environment setup, and SLURM job
   submission on the Leonardo cluster.
-- [`tracks/industrial-infineon/`](tracks/industrial-infineon/) — the organizer briefing,
+- [`competition/track-details/`](competition/track-details/) — the organizer briefing,
   reference data, and `generate_sequences.py` (the canonical grammar and validator).

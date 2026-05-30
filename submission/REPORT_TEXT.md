@@ -1,7 +1,7 @@
 # REPORT — dedicated text + figure callouts
 
 > This file is the "dress-rehearsal" of REPORT.md — copy-paste ready,
-> with figure callouts pointing at `extras/plots/report/*.png`.
+> with figure callouts pointing at `shared/extras/plots/report/*.png`.
 
 ---
 
@@ -20,7 +20,7 @@ patterns (figure 3).
 
 ## Problem
 
-Three submission tasks scored by `participant_files/eval_metrics.py`:
+Three submission tasks scored by `competition/participant-files/eval_metrics.py`:
 next-step prediction, sequence completion, anomaly detection. Plus a
 post-submission Task 4 — organizers re-run our models on a hidden 4th
 product family and report the ID→OOD drop. **Task 4 was the actual
@@ -54,7 +54,7 @@ Plus a 64-cell LoFO ablation grid + 16-cell Phase-2 (max_len fix) +
 ### Headline figures
 
 **Figure 1: Trajectory — OOD Top-1 from trigram → Phase-3.**
-*`extras/plots/report/trajectory.png`*
+*`shared/extras/plots/report/trajectory.png`*
 
 The story of the project in one chart. Trigram gets 0.472 OOD;
 Phase-1 lifts to 0.567 (+9.5pp); the max_len fix in Phase-2 adds
@@ -62,7 +62,7 @@ Phase-1 lifts to 0.567 (+9.5pp); the max_len fix in Phase-2 adds
 regression — see "what didn't work" §4).
 
 **Figure 2: The max_len bug — single-cell A/B.**
-*`extras/plots/report/max_len_fix.png`*
+*`shared/extras/plots/report/max_len_fix.png`*
 
 Same recipe (`transformer-small-multitask`, held-out MOSFET), same
 training budget, only `max_len` changed:
@@ -74,7 +74,7 @@ training budget, only `max_len` changed:
 Largest single improvement of the project from a one-line config fix.
 
 **Figure 3: Submission quality — three panels.**
-*`extras/plots/report/submission_quality.png`*
+*`shared/extras/plots/report/submission_quality.png`*
 
 - (a) **Completion validator-clean rate**: 200/200 per family =
   600/600 valid total. Confirmed by the organizers' own
@@ -86,14 +86,14 @@ Largest single improvement of the project from a one-line config fix.
   uniform-injection eval set.
 
 **Figure 4: LoFO across phases × held-out family.**
-*`extras/plots/report/phase_comparison.png`*
+*`shared/extras/plots/report/phase_comparison.png`*
 
 Per-fold breakdown of Top-1_held by phase. MOSFET-held is the
 hardest fold (unique epitaxy + LDD spacer blocks). Phase-3 helped IC
 but hurt MOSFET / IGBT — capacity dilution from synthetic families.
 
 **Figure 5: Scaling — bigger isn't better on ID, but max_len moves the floor.**
-*`extras/plots/report/scaling_corrected.png`*
+*`shared/extras/plots/report/scaling_corrected.png`*
 
 All Phase-1 transformer sizes (5M → 100M) collapse to LM loss
 0.106 ± 0.0001. xLSTM at the same params is 3-4× slower, same loss.
@@ -178,7 +178,7 @@ learned the *backbone* of the process, not family-specific patterns.
    `top1_drop ≈ 0` finding says the model generalises across families.
 5. **Disciplined LoFO ablation.** 64 + 16 + 8 = 88 transformer cells
    across 4 grids — gave us an actual recipe-selection signal.
-6. **Honest evaluation pipeline.** Our `src/eval/run_eval.py` now
+6. **Honest evaluation pipeline.** Our `models/transformer_xlstm/eval/run_eval.py` now
    computes the exact same metrics as the organizers' `eval_metrics.py`
    (Token Acc + Block-level Acc + F1 + ConfMat etc.), so our self-
    reported numbers are directly comparable.
@@ -241,13 +241,13 @@ learned the *backbone* of the process, not family-specific patterns.
 
 - ✅ Public MIT repo
 - ✅ README.md, REPORT.md, requirements.txt + pixi.toml
-- ✅ `extras/results/submission_v2_real/{nextstep,completion,anomaly}.csv`
+- ✅ `shared/extras/results/submission_v2_real/{nextstep,completion,anomaly}.csv`
   generated against the real 600/600/987-row eval inputs from
-  `participant_files/`
+  `competition/participant-files/`
 - ✅ 88 trained checkpoints + 88 TB event streams + 11 plots
-- ✅ Per-family breakdown in `extras/results/lofo_ablation.{csv,md}`
-- ✅ Baseline-vs-trained side-by-side CLI: `scripts/demo_compare.py`
-- ✅ Self-eval: `scripts/validate_completions.py` runs the official
+- ✅ Per-family breakdown in `shared/extras/results/lofo_ablation.{csv,md}`
+- ✅ Baseline-vs-trained side-by-side CLI: `shared/scripts/demo_compare.py`
+- ✅ Self-eval: `shared/scripts/validate_completions.py` runs the official
   validator on `partial + predicted` — confirms 600/600 valid
 - ⏳ Demo video (2 min) — to record using the CLI
 - ⏳ 10-slide PDF — outline in `submission/SLIDES.md`

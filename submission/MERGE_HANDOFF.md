@@ -22,51 +22,51 @@ pixi.toml                       removed duplicate [target.linux-64.dependencies]
 ### 2. Code modules — abb-original work
 
 ```
-src/data/ood_generator.py              ★ NEW — DIODE/SCHOTTKY/SIC_MOSFET generators
-src/data/load.py                       MODIFIED — ood_family_prob + synonym_randomize_prob support
-src/data/canonicalize.py               MODIFIED — added randomize_synonyms() (inverse of canonicalize)
-src/train/trainer.py                   MODIFIED — passes ood/synonym kwargs to data loader
-src/eval/predict.py                    MODIFIED — vocab_restrict, length-norm beam, validator-dominant anomaly
-src/eval/run_eval.py                   MODIFIED — Token Acc + Block-level Acc + F1 + Confusion Matrix
-src/eval/make_submission.py            MODIFIED — trigram-grammar fallback for empty ranks
-src/experiments/lofo_grid.py           ★ NEW — 64-cell LoFO ablation
-src/experiments/phase2_grid.py         ★ NEW — 16-cell max_len-fix grid
-src/experiments/phase3_grid.py         ★ NEW — 8-cell OOD-family aug grid
-src/experiments/phase4_grid.py         ★ NEW — 8-cell synonym + OOD aug grid
+models/transformer_xlstm/data/ood_generator.py              ★ NEW — DIODE/SCHOTTKY/SIC_MOSFET generators
+models/transformer_xlstm/data/load.py                       MODIFIED — ood_family_prob + synonym_randomize_prob support
+models/transformer_xlstm/data/canonicalize.py               MODIFIED — added randomize_synonyms() (inverse of canonicalize)
+models/transformer_xlstm/train/trainer.py                   MODIFIED — passes ood/synonym kwargs to data loader
+models/transformer_xlstm/eval/predict.py                    MODIFIED — vocab_restrict, length-norm beam, validator-dominant anomaly
+models/transformer_xlstm/eval/run_eval.py                   MODIFIED — Token Acc + Block-level Acc + F1 + Confusion Matrix
+models/transformer_xlstm/eval/make_submission.py            MODIFIED — trigram-grammar fallback for empty ranks
+models/transformer_xlstm/experiments/lofo_grid.py           ★ NEW — 64-cell LoFO ablation
+models/transformer_xlstm/experiments/phase2_grid.py         ★ NEW — 16-cell max_len-fix grid
+models/transformer_xlstm/experiments/phase3_grid.py         ★ NEW — 8-cell OOD-family aug grid
+models/transformer_xlstm/experiments/phase4_grid.py         ★ NEW — 8-cell synonym + OOD aug grid
 ```
 
 ### 3. Infrastructure scripts
 
 ```
-scripts/aggregate_lofo.py              ★ NEW — produces extras/results/lofo_ablation.{csv,md}
-scripts/benchmark_candidates.py        ★ NEW — ranks all 23 final all-3 checkpoints
-scripts/plot_training.py               ★ NEW — 6 training PNGs from 106 TB streams
-scripts/plot_submission_quality.py     ★ NEW — 5 report-ready PNGs
-scripts/demo_compare.py                ★ NEW — required side-by-side CLI demo
-scripts/validate_completions.py        ★ NEW — runs validate_sequence on completion.csv
-scripts/leonardo/deploy.sh             MODIFIED — added .pixi/ to rsync exclude
-scripts/leonardo/setup_env.sh          MODIFIED — CONDA_OVERRIDE_CUDA=12.0
-scripts/leonardo/monitor_lofo.sh       ★ NEW — background poll-and-notify
-scripts/slurm/lofo_grid.sbatch         ★ NEW
-scripts/slurm/lofo_eval_grid.sbatch    ★ NEW
-scripts/slurm/phase{2,3,4}_grid.sbatch ★ NEW (×3)
-scripts/slurm/phase{2,3,4}_eval.sbatch ★ NEW (×3)
-scripts/slurm/submission_real.sbatch   ★ NEW
+shared/scripts/aggregate_lofo.py              ★ NEW — produces shared/extras/results/lofo_ablation.{csv,md}
+shared/scripts/benchmark_candidates.py        ★ NEW — ranks all 23 final all-3 checkpoints
+shared/scripts/plot_training.py               ★ NEW — 6 training PNGs from 106 TB streams
+shared/scripts/plot_submission_quality.py     ★ NEW — 5 report-ready PNGs
+shared/scripts/demo_compare.py                ★ NEW — required side-by-side CLI demo
+shared/scripts/validate_completions.py        ★ NEW — runs validate_sequence on completion.csv
+shared/scripts/leonardo/deploy.sh             MODIFIED — added .pixi/ to rsync exclude
+shared/scripts/leonardo/setup_env.sh          MODIFIED — CONDA_OVERRIDE_CUDA=12.0
+shared/scripts/leonardo/monitor_lofo.sh       ★ NEW — background poll-and-notify
+shared/scripts/slurm/lofo_grid.sbatch         ★ NEW
+shared/scripts/slurm/lofo_eval_grid.sbatch    ★ NEW
+shared/scripts/slurm/phase{2,3,4}_grid.sbatch ★ NEW (×3)
+shared/scripts/slurm/phase{2,3,4}_eval.sbatch ★ NEW (×3)
+shared/scripts/slurm/submission_real.sbatch   ★ NEW
 ```
 
 ### 4. Submission CSVs — pick one of these
 
 ```
-extras/results/submission_v3_real/{nextstep,completion,anomaly}.csv
+shared/extras/results/submission_v3_real/{nextstep,completion,anomaly}.csv
     ← OUR RECOMMENDED SUBMISSION (v3-medium-multitask-ood25)
     100 % validator-clean, 100 % 5-rank fill, 600/387 class balance,
     based on the winner per our ranking (Top-1 held = 0.658, drop = −0.013)
 
-extras/results/submission_v2_real_padded/{nextstep,completion,anomaly}.csv
+shared/extras/results/submission_v2_real_padded/{nextstep,completion,anomaly}.csv
     ← FALLBACK SUBMISSION (v2-final-medium-multitask, with trigram-fill fix)
     Same quality as above on every self-eval metric.
 
-extras/results/submission_v2_real/{nextstep,completion,anomaly}.csv
+shared/extras/results/submission_v2_real/{nextstep,completion,anomaly}.csv
     ← LEGACY (v2 without trigram-fill; 82 % of rank rows had <5 ranks)
     Keep for posterity but don't ship.
 ```
@@ -89,29 +89,29 @@ REPORT.md                              HEAVILY MODIFIED — has Phase-2 update s
 ### 6. Plots — drop into the final report
 
 ```
-extras/plots/training/{train,val}_lm_loss_by_arch.png  — faceted training curves
-extras/plots/training/heads_loss.png                   — multitask head convergence
-extras/plots/training/throughput.png                   — sps per cell
-extras/plots/training/scaling_curve.png                — bigger ≠ better on ID
-extras/plots/training/per_fold_overlay.png             — per-held-out-family val curves
-extras/plots/report/trajectory.png                     — trigram → Phase-1 → Phase-2 → Phase-3
-extras/plots/report/max_len_fix.png                    — same-cell A/B with the bug fix
-extras/plots/report/phase_comparison.png               — per-fold Top-1 across all 4 phases
-extras/plots/report/submission_quality.png             — 100 % validator-clean, class balance
-extras/plots/report/scaling_corrected.png              — bigger ≠ better + Phase-2 stars
+shared/extras/plots/training/{train,val}_lm_loss_by_arch.png  — faceted training curves
+shared/extras/plots/training/heads_loss.png                   — multitask head convergence
+shared/extras/plots/training/throughput.png                   — sps per cell
+shared/extras/plots/training/scaling_curve.png                — bigger ≠ better on ID
+shared/extras/plots/training/per_fold_overlay.png             — per-held-out-family val curves
+shared/extras/plots/report/trajectory.png                     — trigram → Phase-1 → Phase-2 → Phase-3
+shared/extras/plots/report/max_len_fix.png                    — same-cell A/B with the bug fix
+shared/extras/plots/report/phase_comparison.png               — per-fold Top-1 across all 4 phases
+shared/extras/plots/report/submission_quality.png             — 100 % validator-clean, class balance
+shared/extras/plots/report/scaling_corrected.png              — bigger ≠ better + Phase-2 stars
 ```
 
 ### 7. Aggregator outputs
 
 ```
-extras/results/lofo_ablation.{csv,md}     — sorted recipe table across 64 cells
-extras/results/candidate_ranking.csv      — final ranking of 23 all-3 checkpoints
+shared/extras/results/lofo_ablation.{csv,md}     — sorted recipe table across 64 cells
+shared/extras/results/candidate_ranking.csv      — final ranking of 23 all-3 checkpoints
 ```
 
 ### 8. Eval input + scorer (canonical, ship in repo)
 
 ```
-participant_files/                        — organizers' eval inputs + scorer
+competition/participant-files/                        — organizers' eval inputs + scorer
     eval_input_valid.csv                  (600 rows)
     eval_input_anomaly.csv                (987 rows)
     eval_metrics.py                       (23 kB official scoring script)
@@ -128,7 +128,7 @@ Main has changed substantially since we last looked:
 - README rewritten as a solution guide
 - **`FINDINGS.md` was DELETED on main** (narrative docs relocated)
 - Test suite added
-- Helpers consolidated into `src/`
+- Helpers consolidated into `models/transformer_xlstm/`
 
 The real merge `abb` → `main` produces only **7 conflict files**:
 
@@ -136,13 +136,13 @@ The real merge `abb` → `main` produces only **7 conflict files**:
 |---|---|---|
 | `REPORT.md` | AA (both added) | **Take main's** as the spine; add our Phase-2 `max_len bug` section + winner pick from `submission/TEAM_DECISION_MEMO.md` as sub-sections |
 | `FINDINGS.md` | UD (main deleted, we modified) | **Move ours to `submission/abb_FINDINGS.md`** (main relocated narrative docs to a different home) |
-| `src/data/load.py` | UU | **Take abb** — has `ood_family_prob` + `synonym_randomize_prob` parameters that main lacks |
-| `src/eval/make_submission.py` | UU | **Take abb** — has trigram-grammar fallback that fixes the 82 % empty-rank bug |
-| `src/eval/predict.py` | UU | **Take abb** — validator-dominant ensemble + vocab_restrict + length-norm beam |
-| `src/eval/run_eval.py` | UU | **Take abb** — has Token Acc + Block-level Acc + F1 + ConfMat (matches official `eval_metrics.py`) |
-| `src/model/transformer.py` | UU | **Take abb** — `max_seq_len=768` default (matches the config fix) |
+| `models/transformer_xlstm/data/load.py` | UU | **Take abb** — has `ood_family_prob` + `synonym_randomize_prob` parameters that main lacks |
+| `models/transformer_xlstm/eval/make_submission.py` | UU | **Take abb** — has trigram-grammar fallback that fixes the 82 % empty-rank bug |
+| `models/transformer_xlstm/eval/predict.py` | UU | **Take abb** — validator-dominant ensemble + vocab_restrict + length-norm beam |
+| `models/transformer_xlstm/eval/run_eval.py` | UU | **Take abb** — has Token Acc + Block-level Acc + F1 + ConfMat (matches official `eval_metrics.py`) |
+| `models/transformer_xlstm/model/transformer.py` | UU | **Take abb** — `max_seq_len=768` default (matches the config fix) |
 
-Plus 191 new files coming in from main (additive, no conflict): `neurosymbolic-approach/`, `benchmark/`, `ssl_results/`, `tests/`, `.github/workflows/`, etc.
+Plus 191 new files coming in from main (additive, no conflict): `models/neurosymbolic/`, `shared/benchmark/`, `models/self-supervised/`, `tests/`, `.github/workflows/`, etc.
 
 Auto-merged cleanly (27 files): all configs, `pixi.toml`, baselines, scripts, etc.
 
@@ -156,12 +156,12 @@ When merging `abb` into `main`:
 | `REPORT.md` | Both branches have a version | Use `main`'s structure; merge in our Phase-2 "max_len bug" section + winner-pick from `TEAM_DECISION_MEMO.md` |
 | `configs/train/default.yaml`, `multitask.yaml` | `max_len` value | **KEEP `768` (abb's fix)** — main's 256 is the bug |
 | `configs/arch/*.yaml` | `max_seq_len` value | **KEEP `768` (abb's fix)** |
-| `src/data/load.py` | Different signatures | KEEP `abb`'s — has `ood_family_prob` and `synonym_randomize_prob` parameters that `main` lacks |
-| `src/eval/predict.py` | Different anomaly_ensemble logic | KEEP `abb`'s — validator-dominant ensemble fixes the OOD false-positive bug |
-| `src/eval/make_submission.py` | Different rank-fill logic | KEEP `abb`'s — trigram-grammar fallback fixes the 82 % empty-rank bug |
-| `src/eval/run_eval.py` | Different metric coverage | KEEP `abb`'s — has Token Acc + Block-level Acc + F1 + ConfMat |
-| `scripts/leonardo/deploy.sh` | `.pixi/` exclude | KEEP `abb`'s — main wipes the remote env every bootstrap |
-| `scripts/leonardo/setup_env.sh` | `CONDA_OVERRIDE_CUDA` | KEEP `abb`'s — main fails on login-node install |
+| `models/transformer_xlstm/data/load.py` | Different signatures | KEEP `abb`'s — has `ood_family_prob` and `synonym_randomize_prob` parameters that `main` lacks |
+| `models/transformer_xlstm/eval/predict.py` | Different anomaly_ensemble logic | KEEP `abb`'s — validator-dominant ensemble fixes the OOD false-positive bug |
+| `models/transformer_xlstm/eval/make_submission.py` | Different rank-fill logic | KEEP `abb`'s — trigram-grammar fallback fixes the 82 % empty-rank bug |
+| `models/transformer_xlstm/eval/run_eval.py` | Different metric coverage | KEEP `abb`'s — has Token Acc + Block-level Acc + F1 + ConfMat |
+| `shared/scripts/leonardo/deploy.sh` | `.pixi/` exclude | KEEP `abb`'s — main wipes the remote env every bootstrap |
+| `shared/scripts/leonardo/setup_env.sh` | `CONDA_OVERRIDE_CUDA` | KEEP `abb`'s — main fails on login-node install |
 
 ---
 
@@ -171,9 +171,9 @@ When merging `abb` into `main`:
 
 Decision: which of these three CSVs ships?
 
-1. `extras/results/submission_v3_real/` (abb winner, Top-1 held = 0.658)
-2. `participant_files/predictions/predictions_*.csv` (main's SSL Transformer, ID Top-1 = 0.804)
-3. `neurosymbolic-approach/outputs/submission_task{1,2,3}.csv` (OOD Top-1 = 0.681, has role-induction)
+1. `shared/extras/results/submission_v3_real/` (abb winner, Top-1 held = 0.658)
+2. `competition/participant-files/predictions/predictions_*.csv` (main's SSL Transformer, ID Top-1 = 0.804)
+3. `models/neurosymbolic/outputs/submission_task{1,2,3}.csv` (OOD Top-1 = 0.681, has role-induction)
 
 Per `submission/TEAM_DECISION_MEMO.md`, our vote is **neurosymbolic** (strongest OOD + rubric fit). Fallback: abb v3 or main SSL.
 
@@ -184,14 +184,14 @@ git checkout main
 git pull origin main
 git merge abb
 # Resolve conflicts per the table above
-# Specifically: KEEP abb's configs + src/data/load.py + src/eval/* + scripts/leonardo/*
+# Specifically: KEEP abb's configs + models/transformer_xlstm/data/load.py + models/transformer_xlstm/eval/* + shared/scripts/leonardo/*
 ```
 
 ### Step 3 — merge `neurosymbolic-model` if it's the chosen submission
 
 ```bash
 git merge neurosymbolic-model
-# Keep neurosymbolic-approach/ as-is (no conflicts with abb)
+# Keep models/neurosymbolic/ as-is (no conflicts with abb)
 ```
 
 ### Step 4 — pick the canonical submission folder
@@ -211,7 +211,7 @@ Use `submission/REPORT_TEXT.md` as the dress-rehearsal body. Substitute the chos
 
 ### Step 6 — deliverables that still need recording
 
-- **Demo video (≤2 min)** — `scripts/demo_compare.py` on 2-3 example prefixes
+- **Demo video (≤2 min)** — `shared/scripts/demo_compare.py` on 2-3 example prefixes
 - **Slides PDF (≤10 slides)** — convert `submission/SLIDES.md` via Marp or Pandoc
 - **Tally form submission** — team name, public repo URL, slides upload, video link
 

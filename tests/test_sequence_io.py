@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.data.sequence_io import (
+from transformer_xlstm.data.sequence_io import (
     iter_grouped_sequences,
     norm,
     normalized_row,

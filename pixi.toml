@@ -10,22 +10,29 @@ platforms = ["linux-64", "osx-arm64"]
 [system-requirements]
 cuda = "12"
 
+# Make the `transformer_xlstm` package (under models/) importable for the
+# `python -m transformer_xlstm.…` tasks and interactive shells, mirroring
+# pytest's pythonpath=["models"]. The package moved from repo root to
+# models/transformer_xlstm during the approaches/ restructure.
+[activation.env]
+PYTHONPATH = "$PIXI_PROJECT_ROOT/models"
+
 [tasks]
 # Verify install (prints torch version + CUDA availability)
 smoke = "python -c 'import torch; print(torch.__version__, torch.cuda.is_available())'"
 
 # Build tokenizers
-tokenize-step = "python -m src.data.tokenizer --mode step"
-tokenize-comp = "python -m src.data.tokenizer --mode compositional"
+tokenize-step = "python -m transformer_xlstm.data.tokenizer --mode step"
+tokenize-comp = "python -m transformer_xlstm.data.tokenizer --mode compositional"
 
 # Data smoke test
-data-smoke = "python -m src.data.load"
+data-smoke = "python -m transformer_xlstm.data.load"
 
 # Trigram baseline
-trigram = "python extras/baselines/trigram_baseline.py"
+trigram = "python shared/extras/baselines/trigram_baseline.py"
 
 # Launch single training run
-train = "python -m src.train.launch --arch-config configs/arch/transformer_small.yaml --train-config configs/train/default.yaml --token-config configs/token/compositional.yaml --run-name dev-run"
+train = "python -m transformer_xlstm.train.launch --arch-config configs/arch/transformer_small.yaml --train-config configs/train/default.yaml --token-config configs/token/compositional.yaml --run-name dev-run"
 
 # Lint / format / test
 lint = "ruff check ."

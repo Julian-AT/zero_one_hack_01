@@ -84,7 +84,7 @@ Phase-2 also surfaced an **OOD calibration bug** in the anomaly ensemble: the be
 
 Adopted teammate's prior work: **`generate_ood_families.py`** which produces DIODE / SCHOTTKY / SIC_MOSFET sequences from the existing official step vocabulary (validator-clean by construction; 150/150 generated pass `validate_sequence`).
 
-Refactored into `src/data/ood_generator.py` + added an `ood_family_prob` parameter to the online-generator dataloader. With probability p, draws from OOD generators and labels the family token as `<FAMILY_UNK>` — encouraging backbone-level learning rather than family-token shortcuts.
+Refactored into `models/transformer_xlstm/data/ood_generator.py` + added an `ood_family_prob` parameter to the online-generator dataloader. With probability p, draws from OOD generators and labels the family token as `<FAMILY_UNK>` — encouraging backbone-level learning rather than family-token shortcuts.
 
 | Recipe | Avg held Top-1 | Δ vs Phase-2 |
 |---|--:|--:|
@@ -145,16 +145,16 @@ The brief explicitly rewards honest engineering reporting. Fifteen entries we'd 
 ## What we shipped — concrete artifacts on `abb`
 
 **Code:**
-- `src/data/{tokenizer, load, validator, corrupt, canonicalize, physics, ood_generator}.py`
-- `src/model/{transformer, xlstm_model, heads, registry}.py`
-- `src/train/{trainer, launch, losses, tracking}.py`
-- `src/eval/{predict, run_eval, make_submission, simulate_eval_input, validate_submission}.py`
-- `src/experiments/{lofo_grid, phase2_grid, phase3_grid, phase4_grid}.py`
+- `models/transformer_xlstm/data/{tokenizer, load, validator, corrupt, canonicalize, physics, ood_generator}.py`
+- `models/transformer_xlstm/model/{transformer, xlstm_model, heads, registry}.py`
+- `models/transformer_xlstm/train/{trainer, launch, losses, tracking}.py`
+- `models/transformer_xlstm/eval/{predict, run_eval, make_submission, simulate_eval_input, validate_submission}.py`
+- `models/transformer_xlstm/experiments/{lofo_grid, phase2_grid, phase3_grid, phase4_grid}.py`
 
 **Infrastructure:**
-- `scripts/leonardo/{deploy, setup_env, monitor_lofo}.sh`
-- `scripts/slurm/{train, grid, eval, multitask, submission, submission_real, lofo_grid, lofo_eval_grid, phase{2,3,4}_grid, phase{2,3,4}_eval}.sbatch`
-- `scripts/{aggregate_lofo, benchmark_candidates, plot_training, plot_submission_quality, demo_compare, validate_completions}.py`
+- `shared/scripts/leonardo/{deploy, setup_env, monitor_lofo}.sh`
+- `shared/scripts/slurm/{train, grid, eval, multitask, submission, submission_real, lofo_grid, lofo_eval_grid, phase{2,3,4}_grid, phase{2,3,4}_eval}.sbatch`
+- `shared/scripts/{aggregate_lofo, benchmark_candidates, plot_training, plot_submission_quality, demo_compare, validate_completions}.py`
 
 **Configs:**
 - `configs/arch/{transformer, xlstm}_{small, medium, large}.yaml` (all bumped to `max_seq_len: 768`)
@@ -162,13 +162,13 @@ The brief explicitly rewards honest engineering reporting. Fifteen entries we'd 
 - `configs/token/{compositional, step}.yaml`
 
 **Artifacts:**
-- 104 trained checkpoint summaries in `extras/checkpoints/*/summary.json`
-- 106 TB event streams in `extras/logs/tb/`
-- 88 eval metrics in `extras/results/eval/*/metrics.{json,md}`
-- 7 EDA plots in `extras/eda/`
-- 6 training plots in `extras/plots/training/`
-- 5 report plots in `extras/plots/report/`
-- 3 candidate submission folders: `submission_v2_real`, `submission_v2_real_padded`, `submission_v3_real` (the winner) — each with format-compliant 3-CSV bundle against the real eval inputs in `participant_files/`
+- 104 trained checkpoint summaries in `shared/extras/checkpoints/*/summary.json`
+- 106 TB event streams in `shared/extras/logs/tb/`
+- 88 eval metrics in `shared/extras/results/eval/*/metrics.{json,md}`
+- 7 EDA plots in `shared/extras/eda/`
+- 6 training plots in `shared/extras/plots/training/`
+- 5 report plots in `shared/extras/plots/report/`
+- 3 candidate submission folders: `submission_v2_real`, `submission_v2_real_padded`, `submission_v3_real` (the winner) — each with format-compliant 3-CSV bundle against the real eval inputs in `competition/participant-files/`
 
 **Documentation (in `submission/` for the team merger):**
 - `submission/EVERYTHING_WE_DID.md` — full inventory (618 lines)
@@ -215,7 +215,7 @@ All three are bundled correctly per `generation_rules.md §5.3`. The team should
 - **PRM** (Process Reward Model) — train a per-prefix `P(completable to valid)` head from `validate_sequence.step_index` labels. Re-rank beam search by `LM_logit + α·PRM`. Targets Task 2 NED specifically.
 - **Physics-feature injection** — parsed into `data/processed/physics_features.json`, not yet wired into the embedding. A `Linear(10, d_model) + missingness mask` would let the model place unseen step strings in physics-feature space — biggest unexplored lever for Task 4.
 - **Tune Phase-3 OOD aug probability** — current 0.25 is slightly too much capacity dilution for the small model; sweep over 0.10 / 0.15 / 0.20 to find the sweet spot.
-- **A 2-min demo video** using `scripts/demo_compare.py` showing baseline-vs-trained on 2-3 example prefixes.
+- **A 2-min demo video** using `shared/scripts/demo_compare.py` showing baseline-vs-trained on 2-3 example prefixes.
 
 ---
 

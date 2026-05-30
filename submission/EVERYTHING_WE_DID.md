@@ -10,9 +10,9 @@
 
 ## 1. What was asked of us
 
-Per `tracks/industrial-infineon/Track_industrial_en.md` and `README.md`:
+Per `competition/track-details/Track_industrial_en.md` and `README.md`:
 
-**Three submission tasks** (scored by `participant_files/eval_metrics.py`):
+**Three submission tasks** (scored by `competition/participant-files/eval_metrics.py`):
 
 | # | Task | Input | Metrics |
 |---|---|---|---|
@@ -47,13 +47,13 @@ product family and report the performance drop. We don't submit for this.
 
 ### 2.1 EDA + baselines (Level 1)
 
-- **EDA**: 7 plots (`extras/eda/*.png`) — length distribution, vocab overlap,
+- **EDA**: 7 plots (`shared/extras/eda/*.png`) — length distribution, vocab overlap,
   position entropy, bigram coverage, transition heatmap, category-over-position.
-- **Trigram-with-backoff** (`extras/baselines/trigram_baseline.py`):
+- **Trigram-with-backoff** (`shared/extras/baselines/trigram_baseline.py`):
   Top-1=0.722, Top-5=0.993 ID; Top-1=0.43-0.50 LoFO.
 - **Grammar-constrained decoder**: trigram + `validate_sequence` mask.
   Lifts MOSFET frac=0.8 completion NED from 0.999 → 0.126.
-- **k-NN retrieval** (`extras/baselines/retrieval_baseline.py`):
+- **k-NN retrieval** (`shared/extras/baselines/retrieval_baseline.py`):
   weighted Jaccard over prefixes; NED 0.16-0.35 ID (beats greedy generation).
 - **Symbolic validator**: imports organizers' `validate_sequence` — oracle
   for the 10 documented rules on ID.
@@ -61,30 +61,30 @@ product family and report the performance drop. We don't submit for this.
 ### 2.2 Tokenizers + data pipeline (Level 1)
 
 - **Step-as-token tokenizer**: 208-token vocab. Baseline.
-- **Compositional word-tokenizer** (`src/data/tokenizer.py`): 162-token vocab
+- **Compositional word-tokenizer** (`models/transformer_xlstm/data/tokenizer.py`): 162-token vocab
   (~70 words + delimiters). Splits step strings into word tokens; designed
   to generalize to unseen step strings.
-- **`OnlineGeneratorIterableDataset`** (`src/data/load.py`): infinite stream
+- **`OnlineGeneratorIterableDataset`** (`models/transformer_xlstm/data/load.py`): infinite stream
   of generator-produced sequences with on-the-fly corruption injection at
   configurable rate. Avoids any fixed-dataset bias.
-- **Physics-feature parser** (`src/data/physics.py`): 10-dim vector per
+- **Physics-feature parser** (`models/transformer_xlstm/data/physics.py`): 10-dim vector per
   step (temp, log_time, log_pressure, log_dose, energy, log_thickness,
   tool category, is_wet, is_anneal, is_implant). 136 unique steps
   covered. *Parsed but not yet injected into the model.*
-- **Synthetic OOD families** (`src/data/ood_generator.py`): DIODE,
+- **Synthetic OOD families** (`models/transformer_xlstm/data/ood_generator.py`): DIODE,
   SCHOTTKY, SIC_MOSFET generators producing validator-clean sequences
   from the existing step vocabulary. Adapted from teammate prior work.
 
 ### 2.3 Models (Level 2)
 
-- **Decoder transformer** (`src/model/transformer.py`): RoPE + RMSNorm +
+- **Decoder transformer** (`models/transformer_xlstm/model/transformer.py`): RoPE + RMSNorm +
   SwiGLU + SDPA causal attention. Sizes: small (~5M), medium (~25M),
   large (~100M).
-- **xLSTM-mixed** (`src/model/xlstm_model.py`): alternating mLSTM + sLSTM
+- **xLSTM-mixed** (`models/transformer_xlstm/model/xlstm_model.py`): alternating mLSTM + sLSTM
   blocks via NX-AI/xlstm. Sizes: small, medium, large.
-- **Multi-task heads** (`src/model/heads.py`): validity (binary BCE on
+- **Multi-task heads** (`models/transformer_xlstm/model/heads.py`): validity (binary BCE on
   `<EOS>`) + rule-ID (11-way CE on `<EOS>`).
-- **Training loop** (`src/train/trainer.py`): bf16, AdamW, cosine LR +
+- **Training loop** (`models/transformer_xlstm/train/trainer.py`): bf16, AdamW, cosine LR +
   warmup, family-token dropout, opportunistic W&B + always-on TB.
 
 ### 2.4 Experiment grids (Levels 2-3)
@@ -93,37 +93,37 @@ product family and report the performance drop. We don't submit for this.
   large} + xLSTM × {small, medium, large} + transformer-medium step-token
   ablation. Established that bigger ≠ better on ID (all converge to
   LM loss ≈ 0.106).
-- **48-cell Phase-1 LoFO grid** (`src/experiments/lofo_grid.py`):
+- **48-cell Phase-1 LoFO grid** (`models/transformer_xlstm/experiments/lofo_grid.py`):
   arch{T, xLSTM} × size{S, M} × heads{LM, MT} × fdp{0.0, 0.2} × fold{
   held_mosfet, held_igbt, held_ic} = 48 cells. Plus 16-cell final all-3
   retraining = 64 cells total.
-- **16-cell Phase-2 grid** (`src/experiments/phase2_grid.py`):
+- **16-cell Phase-2 grid** (`models/transformer_xlstm/experiments/phase2_grid.py`):
   transformer-only × {S, M} × {LM, MT} × {3 LoFO + all3}, **with the
   max_len=768 fix**. Drops xLSTM (too slow) and the fdp axis (redundant
   with multitask).
-- **8-cell Phase-3 grid** (`src/experiments/phase3_grid.py`):
+- **8-cell Phase-3 grid** (`models/transformer_xlstm/experiments/phase3_grid.py`):
   transformer-multitask × {S, M} × {3 LoFO + all3}, with **OOD-family
   augmentation** (`ood_family_prob=0.25` drawing DIODE/SCHOTTKY/SIC_MOSFET).
   Direct A/B vs Phase-2.
 
 ### 2.5 Evaluation pipeline (Level 2-3)
 
-- **`src/eval/predict.py`**: top-K next-step (with grammar mask + vocab
+- **`models/transformer_xlstm/eval/predict.py`**: top-K next-step (with grammar mask + vocab
   restrict + length-normalised compositional beam search) + greedy
   completion + ensemble anomaly scoring (validator-dominant).
-- **`src/eval/run_eval.py`**: full per-family report — Top-1/3/5 + MRR
+- **`models/transformer_xlstm/eval/run_eval.py`**: full per-family report — Top-1/3/5 + MRR
   + EM + NED + Token Acc + Block-level Acc + Binary Acc + P/R/F1 (both
   classes) + ROC-AUC + Confusion Matrix + Rule Attribution. Matches
   `eval_metrics.py` line-for-line.
-- **`src/eval/make_submission.py`**: reads organizers' eval_input_*.csv,
+- **`models/transformer_xlstm/eval/make_submission.py`**: reads organizers' eval_input_*.csv,
   emits the three submission CSVs in the documented schema.
-- **`scripts/aggregate_lofo.py`**: crawls 64 checkpoints + 64 eval
+- **`shared/scripts/aggregate_lofo.py`**: crawls 64 checkpoints + 64 eval
   metrics.json, joins on cell id, emits ranked ablation table with
   `top1_drop` + `anom_AUC_held` columns.
 
 ### 2.6 Infrastructure
 
-- **Leonardo deployment** (`scripts/leonardo/deploy.sh`): one-shot SSH key
+- **Leonardo deployment** (`shared/scripts/leonardo/deploy.sh`): one-shot SSH key
   setup, rsync with proper excludes, sub-commands for probe/bootstrap/grid/
   status/tail/pull.
 - **SLURM array dispatchers**: `train.sbatch`, `grid.sbatch`, `eval.sbatch`,
@@ -131,18 +131,18 @@ product family and report the performance drop. We don't submit for this.
   `lofo_grid.sbatch`, `lofo_eval_grid.sbatch`, `phase2_grid.sbatch`,
   `phase2_eval.sbatch`, `phase3_grid.sbatch`, `phase3_eval.sbatch`.
   All `--array=N%4` to saturate the 4-A100 reservation.
-- **Background monitor** (`scripts/leonardo/monitor_lofo.sh`): polls
+- **Background monitor** (`shared/scripts/leonardo/monitor_lofo.sh`): polls
   every 5 min, exits 0 on clean completion / 1 on any failure / 2 on
   safety timeout. Zero context cost during normal operation.
 - **Pixi env** (`pixi.toml`): torch 2.5.1 cu121 + xlstm + tensorboard +
   einops + omegaconf + pandas + matplotlib. CUDA-12-override for
   login-node installation. Reproducible from clean checkout.
-- **Plot generation** (`scripts/plot_training.py`): 6 PNGs from all 73
+- **Plot generation** (`shared/scripts/plot_training.py`): 6 PNGs from all 73
   TB event streams.
 
 ### 2.7 Side-by-side demo (Industrial-track required)
 
-- **`scripts/demo_compare.py`**: takes a prefix, prints predictions from
+- **`shared/scripts/demo_compare.py`**: takes a prefix, prints predictions from
   trigram, grammar-trigram, transformer (LM only), multitask transformer
   side-by-side; runs anomaly attribution if the sequence is complete.
   Five built-in example prefixes covering MOSFET/IGBT/IC early/mid and
@@ -371,7 +371,7 @@ flat — that destroys ROC-AUC.
   d_model)` and a missingness mask. Stretch.
 - **Contrastive sequence encoder**: for OOD anomaly when validator's
   rule set doesn't cover the hidden family. Stretch.
-- **Streamlit dashboard**: replaced by `scripts/demo_compare.py` CLI.
+- **Streamlit dashboard**: replaced by `shared/scripts/demo_compare.py` CLI.
 
 ---
 
@@ -405,13 +405,13 @@ gone to PRM training + physics-feature injection if we'd had another
 | README.md with run instructions | ✅ | `README.md` |
 | REPORT.md | ✅ | `REPORT.md` (with Phase-2 update section) |
 | requirements.txt + pixi.toml | ✅ | `requirements.txt`, `pixi.toml` |
-| `nextstep.csv` (Task 1) | ✅ | `extras/results/submission_v2_real/` (after job `43130303` finishes) |
+| `nextstep.csv` (Task 1) | ✅ | `shared/extras/results/submission_v2_real/` (after job `43130303` finishes) |
 | `completion.csv` (Task 2) | ✅ | same |
 | `anomaly.csv` (Task 3) | ✅ | same |
-| Training artifacts + loss curves | ✅ | 80 checkpoints in `extras/checkpoints/`, 73 TB streams in `extras/logs/tb/`, 6 plots in `extras/plots/training/` |
-| `eval_metrics.py`-compatible scores | ✅ | `extras/results/lofo_ablation.{csv,md}` + per-cell `metrics.{json,md}` |
+| Training artifacts + loss curves | ✅ | 80 checkpoints in `shared/extras/checkpoints/`, 73 TB streams in `shared/extras/logs/tb/`, 6 plots in `shared/extras/plots/training/` |
+| `eval_metrics.py`-compatible scores | ✅ | `shared/extras/results/lofo_ablation.{csv,md}` + per-cell `metrics.{json,md}` |
 | Per-family breakdown | ✅ | In all eval reports |
-| Baseline-vs-trained demo | ✅ | `scripts/demo_compare.py` |
+| Baseline-vs-trained demo | ✅ | `shared/scripts/demo_compare.py` |
 | ≤2-min demo video | ⏳ | To record using the CLI |
 | ≤10-slide PDF | ⏳ | Outline in `submission/SLIDES.md`; convert to PDF |
 

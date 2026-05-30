@@ -1,9 +1,9 @@
 """Tests for the rule validator and corrupters.
 
 These exercise the organizer grammar (`generate_sequences`) via the
-`src.data.validator` adapter and the corrupters in `src.data.corrupt`. They use
-the in-repo variants CSVs and the seeded sequence generator, so they are
-deterministic.
+`transformer_xlstm.data.validator` adapter and the corrupters in
+`transformer_xlstm.data.corrupt`. They use the in-repo variants CSVs and the
+seeded sequence generator, so they are deterministic.
 """
 
 from __future__ import annotations
@@ -11,9 +11,8 @@ from __future__ import annotations
 import random
 
 import pytest
-
-from src.data.corrupt import CORRUPTERS, corrupt_random
-from src.data.validator import (
+from transformer_xlstm.data.corrupt import CORRUPTERS, corrupt_random
+from transformer_xlstm.data.validator import (
     NUM_RULE_CLASSES,
     RULE_IDS,
     VALID_CLASS_IDX,

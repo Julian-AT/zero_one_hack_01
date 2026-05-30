@@ -259,7 +259,7 @@ the LoFO ablation table.
 LoFO matrix for the appendix.
 
 **v2 submission CSVs ready in ~15 min**. Pull, sanity check against
-`eval_metrics.py` schema, ship to `extras/results/submission_v2_real/`.
+`eval_metrics.py` schema, ship to `shared/extras/results/submission_v2_real/`.
 
 ---
 

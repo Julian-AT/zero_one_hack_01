@@ -22,7 +22,7 @@ From `submission/SUBMISSION.md` §5:
 
 > "**Demo shows baseline vs. trained output on identical inputs**"
 
-This is the specific deliverable — a side-by-side comparison of what the baseline produces vs. what our system produces, on the same prefix. We already have this exact tool: `scripts/demo_compare.py`.
+This is the specific deliverable — a side-by-side comparison of what the baseline produces vs. what our system produces, on the same prefix. We already have this exact tool: `shared/scripts/demo_compare.py`.
 
 ### What they explicitly say NOT to do
 
@@ -52,7 +52,7 @@ This maps directly to the rubric's 4 bullets.
 
 **Visual:**
 - Terminal open, large font.
-- Type or paste a real prefix from `participant_files/eval_input_valid.csv`. Use a MOSFET prefix mid-process (something with `IMPLANT WELL → DRIVE IN DIFFUSION → RAPID THERMAL ANNEAL` in the last few visible steps so the next-step question is non-trivial).
+- Type or paste a real prefix from `competition/participant-files/eval_input_valid.csv`. Use a MOSFET prefix mid-process (something with `IMPLANT WELL → DRIVE IN DIFFUSION → RAPID THERMAL ANNEAL` in the last few visible steps so the next-step question is non-trivial).
 - Show the prefix on screen for ~5 seconds, then highlight the `→ ?` at the end.
 
 **Voiceover (read in ~12 seconds):**
@@ -61,7 +61,7 @@ This maps directly to the rubric's 4 bullets.
 ### Beat 2 — Baseline (0:15 – 0:45) — 30 sec
 
 **Visual:**
-- Run `python scripts/demo_compare.py --example mosfet-mid` (it's already wired up). The output shows trigram + grammar-trigram + transformer side-by-side.
+- Run `python shared/scripts/demo_compare.py --example mosfet-mid` (it's already wired up). The output shows trigram + grammar-trigram + transformer side-by-side.
 - Highlight the **trigram-with-backoff** row — Top-5 = 0.993 ID, but on LoFO drops to 0.472.
 - Show one concrete example where trigram suggests a step that's locally probable but doesn't fit the process logic.
 
@@ -78,13 +78,13 @@ This maps directly to the rubric's 4 bullets.
 - Same `demo_compare.py` output, now zoom on the trained-transformer + multitask-transformer rows.
 - For an `anomaly-mosfet` example, run:
   ```
-  python scripts/demo_compare.py --example anomaly-mosfet
+  python shared/scripts/demo_compare.py --example anomaly-mosfet
   ```
 - The output shows:
   - The corrupted sequence (with `PARAMETRIC TEST → DEPOSIT PASSIVATION` — a `RULE_TEST_BEFORE_PASSIVATION` violation)
   - The validator flags it with the specific rule
   - The transformer's anomaly head agrees
-- Underneath: a quick flash of `extras/plots/report/trajectory.png` showing the trajectory from trigram (0.47) → our v3 (0.658) on LoFO held-out.
+- Underneath: a quick flash of `shared/extras/plots/report/trajectory.png` showing the trajectory from trigram (0.47) → our v3 (0.658) on LoFO held-out.
 
 **Voiceover:**
 > *"Our approach: a neuro-symbolic stack. A grammar-mask filter built from the 10 documented process rules. A compositional Transformer trained with a validity head and a rule-attribution head. And — the key piece — a leave-one-family-out training regime that proves the model isn't memorising. On held-out families, our top-1 stays at 65.8% — a 1.3 percentage-point drop from in-distribution. Trigram drops 25. And the system tells you WHICH rule was violated, not just that something's wrong."*
@@ -92,7 +92,7 @@ This maps directly to the rubric's 4 bullets.
 ### Beat 4 — Headline (1:30 – 2:00) — 30 sec
 
 **Visual:**
-- Run `python scripts/validate_completions.py --predictions extras/results/submission_v3_real/completion.csv` live.
+- Run `python shared/scripts/validate_completions.py --predictions shared/extras/results/submission_v3_real/completion.csv` live.
 - Output shows:
   ```
   Overall: 600/600 (100.0%) completions are validator-clean
@@ -125,12 +125,12 @@ Word count: ~280. At 140 words per minute speaking pace, that's exactly 2 minute
 
 | File | Used in beat |
 |---|---|
-| `scripts/demo_compare.py` (live execution) | Beats 2 + 3 (the main content) |
-| `scripts/validate_completions.py` (live execution) | Beat 4 (the headline) |
-| `extras/plots/report/trajectory.png` | Beat 3 (transition) + Beat 4 (closing) |
-| `extras/plots/report/max_len_fix.png` | (optional, if we have 5 sec to spare in Beat 3) |
-| `extras/plots/report/submission_quality.png` | (optional alternative for Beat 4) |
-| `participant_files/eval_input_valid.csv` | Beat 1 (the real prefix to demo on) |
+| `shared/scripts/demo_compare.py` (live execution) | Beats 2 + 3 (the main content) |
+| `shared/scripts/validate_completions.py` (live execution) | Beat 4 (the headline) |
+| `shared/extras/plots/report/trajectory.png` | Beat 3 (transition) + Beat 4 (closing) |
+| `shared/extras/plots/report/max_len_fix.png` | (optional, if we have 5 sec to spare in Beat 3) |
+| `shared/extras/plots/report/submission_quality.png` | (optional alternative for Beat 4) |
+| `competition/participant-files/eval_input_valid.csv` | Beat 1 (the real prefix to demo on) |
 
 **We don't need to make any new plots or videos.** Everything is in the repo.
 
@@ -172,8 +172,8 @@ Word count: ~280. At 140 words per minute speaking pace, that's exactly 2 minute
 
 ## 7. Pre-flight checklist (before hitting Record)
 
-- [ ] `scripts/demo_compare.py` runs cleanly with `--example mosfet-mid` and `--example anomaly-mosfet`
-- [ ] `scripts/validate_completions.py` outputs `600/600 (100.0%)` against the v3 submission
+- [ ] `shared/scripts/demo_compare.py` runs cleanly with `--example mosfet-mid` and `--example anomaly-mosfet`
+- [ ] `shared/scripts/validate_completions.py` outputs `600/600 (100.0%)` against the v3 submission
 - [ ] Terminal font is readable at 1080p
 - [ ] Microphone tested (not the AirPod mic with wind — use built-in or a desk mic)
 - [ ] Background quiet (no fan, no chat notifications)
@@ -210,15 +210,15 @@ If we automate this for retakes:
 
 ```bash
 # Beat 2 — baseline
-python scripts/demo_compare.py --example mosfet-mid --n-completion 8
+python shared/scripts/demo_compare.py --example mosfet-mid --n-completion 8
 
 # Beat 3 — anomaly attribution
-python scripts/demo_compare.py --example anomaly-mosfet --n-completion 5
+python shared/scripts/demo_compare.py --example anomaly-mosfet --n-completion 5
 
 # Beat 4 — headline
-python scripts/validate_completions.py \
-    --eval-input participant_files/eval_input_valid.csv \
-    --predictions extras/results/submission_v3_real/completion.csv
+python shared/scripts/validate_completions.py \
+    --eval-input competition/participant-files/eval_input_valid.csv \
+    --predictions shared/extras/results/submission_v3_real/completion.csv
 ```
 
 Each of these takes ~3-5 seconds of terminal output. Plus voiceover.

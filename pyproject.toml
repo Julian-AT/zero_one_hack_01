@@ -31,22 +31,22 @@ dev = ["pytest>=8", "ruff>=0.6"]
 viz = ["matplotlib>=3.8", "seaborn>=0.13"]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
+where = ["models"]
+include = ["transformer_xlstm*"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
 extend-exclude = [
     # Organizer-provided; keep diffable against upstream.
-    "tracks/industrial-infineon/training_data/generate_sequences.py",
-    "participant_files/eval_metrics.py",
-    "tracks/industrial-infineon/scripts/eval_metrics.py",
+    "competition/track-details/training_data/generate_sequences.py",
+    "competition/participant-files/eval_metrics.py",
+    "competition/track-details/scripts/eval_metrics.py",
     # Separate experiment tracks not yet brought under this lint config.
     # Lint these in their own pass before folding into the standard.
-    "neurosymbolic-approach/**",
-    "benchmark/**",
-    "ssl_results/update_ssl_results_with_coverage_guided.py",
+    "models/neurosymbolic/**",
+    "shared/benchmark/**",
+    "models/self-supervised/update_ssl_results_with_coverage_guided.py",
 ]
 
 [tool.ruff.lint]
@@ -55,17 +55,17 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 # Peripheral data-generation and EDA scripts: long lines are markdown-table
 # builders, CLI examples in docstrings, and f-strings that don't split cleanly.
-# Hold src/ to the full standard, but don't churn these for E501.
-"tracks/**" = ["E501"]
-"extras/**" = ["E501"]
+# Hold models/transformer_xlstm/ to the full standard, but don't churn these for E501.
+"competition/track-details/**" = ["E501"]
+"shared/extras/**" = ["E501"]
 # Standalone prediction/reranking scripts: they prepend repo root to sys.path
-# before importing `src` (E402), their report builders use long f-strings
-# (E501), and the SVG plotters use %-format string templates (UP031). All are
-# intentional for scripts run as `python participant_files/x.py`.
-"participant_files/**" = ["E402", "E501", "UP031"]
+# before importing `transformer_xlstm` (E402), their report builders use long
+# f-strings (E501), and the SVG plotters use %-format string templates (UP031).
+# All are intentional for scripts run as `python competition/participant-files/x.py`.
+"competition/participant-files/**" = ["E402", "E501", "UP031"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
-# Make `src` importable under bare `pytest` (not just `python -m pytest`).
-pythonpath = ["."]
+# Make `transformer_xlstm` importable under bare `pytest` (not just `python -m pytest`).
+pythonpath = ["models"]

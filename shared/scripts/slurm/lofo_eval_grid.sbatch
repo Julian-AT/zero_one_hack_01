@@ -1,0 +1,50 @@
+#!/bin/bash
+# LoFO eval grid — runs run_eval.py for every cell in the LoFO ablation.
+# Submit AFTER lofo_grid.sbatch has produced all checkpoints.
+#
+#   sbatch --dependency=afterok:<lofo_grid_jobid> shared/scripts/slurm/lofo_eval_grid.sbatch
+#
+# Or, after manual verification that all checkpoints exist:
+#   sbatch shared/scripts/slurm/lofo_eval_grid.sbatch
+
+#SBATCH --account=euhpc_d30_031
+#SBATCH --partition=boost_usr_prod
+#SBATCH --reservation=s_tra_ncc
+#SBATCH --array=0-63%4
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-task=1
+#SBATCH --mem=120GB
+#SBATCH --cpus-per-task=8
+#SBATCH --time=01:00:00
+#SBATCH --job-name=lofo-eval
+#SBATCH --output=shared/extras/logs/lofo-eval-%A_%a.out
+#SBATCH --error=shared/extras/logs/lofo-eval-%A_%a.err
+
+set -euo pipefail
+cd "${SCRATCH}/zero_one_hack_01"
+
+source /etc/profile.d/modules.sh 2>/dev/null || \
+    source /usr/share/Modules/init/bash 2>/dev/null || true
+module load gcc/12.2.0 2>&1 || true
+module load cuda/12.6 2>&1 || true
+
+export HTTP_PROXY="http://proxyuser:5dd1d2bd00@10.99.0.1:38425"
+export HTTPS_PROXY="$HTTP_PROXY"
+export http_proxy="$HTTP_PROXY"
+export https_proxy="$HTTP_PROXY"
+
+export PATH="${SCRATCH}/.pixi/bin:${PATH}"
+PIXI_RUN=(pixi run --manifest-path "${SCRATCH}/zero_one_hack_01/pixi.toml")
+
+mapfile -t CMD < <("${PIXI_RUN[@]}" python -m transformer_xlstm.experiments.lofo_grid \
+    --eval-cell "$SLURM_ARRAY_TASK_ID")
+CELL_ID=$("${PIXI_RUN[@]}" python -m transformer_xlstm.experiments.lofo_grid \
+    --cell-id "$SLURM_ARRAY_TASK_ID")
+echo "[lofo-eval] cell_id=$CELL_ID"
+echo "[lofo-eval] cmd: ${CMD[*]}"
+
+# Bigger sample than the previous fast eval — full 100/family available.
+"${PIXI_RUN[@]}" "${CMD[@]}" \
+    --max-examples 100 \
+    --max-completion-steps 80

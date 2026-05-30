@@ -33,10 +33,10 @@ loss:
   rule_id_weight: 0.3
 
 tracking:
-  tensorboard_dir: extras/logs/tb
+  tensorboard_dir: shared/extras/logs/tb
   wandb_project: zero-one-process-logic
   wandb_entity: null
   wandb_mode: opportunistic
 
 out:
-  checkpoint_dir: extras/checkpoints
+  checkpoint_dir: shared/extras/checkpoints

@@ -33,11 +33,11 @@ loss:
 
 # Tracking
 tracking:
-  tensorboard_dir: extras/logs/tb
+  tensorboard_dir: shared/extras/logs/tb
   wandb_project: zero-one-process-logic
   wandb_entity: null           # set via env WANDB_ENTITY if needed
   wandb_mode: opportunistic    # one of: opportunistic | online | offline | disabled
 
 # Output
 out:
-  checkpoint_dir: extras/checkpoints
+  checkpoint_dir: shared/extras/checkpoints

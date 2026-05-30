@@ -93,7 +93,7 @@ Large generated data files are usually not committed to GitHub, but they are cre
 ### 3.1 Coverage-Guided Valid Data
 
 ```text
-tracks/industrial-infineon/data/coverage_guided_v1/coverage_guided_sequences.csv
+competition/track-details/data/coverage_guided_v1/coverage_guided_sequences.csv
 ```
 
 Used for:
@@ -127,7 +127,7 @@ Approximate size:
 ### 3.2 Easy Invalid Data
 
 ```text
-tracks/industrial-infineon/data/easy_invalid_v1/invalid_sequences.csv
+competition/track-details/data/easy_invalid_v1/invalid_sequences.csv
 ```
 
 Used for:
@@ -148,7 +148,7 @@ Approximate size:
 ### 3.3 Hard Invalid Data
 
 ```text
-tracks/industrial-infineon/data/hard_invalid_v1/hard_invalid_sequences.csv
+competition/track-details/data/hard_invalid_v1/hard_invalid_sequences.csv
 ```
 
 Used for:
@@ -182,7 +182,7 @@ The full generated sequences are converted into model-ready datasets.
 Path:
 
 ```text
-tracks/industrial-infineon/data/task_datasets_v1/
+competition/track-details/data/task_datasets_v1/
 ```
 
 | File                       | Input            | Target              | Purpose                         |
@@ -336,9 +336,9 @@ SSL pretraining on valid data
 The organizers provided:
 
 ```text
-participant_files/eval_input_valid.csv
-participant_files/eval_input_anomaly.csv
-participant_files/eval_metrics.py
+competition/participant-files/eval_input_valid.csv
+competition/participant-files/eval_input_anomaly.csv
+competition/participant-files/eval_metrics.py
 ```
 
 The official eval input files are unlabeled.
@@ -361,9 +361,9 @@ The anomaly eval file contains 987 unlabeled full sequences for Task 3.
 The final active prediction files are:
 
 ```text
-participant_files/predictions/predictions_nextstep.csv
-participant_files/predictions/predictions_completion.csv
-participant_files/predictions/predictions_anomaly.csv
+competition/participant-files/predictions/predictions_nextstep.csv
+competition/participant-files/predictions/predictions_completion.csv
+competition/participant-files/predictions/predictions_anomaly.csv
 ```
 
 Expected line counts:
@@ -419,7 +419,7 @@ The local reports can verify row counts, prediction distributions, and internal 
 Diagnostic report:
 
 ```text
-participant_files/eval_plots/eval_prediction_report.md
+competition/participant-files/eval_plots/eval_prediction_report.md
 ```
 
 This report checks:
@@ -435,14 +435,14 @@ This report checks:
 Generated diagnostic plots include:
 
 ```text
-participant_files/eval_plots/nextstep_top1_distribution.svg
-participant_files/eval_plots/nextstep_top5_distribution.svg
-participant_files/eval_plots/completion_length_distribution.svg
-participant_files/eval_plots/completion_first_step_distribution.svg
-participant_files/eval_plots/completion_last_step_distribution.svg
-participant_files/eval_plots/anomaly_validity_counts.svg
-participant_files/eval_plots/anomaly_rule_distribution.svg
-participant_files/eval_plots/anomaly_score_distribution.svg
+competition/participant-files/eval_plots/nextstep_top1_distribution.svg
+competition/participant-files/eval_plots/nextstep_top5_distribution.svg
+competition/participant-files/eval_plots/completion_length_distribution.svg
+competition/participant-files/eval_plots/completion_first_step_distribution.svg
+competition/participant-files/eval_plots/completion_last_step_distribution.svg
+competition/participant-files/eval_plots/anomaly_validity_counts.svg
+competition/participant-files/eval_plots/anomaly_rule_distribution.svg
+competition/participant-files/eval_plots/anomaly_score_distribution.svg
 ```
 
 These are diagnostics only, not official scores.
@@ -456,10 +456,10 @@ Because the model already reaches very high Top-3/Top-5 accuracy, we tried to im
 Relevant files:
 
 ```text
-participant_files/rerank_nextstep_with_rules.py
-participant_files/run_rerank_nextstep.slurm
-participant_files/predictions/predictions_nextstep_reranked.csv
-participant_files/predictions/rerank_nextstep_report.md
+competition/participant-files/rerank_nextstep_with_rules.py
+competition/participant-files/run_rerank_nextstep.slurm
+competition/participant-files/predictions/predictions_nextstep_reranked.csv
+competition/participant-files/predictions/rerank_nextstep_report.md
 ```
 
 The reranker uses:
@@ -488,8 +488,8 @@ It mainly adjusts ordering and penalizes process-invalid candidates.
 Internal benchmark:
 
 ```text
-participant_files/predictions/internal_reranker_benchmark_report.md
-ssl_results/internal_reranker_benchmark_report.md
+competition/participant-files/predictions/internal_reranker_benchmark_report.md
+models/self-supervised/internal_reranker_benchmark_report.md
 ```
 
 The observed internal change was tiny, around:
@@ -509,12 +509,12 @@ We also implemented a retrieval/RAG-style prediction attempt.
 Relevant files:
 
 ```text
-participant_files/run_generate_retrieval_bank.slurm
-participant_files/retrieval_augmented_eval.py
-participant_files/run_retrieval_augmented_eval.slurm
-participant_files/predictions/retrieval_augmented_report.md
-participant_files/predictions/predictions_nextstep_retrieval.csv
-participant_files/predictions/predictions_completion_retrieval.csv
+competition/participant-files/run_generate_retrieval_bank.slurm
+competition/participant-files/retrieval_augmented_eval.py
+competition/participant-files/run_retrieval_augmented_eval.slurm
+competition/participant-files/predictions/retrieval_augmented_report.md
+competition/participant-files/predictions/predictions_nextstep_retrieval.csv
+competition/participant-files/predictions/predictions_completion_retrieval.csv
 ```
 
 Idea:
@@ -539,8 +539,8 @@ Retrieval = useful if eval resembles generated memory
 The retrieval report should be inspected here:
 
 ```text
-participant_files/predictions/retrieval_augmented_report.md
-ssl_results/retrieval_augmented_report.md
+competition/participant-files/predictions/retrieval_augmented_report.md
+models/self-supervised/retrieval_augmented_report.md
 ```
 
 Key diagnostics:
@@ -563,11 +563,11 @@ As a final high-upside experiment, we implemented a learned contrastive reranker
 Relevant files:
 
 ```text
-participant_files/train_learned_contrastive_reranker.py
-participant_files/run_learned_contrastive_reranker.slurm
-participant_files/predictions/predictions_nextstep_learned_reranked.csv
-participant_files/predictions/learned_reranker_report.md
-ssl_results/learned_reranker_report.md
+competition/participant-files/train_learned_contrastive_reranker.py
+competition/participant-files/run_learned_contrastive_reranker.slurm
+competition/participant-files/predictions/predictions_nextstep_learned_reranked.csv
+competition/participant-files/predictions/learned_reranker_report.md
+models/self-supervised/learned_reranker_report.md
 ```
 
 ### Idea
@@ -608,8 +608,8 @@ Among these 5 plausible candidates, which one should be Rank 1?
 Inspect the result here:
 
 ```text
-participant_files/predictions/learned_reranker_report.md
-ssl_results/learned_reranker_report.md
+competition/participant-files/predictions/learned_reranker_report.md
+models/self-supervised/learned_reranker_report.md
 ```
 
 Decision rule:
@@ -628,8 +628,8 @@ test split it raised Top-1 from 0.7993 to **0.8044** (+0.0052) and MRR from 0.89
 learned-reranked output:
 
 ```text
-participant_files/predictions/predictions_nextstep.csv
-  == participant_files/predictions/predictions_nextstep_learned_reranked.csv  (byte-identical)
+competition/participant-files/predictions/predictions_nextstep.csv
+  == competition/participant-files/predictions/predictions_nextstep_learned_reranked.csv  (byte-identical)
 ```
 
 Only this active file should be submitted.
@@ -641,20 +641,20 @@ Only this active file should be submitted.
 Submit these three files:
 
 ```text
-participant_files/predictions/predictions_nextstep.csv
-participant_files/predictions/predictions_completion.csv
-participant_files/predictions/predictions_anomaly.csv
+competition/participant-files/predictions/predictions_nextstep.csv
+competition/participant-files/predictions/predictions_completion.csv
+competition/participant-files/predictions/predictions_anomaly.csv
 ```
 
 Possible backup/variant files include:
 
 ```text
-participant_files/predictions/predictions_nextstep_model_only.csv
-participant_files/predictions/predictions_nextstep_reranked.csv
-participant_files/predictions/predictions_nextstep_retrieval.csv
-participant_files/predictions/predictions_nextstep_learned_reranked.csv
-participant_files/predictions/predictions_completion_before_retrieval.csv
-participant_files/predictions/predictions_completion_retrieval.csv
+competition/participant-files/predictions/predictions_nextstep_model_only.csv
+competition/participant-files/predictions/predictions_nextstep_reranked.csv
+competition/participant-files/predictions/predictions_nextstep_retrieval.csv
+competition/participant-files/predictions/predictions_nextstep_learned_reranked.csv
+competition/participant-files/predictions/predictions_completion_before_retrieval.csv
+competition/participant-files/predictions/predictions_completion_retrieval.csv
 ```
 
 The backup/variant files should not be submitted unless manually chosen as active.
@@ -667,9 +667,9 @@ From repo root:
 
 ```bash
 zip -j participant_eval_predictions_final.zip \
-  participant_files/predictions/predictions_nextstep.csv \
-  participant_files/predictions/predictions_completion.csv \
-  participant_files/predictions/predictions_anomaly.csv
+  competition/participant-files/predictions/predictions_nextstep.csv \
+  competition/participant-files/predictions/predictions_completion.csv \
+  competition/participant-files/predictions/predictions_anomaly.csv
 ```
 
 Check contents:
@@ -693,23 +693,23 @@ predictions_anomaly.csv
 Run from repo root:
 
 ```bash
-wc -l participant_files/eval_input_valid.csv
-wc -l participant_files/predictions/predictions_nextstep.csv
-wc -l participant_files/predictions/predictions_completion.csv
+wc -l competition/participant-files/eval_input_valid.csv
+wc -l competition/participant-files/predictions/predictions_nextstep.csv
+wc -l competition/participant-files/predictions/predictions_completion.csv
 
-wc -l participant_files/eval_input_anomaly.csv
-wc -l participant_files/predictions/predictions_anomaly.csv
+wc -l competition/participant-files/eval_input_anomaly.csv
+wc -l competition/participant-files/predictions/predictions_anomaly.csv
 ```
 
 Expected:
 
 ```text
-601 participant_files/eval_input_valid.csv
-601 participant_files/predictions/predictions_nextstep.csv
-601 participant_files/predictions/predictions_completion.csv
+601 competition/participant-files/eval_input_valid.csv
+601 competition/participant-files/predictions/predictions_nextstep.csv
+601 competition/participant-files/predictions/predictions_completion.csv
 
-988 participant_files/eval_input_anomaly.csv
-988 participant_files/predictions/predictions_anomaly.csv
+988 competition/participant-files/eval_input_anomaly.csv
+988 competition/participant-files/predictions/predictions_anomaly.csv
 ```
 
 ---
@@ -770,7 +770,7 @@ with the model as one component in a broader process-logic learning system.
 
 ---
 
-## 21. Files in `ssl_results/`
+## 21. Files in `models/self-supervised/`
 
 Per-run metrics:
 

@@ -25,15 +25,15 @@ Thumbs.db
 
 # Experiment artifacts (large; regenerate from configs/seeds)
 # Use **/ globs so per-run subdirs are caught too. We still keep
-# extras/checkpoints/**/summary.json which is committed manually.
+# shared/extras/checkpoints/**/summary.json which is committed manually.
 *.pt
 *.safetensors
 *.bin
 *.ckpt
-extras/logs/*.out
-extras/logs/*.err
-extras/logs/slurm-*.out
-extras/logs/slurm-*.err
+shared/extras/logs/*.out
+shared/extras/logs/*.err
+shared/extras/logs/slurm-*.out
+shared/extras/logs/slurm-*.err
 runs/
 tb_logs/
 wandb/
@@ -59,54 +59,54 @@ dist/
 *.tmp
 
 # Industrial Infineon generated datasets / reports
-tracks/industrial-infineon/data/coverage_guided_*/
-tracks/industrial-infineon/data/easy_invalid_*/
-tracks/industrial-infineon/data/hard_invalid_*/
-tracks/industrial-infineon/data/task_datasets_*/
-tracks/industrial-infineon/data/coverage_outputs/
-tracks/industrial-infineon/data/generated/base_seed/
-tracks/industrial-infineon/data/*_test/
-tracks/industrial-infineon/data/**/*.csv
-tracks/industrial-infineon/data/**/*.json
-tracks/industrial-infineon/data/**/*.md
-!tracks/industrial-infineon/data/plan.md
+competition/track-details/data/coverage_guided_*/
+competition/track-details/data/easy_invalid_*/
+competition/track-details/data/hard_invalid_*/
+competition/track-details/data/task_datasets_*/
+competition/track-details/data/coverage_outputs/
+competition/track-details/data/generated/base_seed/
+competition/track-details/data/*_test/
+competition/track-details/data/**/*.csv
+competition/track-details/data/**/*.json
+competition/track-details/data/**/*.md
+!competition/track-details/data/plan.md
 
 # Leonardo / Slurm runtime artifacts
-participant_files/eval_preds_*.out
-participant_files/eval_preds_*.err
-tracks/industrial-infineon/jobs/
-tracks/industrial-infineon/logs/
-tracks/industrial-infineon/saved_models/
+competition/participant-files/eval_preds_*.out
+competition/participant-files/eval_preds_*.err
+competition/track-details/jobs/
+competition/track-details/logs/
+competition/track-details/saved_models/
 
 # Large generated industrial data
-tracks/industrial-infineon/data/coverage_guided_*/
-tracks/industrial-infineon/data/easy_invalid_*/
-tracks/industrial-infineon/data/hard_invalid_*/
-tracks/industrial-infineon/data/task_datasets_*/
-tracks/industrial-infineon/data/generated/
-tracks/industrial-infineon/runs/*/checkpoint_*.pt
+competition/track-details/data/coverage_guided_*/
+competition/track-details/data/easy_invalid_*/
+competition/track-details/data/hard_invalid_*/
+competition/track-details/data/task_datasets_*/
+competition/track-details/data/generated/
+competition/track-details/runs/*/checkpoint_*.pt
 
 # Participant eval/reranker runtime logs
-participant_files/bench_rerank_*.out
-participant_files/bench_rerank_*.err
-participant_files/rerank_next_*.out
-participant_files/rerank_next_*.err
+competition/participant-files/bench_rerank_*.out
+competition/participant-files/bench_rerank_*.err
+competition/participant-files/rerank_next_*.out
+competition/participant-files/rerank_next_*.err
 
 # Large internal debug outputs
-participant_files/predictions/internal_reranker_benchmark_examples.csv
+competition/participant-files/predictions/internal_reranker_benchmark_examples.csv
 
 # Retrieval bank and retrieval runtime logs
-tracks/industrial-infineon/data/retrieval_bank_v1/
-participant_files/gen_retrieval_bank_*.out
-participant_files/gen_retrieval_bank_*.err
-participant_files/retrieval_eval_*.out
-participant_files/retrieval_eval_*.err
+competition/track-details/data/retrieval_bank_v1/
+competition/participant-files/gen_retrieval_bank_*.out
+competition/participant-files/gen_retrieval_bank_*.err
+competition/participant-files/retrieval_eval_*.out
+competition/participant-files/retrieval_eval_*.err
 
 # Learned reranker runtime/model artifacts
-participant_files/learn_rerank_*.out
-participant_files/learn_rerank_*.err
-participant_files/predictions/learned_reranker.pt
-participant_files/predictions/learned_reranker_internal_examples.csv
+competition/participant-files/learn_rerank_*.out
+competition/participant-files/learn_rerank_*.err
+competition/participant-files/predictions/learned_reranker.pt
+competition/participant-files/predictions/learned_reranker_internal_examples.csv
 
 # Final zip can be regenerated
 participant_eval_predictions_final.zip
@@ -115,9 +115,9 @@ participant_eval_predictions_final.zip
 Z10_compressed.pdf
 
 # Benchmark harness — generated artifacts (harness code + RESULTS.md are tracked)
-benchmark/eval_set_v1/
-benchmark/predictions/
-benchmark/results.csv
-benchmark/RESULTS_auto.md
-benchmark/_smoke_out/
-benchmark/__pycache__/
+shared/benchmark/eval_set_v1/
+shared/benchmark/predictions/
+shared/benchmark/results.csv
+shared/benchmark/RESULTS_auto.md
+shared/benchmark/_smoke_out/
+shared/benchmark/__pycache__/
