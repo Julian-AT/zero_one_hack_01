@@ -119,10 +119,16 @@ def main() -> None:
             print(f"{i}\t{c.id}\t{' '.join(c.launch_cmd)}")
         return
     if args.cell is not None:
-        for tok in cells[args.cell].launch_cmd: print(tok); return
+        for tok in cells[args.cell].launch_cmd:
+            print(tok)
+        return
     if args.eval_cell is not None:
-        for tok in _eval_args(cells[args.eval_cell]): print(tok); return
-    if args.cell_id is not None: print(cells[args.cell_id].id); return
+        for tok in _eval_args(cells[args.eval_cell]):
+            print(tok)
+        return
+    if args.cell_id is not None:
+        print(cells[args.cell_id].id)
+        return
 
 
 if __name__ == "__main__":
