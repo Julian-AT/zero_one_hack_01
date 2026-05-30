@@ -104,3 +104,6 @@ participant_files/predictions/learned_reranker_internal_examples.csv
 
 # Final zip can be regenerated
 participant_eval_predictions_final.zip
+
+# Organizer event brief (input material, not solution code) — kept local only
+Z10_compressed.pdf
