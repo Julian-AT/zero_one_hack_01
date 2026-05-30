@@ -144,3 +144,4 @@ script (`eval_metrics.py`) provided by the organizers. See `requirements.txt` an
 - Track briefing & data: [`tracks/industrial-infineon/README.md`](./tracks/industrial-infineon/README.md), [`tracks/industrial-infineon/training_data/README.md`](./tracks/industrial-infineon/training_data/README.md)
 - Final predictions: [`participant_files/predictions/README.md`](./participant_files/predictions/README.md)
 - Eval diagnostics: [`participant_files/eval_plots/eval_prediction_report.md`](./participant_files/eval_plots/eval_prediction_report.md)
+- **Cross-model comparison:** [`benchmark/RESULTS.md`](./benchmark/RESULTS.md) (plan: [`benchmark/benchmark_plan.md`](./benchmark/benchmark_plan.md), harness: [`benchmark/README.md`](./benchmark/README.md))

@@ -104,3 +104,11 @@ participant_files/predictions/learned_reranker_internal_examples.csv
 
 # Final zip can be regenerated
 participant_eval_predictions_final.zip
+
+# Benchmark harness — generated artifacts (harness code + RESULTS.md are tracked)
+benchmark/eval_set_v1/
+benchmark/predictions/
+benchmark/results.csv
+benchmark/RESULTS_auto.md
+benchmark/_smoke_out/
+benchmark/__pycache__/
