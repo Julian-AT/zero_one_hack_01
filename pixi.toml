@@ -6,10 +6,10 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
 [tasks]
-# Verify install
+# Verify install (prints torch version + CUDA availability)
 smoke = "python -c 'import torch; print(torch.__version__, torch.cuda.is_available())'"
 
-# Build tokenizer
+# Build tokenizers
 tokenize-step = "python -m src.data.tokenizer --mode step"
 tokenize-comp = "python -m src.data.tokenizer --mode compositional"
 
@@ -19,13 +19,15 @@ data-smoke = "python -m src.data.load"
 # Trigram baseline
 trigram = "python extras/baselines/trigram_baseline.py"
 
-# Launch single training cell
+# Launch single training run
 train = "python -m src.train.launch --config configs/arch/transformer_small.yaml"
 
 [dependencies]
 python = ">=3.10,<3.13"
-numpy = ">=1.26"
-pandas = ">=2.2"
+# Modern libstdc++ (GLIBCXX_3.4.29+) inside the env so the PyPI torch/numpy
+# wheels don't fall back to Leonardo's older system /lib64/libstdc++.so.6.
+libstdcxx-ng = ">=12"
+pandas = ">=2.2"          # pulls in a compatible numpy automatically
 pyyaml = ">=6.0"
 tqdm = ">=4.66"
 rich = ">=13.7"
@@ -33,17 +35,20 @@ matplotlib = ">=3.8"
 seaborn = ">=0.13"
 
 [pypi-dependencies]
-# torch is heavy; rely on Leonardo's CUDA install via pixi pypi
-torch = ">=2.3"
+# Cross-platform pure-Python deps
 einops = ">=0.7"
 omegaconf = ">=2.3"
 tensorboard = ">=2.16"
 
-# Optional: xLSTM only on Linux + CUDA; pixi will skip on macOS
+# --- Linux (Leonardo Booster: A100, driver 535.x => CUDA 12.2 ceiling) -------
+# Pin torch to the CUDA 12.1 build: needs driver >= 525, so it runs on 535.
+# Cap at < 2.6 because PyTorch stopped publishing cu121 wheels from 2.6 on.
 [target.linux-64.pypi-dependencies]
+torch = { version = ">=2.4,<2.6", index = "https://download.pytorch.org/whl/cu121" }
 xlstm = ">=1.0.7"
 wandb = ">=0.17"
 
+# --- macOS dev (Apple Silicon): default wheels (CPU/MPS), no CUDA, no xlstm ---
 [target.osx-arm64.pypi-dependencies]
-# Mac dev: skip xlstm (needs CUDA); wandb still useful
+torch = ">=2.4,<2.6"
 wandb = ">=0.17"
