@@ -44,8 +44,8 @@ pixi run python -c "import torch; print('[full] torch', torch.__version__, 'cuda
 # --- full in-distribution ranker (train on all 3 families, no held-out) ------
 pixi run python "$E/exp03_neural_ranker.py" --holdout none --config "$C/base.yaml"
 
-# --- final all-3-family model -> 3 submission CSVs ---------------------------
-pixi run python "$E/exp06_make_submission.py" --config "$C/base.yaml"
+# --- final all-3-family model -> 3 submission CSVs (PPM ranker; no GPU needed) -
+pixi run python "$E/exp06_make_submission.py" --ranker ppm
 
 # --- render all charts from whatever results now exist in $NSPE_OUT ----------
 pixi run python "$E/make_charts.py" || echo "[full] charts step skipped"
