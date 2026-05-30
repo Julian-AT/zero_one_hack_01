@@ -1,0 +1,145 @@
+{
+  "checkpoint": "extras/checkpoints/cell1-transformer_medium-compositional/final.pt",
+  "config": {
+    "arch": "transformer",
+    "model": {
+      "d_model": 512,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff": 2048,
+      "dropout": 0.1,
+      "max_seq_len": 256,
+      "rope": true,
+      "rmsnorm": true
+    },
+    "train": {
+      "batch_size": 32,
+      "grad_accum": 1,
+      "max_steps": 6000,
+      "warmup_steps": 200,
+      "lr": 0.0003,
+      "weight_decay": 0.1,
+      "beta1": 0.9,
+      "beta2": 0.95,
+      "grad_clip": 1.0,
+      "precision": "bf16",
+      "log_every": 25,
+      "eval_every": 500,
+      "save_every": 2000,
+      "seed": 42,
+      "family_dropout": 0.2,
+      "max_len": 256
+    },
+    "data": {
+      "use_online_generator": true,
+      "families": [
+        "mosfet",
+        "igbt",
+        "ic"
+      ],
+      "corrupt_fraction": 0.25,
+      "canonicalize": false,
+      "num_workers": 2
+    },
+    "loss": {
+      "lm_weight": 1.0,
+      "validity_weight": 0.0,
+      "rule_id_weight": 0.0
+    },
+    "tracking": {
+      "tensorboard_dir": "extras/logs/tb",
+      "wandb_project": "zero-one-process-logic",
+      "wandb_entity": null,
+      "wandb_mode": "opportunistic"
+    },
+    "out": {
+      "checkpoint_dir": "extras/checkpoints"
+    },
+    "tokenization": {
+      "mode": "compositional"
+    },
+    "run_name": "cell1-transformer_medium-compositional"
+  },
+  "grammar": true,
+  "canonicalize": false,
+  "per_family": {
+    "mosfet": {
+      "0.6": {
+        "n": 40,
+        "top1_at_cut": 0.5,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.75,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.40139642064232417,
+        "wall_seconds": 125.5
+      },
+      "0.8": {
+        "n": 40,
+        "top1_at_cut": 0.55,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.775,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.4042398961809419,
+        "wall_seconds": 63.4
+      }
+    },
+    "igbt": {
+      "0.6": {
+        "n": 40,
+        "top1_at_cut": 0.675,
+        "top3_at_cut": 0.975,
+        "top5_at_cut": 0.975,
+        "mrr_at_cut": 0.825,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.5289322228098008,
+        "wall_seconds": 122.8
+      },
+      "0.8": {
+        "n": 40,
+        "top1_at_cut": 0.625,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8083333333333332,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.45037231559290375,
+        "wall_seconds": 72.1
+      }
+    },
+    "ic": {
+      "0.6": {
+        "n": 40,
+        "top1_at_cut": 0.75,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8666666666666668,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.4401060146845387,
+        "wall_seconds": 106.0
+      },
+      "0.8": {
+        "n": 40,
+        "top1_at_cut": 0.525,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.7625,
+        "completion_exact_match": 0.0,
+        "completion_ned": 0.5390701970443349,
+        "wall_seconds": 59.3
+      }
+    }
+  },
+  "anomaly": {
+    "n": 40,
+    "binary_accuracy": 1.0,
+    "precision_valid": 1.0,
+    "recall_valid": 1.0,
+    "tp": 24,
+    "fp": 0,
+    "tn": 16,
+    "fn": 0,
+    "rule_attribution_accuracy": 1.0,
+    "rule_attribution_n": 16
+  }
+}

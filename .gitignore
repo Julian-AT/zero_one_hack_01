@@ -24,9 +24,12 @@ Thumbs.db
 .ipynb_checkpoints/
 
 # Experiment artifacts (large; regenerate from configs/seeds)
-extras/checkpoints/*.pt
-extras/checkpoints/*.safetensors
-extras/checkpoints/*.bin
+# Use **/ globs so per-run subdirs are caught too. We still keep
+# extras/checkpoints/**/summary.json which is committed manually.
+*.pt
+*.safetensors
+*.bin
+*.ckpt
 extras/logs/
 runs/
 tb_logs/
