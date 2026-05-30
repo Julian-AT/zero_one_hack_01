@@ -16,9 +16,14 @@ This experiment exercises the pure-symbolic (role-augmented) Task-3 oracle in
 
   (b) OOD — generate diode/schottky/sic_mosfet sequences via the official OOD
             family generators (``official.ood.generate_unique``), inject
-            violations with ``novel=True`` (the trigger step is renamed to an
-            unseen string so the stock validator is blind), and measure recall
-            with role-induction ON vs OFF to show the recovery — mirroring
+            violations with ``novel=True`` (the rule's trigger/anchor step is
+            renamed to an unseen, keyword-preserving string so the stock validator
+            is blind), and report — PER RULE — novel-vocab detection recall with
+            role-induction OFF vs ON across the 9 novel-capable rules (every rule
+            but the structural RULE_LITHO_LEVEL_SKIP), plus false positives on
+            novel-but-valid sequences. The headline: role-induction (roles_on)
+            recovers exactly what the stock validator (roles_off) misses, with 0
+            FP, now for 9 rules instead of the original 3 — mirroring
             ``experiments/ood_symbolic_probe.py`` but routed through the same
             official scorer.
 
@@ -50,6 +55,7 @@ __all__ = [
     "build_anomaly_csvs",
     "score_anomaly_set",
     "per_rule_table",
+    "per_rule_ood_table",
     "ood_recall_probe",
     "run",
     "main",
@@ -198,6 +204,38 @@ def per_rule_table(
 # OOD recall probe (role-induction ON vs OFF), mirroring ood_symbolic_probe.py
 # --------------------------------------------------------------------------- #
 
+def per_rule_ood_table(
+    novel_rows: Sequence[dict],
+    use_roles: bool,
+) -> Dict[str, dict]:
+    """Per-injected-rule detection on the NOVEL-vocab OOD set for one mode.
+
+    For each invalid row whose injected rule is novel-capable, re-run the oracle
+    in the requested mode and record (i) whether it was detected as invalid
+    (recall) and (ii) whether the attributed rule matches the injected one
+    (attribution). The ordering of mode (``use_roles``) is the whole point: with
+    ``use_roles=False`` (stock validator) the renamed anchors are invisible, so
+    detection collapses; with ``use_roles=True`` canonicalization recovers them.
+
+    Returns ``{rule: {n, detected, attributed}}`` keyed by injected rule, limited
+    to the novel-capable rules.
+    """
+    agg: Dict[str, dict] = defaultdict(
+        lambda: {"n": 0, "detected": 0, "attributed": 0})
+    for row in novel_rows:
+        rule = row["VIOLATION_RULE"]
+        if rule not in corrupt.NOVEL_CAPABLE:
+            continue
+        res = anomaly.classify(list(row["SEQUENCE"]), use_roles=use_roles)
+        cell = agg[rule]
+        cell["n"] += 1
+        if res["is_valid"] == 0:
+            cell["detected"] += 1
+            if res["rule"] == rule:
+                cell["attributed"] += 1
+    return dict(agg)
+
+
 def ood_recall_probe(
     n: int,
     seed: int,
@@ -207,8 +245,11 @@ def ood_recall_probe(
 
     Builds a novel-vocab anomaly set from the three OOD generators, then scores
     it twice through the official scorer: with role-induction OFF (the stock
-    validator, blind to renamed triggers) and ON (recovers them). Also reports
-    the false-positive count on OOD valids for both modes.
+    validator, blind to renamed triggers/anchors) and ON (recovers them). Reports
+    the aggregate scorer metrics, the false-positive count on OOD valids for both
+    modes, and — the headline — a PER-RULE detection table across the 9
+    novel-capable rules so the recovery is visible rule-by-rule (roles_off misses
+    what roles_on catches, with 0 FP).
     """
     valids: List[list] = []
     for i, fam in enumerate(OOD_FAMILIES):
@@ -217,12 +258,19 @@ def ood_recall_probe(
     rng = random.Random(seed)
     novel_set = corrupt.make_anomaly_set(valids, rng, novel=True, frac_invalid=0.4)
 
+    # The novel-capable invalid rows (renamed anchors) shared across both modes.
+    novel_rows = [r for r in novel_set if r["IS_VALID"] == 0
+                  and r["VIOLATION_RULE"] in corrupt.NOVEL_CAPABLE]
+
     result: dict = {
         "n_per_family": n,
         "n_total": len(novel_set),
         "families": list(OOD_FAMILIES),
         "modes": {},
         "novel_capable_rules": sorted(corrupt.NOVEL_CAPABLE),
+        "n_novel_capable_invalid": len(novel_rows),
+        # per_rule[mode][rule] = {n, detected, attributed}
+        "per_rule": {},
     }
 
     for tag, use_roles in (("roles_off", False), ("roles_on", True)):
@@ -233,15 +281,14 @@ def ood_recall_probe(
             1 for r in novel_set if r["IS_VALID"] == 1
             and anomaly.classify(list(r["SEQUENCE"]), use_roles=use_roles)["is_valid"] == 0
         )
-        # Recall restricted to the novel-capable rules (the ones that exercise
-        # role-induction), since the ordering rules carry known vocabulary and
-        # are caught in both modes.
-        novel_rows = [r for r in novel_set if r["IS_VALID"] == 0
-                      and r["VIOLATION_RULE"] in corrupt.NOVEL_CAPABLE]
+        # Detection restricted to the novel-capable rules (the ones that exercise
+        # role-induction); ordering rules with known vocabulary are caught in both
+        # modes and are reported in the ID table.
         novel_detected = sum(
             1 for r in novel_rows
             if anomaly.classify(list(r["SEQUENCE"]), use_roles=use_roles)["is_valid"] == 0
         )
+        result["per_rule"][tag] = per_rule_ood_table(novel_rows, use_roles=use_roles)
         result["modes"][tag] = {
             "recall": metrics.get("recall"),
             "precision": metrics.get("precision"),
@@ -338,7 +385,9 @@ def _print_tables(result: dict) -> None:
     o = result["ood"]
     print(f"\n[OOD] novel-vocab injection  (families: {', '.join(o['families'])}, "
           f"n/family={o['n_per_family']}, total={o['n_total']})")
-    print(f"  novel-capable rules: {', '.join(o['novel_capable_rules'])}")
+    print(f"  novel-capable rules ({len(o['novel_capable_rules'])}): "
+          f"{', '.join(o['novel_capable_rules'])}")
+    print(f"  novel-capable invalid rows: {o['n_novel_capable_invalid']}")
     print(f"  {'mode':10s} {'recall':>8s} {'precision':>10s} {'f1':>8s} "
           f"{'fp_valids':>10s} {'novel_det/n':>14s}")
     for tag in ("roles_off", "roles_on"):
@@ -346,6 +395,38 @@ def _print_tables(result: dict) -> None:
         nd = f"{m['novel_capable_detected']}/{m['novel_capable_n']}"
         print(f"  {tag:10s} {_fmt(m['recall']):>8s} {_fmt(m['precision']):>10s} "
               f"{_fmt(m['f1']):>8s} {m['fp_on_valids']:>10d} {nd:>14s}")
+
+    # ---- OOD per-rule recovery (roles_off vs roles_on), 9 novel-capable rules --
+    print("\n[OOD] per-rule novel-vocab detection recall: roles_off vs roles_on")
+    print("  (recall = fraction of injected-rule rows the oracle flags invalid;")
+    print("   roles_on also shows attribution accuracy on detected rows)")
+    off = o["per_rule"]["roles_off"]
+    on = o["per_rule"]["roles_on"]
+    print(f"  {'rule':34s} {'n':>4s} {'recall_off':>11s} {'recall_on':>10s} "
+          f"{'attr_on':>9s}")
+    for rule in o["novel_capable_rules"]:
+        c_off = off.get(rule)
+        c_on = on.get(rule)
+        n_rows = (c_on or c_off or {}).get("n", 0)
+        if not n_rows:
+            print(f"  {rule:34s} {0:>4d} {'  --  ':>11s} {'  --  ':>10s} "
+                  f"{'  --  ':>9s}")
+            continue
+        rec_off = (c_off["detected"] / c_off["n"]) if c_off and c_off["n"] else 0.0
+        rec_on = (c_on["detected"] / c_on["n"]) if c_on and c_on["n"] else 0.0
+        attr_on = ((c_on["attributed"] / c_on["detected"])
+                   if c_on and c_on["detected"] else float("nan"))
+        print(f"  {rule:34s} {n_rows:>4d} {rec_off:>11.3f} {rec_on:>10.3f} "
+              f"{attr_on:>9.3f}")
+    # Headline summary line.
+    tot_n = sum(c["n"] for c in on.values())
+    tot_off = sum(c["detected"] for c in off.values())
+    tot_on = sum(c["detected"] for c in on.values())
+    print(f"  {'TOTAL (9 rules)':34s} {tot_n:>4d} "
+          f"{(tot_off / tot_n if tot_n else 0):>11.3f} "
+          f"{(tot_on / tot_n if tot_n else 0):>10.3f}")
+    print(f"  => roles_on recovers {tot_on - tot_off} detections roles_off misses, "
+          f"FP(valids)={o['modes']['roles_on']['fp_on_valids']}")
     print(sep)
 
 

@@ -39,13 +39,28 @@ from nspe.rules import first_rule, validate, validate_with_roles
 # test, nor logistics trigger — safe to overwrite any step with.
 _FILLER = "MEASURE THICKNESS"
 
-# Unseen (family-4) trigger names used by the `novel=True` path. None of these is
-# a member of any official frozenset, so the stock validator is blind to them and
-# only role-induction (validate_with_roles) recovers the violation.
-_NOVEL_DEP = "DEPOSIT SIC EPITAXIAL STACK"
-_NOVEL_ETCH = "SIC TRENCH ETCH"
-_NOVEL_IMPLANT = "IMPLANT SIC ALUMINUM"
-_NOVEL_CLEAN = "MEGASONIC SIC CLEAN"
+# Unseen (family-4) trigger/anchor names used by the ``novel=True`` path.
+#
+# None of these is a member of any official frozenset (verified against
+# ``rules.known_vocab()``), so the stock validator — which keys on exact step
+# strings / hardcoded literals — is BLIND to them. Each is, however,
+# KEYWORD-PRESERVING in exactly the way ``rules._canonical_landmark`` recognizes,
+# so ``validate_with_roles`` canonicalizes it back to its landmark and recovers
+# the violation. This is the surface-rename failure mode a renaming 4th family
+# induces, and the pair (stock-blind, role-caught) is what each novel corruptor
+# demonstrates.
+#
+#   novel string                     canonicalizes back to        rule(s)
+#   -------------------------------  ---------------------------  ---------------
+_NOVEL_DEP = "DEPOSIT SIC POLY"          # DEPOSIT POLYSILICON     DEP_NO_CLEAN
+_NOVEL_ETCH = "OXIDE DRY ETCH STEP"      # OXIDE ETCH              ETCH_NO_MASK
+_NOVEL_METAL_ETCH = "METAL DRY ETCH STEP"  # METAL ETCH            METAL_ETCH_NO_LITHO
+_NOVEL_IMPLANT = "IMPLANT WELL REGION"   # IMPLANT WELL            IMPLANT_NO_MASK
+_NOVEL_CMP = "CMP PLANARIZE STEP"        # CMP METAL               CMP_NO_DEP
+_NOVEL_PAD = "OPEN BOND PAD WINDOW AREA"  # OPEN PAD WINDOW         PAD_OPEN_BEFORE_DEP
+_NOVEL_ELECTRICAL_TEST = "LEAKAGE SCREEN TEST"  # LEAKAGE TEST      TEST_BEFORE_PASSIVATION
+_NOVEL_SHIP = "SHIP PRODUCT LOT"         # SHIP LOT                SHIP_BEFORE_TEST
+_NOVEL_BACKSIDE = "DEPOSIT BACKSIDE CONTACT METAL"  # DEPOSIT BACKSIDE METAL  BACKSIDE_BEFORE_PASSIVATION
 
 
 # --------------------------------------------------------------------------- #
@@ -120,10 +135,12 @@ def corrupt_metal_etch_no_litho(seq: list[str], rng: random.Random,
     """Blank the EXPOSE LITHO LEVEL and DEVELOP steps in the prior-15 window of a
     metal etch, so the metal etch loses its photoresist mask.
 
-    Note: this rule has no novel variant (METAL ETCH names are fixed in the
-    grammar and the rule keys on the *litho* steps, not the etch)."""
-    if novel:
-        return None
+    Novel variant: in addition to blanking the litho prereqs, rename the metal
+    etch trigger itself to ``_NOVEL_METAL_ETCH`` (``METAL DRY ETCH STEP``). The
+    stock validator no longer recognizes it as a metal-etch step (nor as any etch
+    step — the string is in neither ``METAL_ETCH_STEPS`` nor ``ETCH_STEPS``) so it
+    is blind, whereas ``validate_with_roles`` canonicalizes it back to
+    ``METAL ETCH`` and fires RULE_METAL_ETCH_NO_LITHO."""
     steps = list(seq)
     mi = _last_index(steps, gs.METAL_ETCH_STEPS)
     if mi is None:
@@ -140,6 +157,8 @@ def corrupt_metal_etch_no_litho(seq: list[str], rng: random.Random,
             changed = True
     if not changed:
         return None
+    if novel:
+        steps[mi] = _NOVEL_METAL_ETCH
     return _verify(steps, "RULE_METAL_ETCH_NO_LITHO", novel)
 
 
@@ -170,8 +189,17 @@ def corrupt_etch_no_mask(seq: list[str], rng: random.Random,
 
 def corrupt_litho_level_skip(seq: list[str], rng: random.Random,
                              novel: bool = False) -> Optional[list[str]]:
-    """Renumber an ``ALIGN MASK LEVEL n`` -> ``n+2`` to skip a level. The rule is
-    purely structural (level integers), so there is no novel-vocab variant."""
+    """Renumber an ``ALIGN MASK LEVEL n`` -> ``n+2`` to skip a level.
+
+    STRUCTURAL rule — intentionally KNOWN-VOCAB ONLY (no novel variant). Unlike
+    every other rule, RULE_LITHO_LEVEL_SKIP does not key on a renamable surface
+    anchor: it keys on the *integer ordering* of the ``ALIGN MASK LEVEL n``
+    levels. There is no surface-rename failure mode for a 4th family to induce
+    here — the level integers are structural, not vocabulary — so canonicalization
+    has nothing to recover and ``validate_with_roles`` would behave identically to
+    ``validate``. We therefore exclude it from ``NOVEL_CAPABLE`` and return None on
+    the novel path; ``make_anomaly_set(novel=True)`` still covers this rule via its
+    standard known-vocab injection."""
     if novel:
         return None
     steps = list(seq)
@@ -213,14 +241,16 @@ def corrupt_implant_no_mask(seq: list[str], rng: random.Random,
 def corrupt_cmp_no_dep(seq: list[str], rng: random.Random,
                        novel: bool = False) -> Optional[list[str]]:
     """Blank every deposition/fill step in the prior-6 window of the EARLIEST CMP,
-    so there is nothing to planarize. For novel=True we rename the deposition that
-    fed the CMP to an unseen string before blanking it — but since blanking
-    removes it entirely, the novel signal here is on the *renamed* dep elsewhere.
+    so there is nothing to planarize.
 
-    To exercise the role path for CMP, novel=True instead renames the CMP's
-    feeding deposition to a novel string AND leaves it in place would not
-    violate; so for CMP we keep novel as the standard window-blank (the CMP rule
-    keys on the deposition/fill set, which role-induction augments)."""
+    Novel variant: blank the feeding deposition/fill exactly as in the ID case,
+    then rename the CMP TRIGGER itself to ``_NOVEL_CMP`` (``CMP PLANARIZE STEP``).
+    The stock validator no longer sees a CMP step (the string is not in
+    ``CMP_STEPS``), so it is blind; ``validate_with_roles`` canonicalizes it back
+    to ``CMP METAL`` and fires RULE_CMP_NO_DEP. (Renaming the *deposition* instead
+    would be self-defeating — role-induction would re-classify it as FILL and the
+    violation would vanish — so the trigger, not the prereq, carries the novel
+    string here.)"""
     steps = list(seq)
     ci = _first_index(steps, gs.CMP_STEPS)
     if ci is None:
@@ -228,28 +258,26 @@ def corrupt_cmp_no_dep(seq: list[str], rng: random.Random,
     cleared = False
     for k in range(max(0, ci - 6), ci):
         if steps[k] in gs.FILL_STEPS:
-            if novel:
-                # Rename to a novel deposition the stock validator does not know,
-                # so stock CMP rule still fires (dep gone from known set) but the
-                # role-augmented validator would *re-add* it as FILL and NOT fire.
-                # That inverts the gate, so for a clean novel CMP demonstration we
-                # simply blank it as in the ID case; role recovery for CMP is
-                # demonstrated via the dep that role-induction classifies as FILL.
-                steps[k] = _FILLER
-            else:
-                steps[k] = _FILLER
+            steps[k] = _FILLER
             cleared = True
     if not cleared:
         return None
+    if novel:
+        steps[ci] = _NOVEL_CMP
     return _verify(steps, "RULE_CMP_NO_DEP", novel)
 
 
 def corrupt_pad_open_before_dep(seq: list[str], rng: random.Random,
                                 novel: bool = False) -> Optional[list[str]]:
-    """Move a pad-window step to before DEPOSIT PASSIVATION. Pure ordering rule —
-    no novel-vocab variant."""
-    if novel:
-        return None
+    """Move a pad-window step to before DEPOSIT PASSIVATION (ordering rule).
+
+    Novel variant: rename the pad-window anchor to ``_NOVEL_PAD``
+    (``OPEN BOND PAD WINDOW AREA``) before moving it. The stock validator does not
+    recognize it as a pad-window step (string absent from ``PAD_WINDOW_STEPS``), so
+    the misorder is invisible; ``validate_with_roles`` canonicalizes it back to
+    ``OPEN PAD WINDOW`` and fires RULE_PAD_OPEN_BEFORE_DEP. (The ``_canonical``
+    rule checks DEVELOP before PAD+WINDOW, so this AREA string — having no DEVELOP
+    keyword — maps to the pad-window opener, not a develop step.)"""
     steps = list(seq)
     dep_idx = _first_index(steps, ("DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER"))
     if dep_idx is None:
@@ -258,15 +286,23 @@ def corrupt_pad_open_before_dep(seq: list[str], rng: random.Random,
     if pad_idx is None or pad_idx <= dep_idx:
         return None
     pad = steps.pop(pad_idx)
+    if novel:
+        pad = _NOVEL_PAD
     steps.insert(dep_idx, pad)  # now the pad window precedes passivation deposition
     return _verify(steps, "RULE_PAD_OPEN_BEFORE_DEP", novel)
 
 
 def corrupt_test_before_passivation(seq: list[str], rng: random.Random,
                                     novel: bool = False) -> Optional[list[str]]:
-    """Move an electrical test to before CURE PASSIVATION. Pure ordering rule."""
-    if novel:
-        return None
+    """Move an electrical test to before CURE PASSIVATION (ordering rule).
+
+    Novel variant: rename the electrical-test anchor to ``_NOVEL_ELECTRICAL_TEST``
+    (``LEAKAGE SCREEN TEST``) before moving it. The stock validator does not
+    recognize it as an electrical test (string absent from
+    ``ELECTRICAL_TEST_STEPS``) so the misorder is invisible; the keyword-gated
+    ``_canonical_landmark`` (``* TEST`` carrying an electrical keyword such as
+    LEAKAGE) maps it back to ``LEAKAGE TEST`` and fires
+    RULE_TEST_BEFORE_PASSIVATION."""
     steps = list(seq)
     cure_idx = _first_index(steps, ("CURE PASSIVATION",))
     if cure_idx is None:
@@ -276,35 +312,48 @@ def corrupt_test_before_passivation(seq: list[str], rng: random.Random,
     if test_idx is None:
         return None
     test = steps.pop(test_idx)
+    if novel:
+        test = _NOVEL_ELECTRICAL_TEST
     steps.insert(cure_idx, test)  # test now precedes CURE PASSIVATION
     return _verify(steps, "RULE_TEST_BEFORE_PASSIVATION", novel)
 
 
 def corrupt_ship_before_test(seq: list[str], rng: random.Random,
                              novel: bool = False) -> Optional[list[str]]:
-    """Move SHIP LOT to before WAFER SORT TEST. Pure ordering rule."""
-    if novel:
-        return None
+    """Move SHIP LOT to before WAFER SORT TEST (ordering rule).
+
+    Novel variant: rename the ship anchor to ``_NOVEL_SHIP``
+    (``SHIP PRODUCT LOT``) before moving it. The stock validator finds no literal
+    ``SHIP LOT`` (its ``ship_idx`` is None) so the rule cannot fire — it is blind;
+    ``validate_with_roles`` canonicalizes it back to ``SHIP LOT`` and, now placed
+    before the (still-known) ``WAFER SORT TEST``, fires RULE_SHIP_BEFORE_TEST."""
     steps = list(seq)
     ship_idx = _first_index(steps, ("SHIP LOT",))
     sort_idx = _first_index(steps, ("WAFER SORT TEST",))
     if ship_idx is None or sort_idx is None or ship_idx < sort_idx:
         return None
     ship = steps.pop(ship_idx)
+    if novel:
+        ship = _NOVEL_SHIP
     steps.insert(sort_idx, ship)  # SHIP LOT now precedes WAFER SORT TEST
     return _verify(steps, "RULE_SHIP_BEFORE_TEST", novel)
 
 
 def corrupt_backside_before_passivation(seq: list[str], rng: random.Random,
                                         novel: bool = False) -> Optional[list[str]]:
-    """Move DEPOSIT BACKSIDE METAL to before CURE PASSIVATION. Ordering rule.
+    """Move DEPOSIT BACKSIDE METAL to before CURE PASSIVATION (ordering rule).
 
-    Note: this would also leave the backside metal possibly clean-deprived, but
-    we move it to *just after* CURE-1 where a clean still sits in its window in
-    the original flow; the verifier confirms the earliest violation is backside.
-    """
-    if novel:
-        return None
+    We insert the backside metal at ``cure_idx`` (just before the first
+    CURE PASSIVATION) so a clean still sits in its prior-12 window in the original
+    flow; the verifier confirms the earliest violation is backside (not an
+    incidental RULE_DEP_NO_CLEAN on the moved deposition).
+
+    Novel variant: rename the backside-metal trigger to ``_NOVEL_BACKSIDE``
+    (``DEPOSIT BACKSIDE CONTACT METAL``) before moving it. The stock validator
+    does not recognize it as a backside-metal step (string absent from
+    ``BACKSIDE_METAL_STEPS``) so the misorder is invisible; the
+    DEPOSIT+BACKSIDE+METAL canonicalization maps it back to
+    ``DEPOSIT BACKSIDE METAL`` and fires RULE_BACKSIDE_BEFORE_PASSIVATION."""
     steps = list(seq)
     cure_idx = _first_index(steps, ("CURE PASSIVATION",))
     if cure_idx is None:
@@ -314,6 +363,8 @@ def corrupt_backside_before_passivation(seq: list[str], rng: random.Random,
     if bk_idx is None:
         return None
     bk = steps.pop(bk_idx)
+    if novel:
+        bk = _NOVEL_BACKSIDE
     steps.insert(cure_idx, bk)  # backside metal now precedes CURE PASSIVATION
     return _verify(steps, "RULE_BACKSIDE_BEFORE_PASSIVATION", novel)
 
@@ -335,10 +386,27 @@ CORRUPTORS: dict[str, Callable[[list[str], random.Random], Optional[list[str]]]]
     "RULE_BACKSIDE_BEFORE_PASSIVATION": corrupt_backside_before_passivation,
 }
 
-# Rules whose corruptors expose a meaningful novel-vocab variant (windowed rules
-# whose trigger step we can rename to an unseen string).
+# Rules whose corruptors expose a meaningful novel-vocab variant — i.e. the rule
+# keys on a renamable SURFACE anchor (a trigger or an ordering landmark) that a
+# 4th family could rename to an unseen string. For each of these the novel
+# corruptor renames that anchor to a keyword-preserving novel string, so the
+# stock validator (exact-string keyed) is BLIND while `validate_with_roles`
+# canonicalizes the anchor back and recovers the violation.
+#
+# 9 of 10 rules qualify. The sole exception is RULE_LITHO_LEVEL_SKIP, which is
+# STRUCTURAL (keyed on ALIGN MASK LEVEL integer ordering, not on a renamable
+# string) and therefore has no surface-rename failure mode — see
+# `corrupt_litho_level_skip`. It stays known-vocab only.
 NOVEL_CAPABLE: frozenset = frozenset({
-    "RULE_DEP_NO_CLEAN", "RULE_ETCH_NO_MASK", "RULE_IMPLANT_NO_MASK",
+    "RULE_DEP_NO_CLEAN",
+    "RULE_METAL_ETCH_NO_LITHO",
+    "RULE_ETCH_NO_MASK",
+    "RULE_IMPLANT_NO_MASK",
+    "RULE_CMP_NO_DEP",
+    "RULE_PAD_OPEN_BEFORE_DEP",
+    "RULE_TEST_BEFORE_PASSIVATION",
+    "RULE_SHIP_BEFORE_TEST",
+    "RULE_BACKSIDE_BEFORE_PASSIVATION",
 })
 
 

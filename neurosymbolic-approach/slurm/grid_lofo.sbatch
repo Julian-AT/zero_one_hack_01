@@ -51,4 +51,7 @@ wait
 # --- aggregate + score everything with the official scorer ------------------
 pixi run python "$E/exp05_scaling.py" --aggregate
 
-echo "[grid] grid done -> $NSPE_OUT"
+# --- render every chart (anomaly + LoFO + neural scaling/ablation) -----------
+pixi run python "$E/make_charts.py" || echo "[grid] charts step skipped"
+
+echo "[grid] grid done -> $NSPE_OUT (charts in $NSPE_OUT/charts)"

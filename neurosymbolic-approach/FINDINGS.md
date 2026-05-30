@@ -359,3 +359,37 @@ repo rather than restarting:
 *Next step when we move from plan → build: pick the critical path —
 **A (anomaly oracle) + B (constrained decode) + C (role abstraction)** is the
 minimum that meaningfully changes the Task-4 number; D/E/F/G are upside.*
+
+---
+
+## 9. Build complete — measured results (2026-05-30)
+
+The full engine is implemented in `nspe/` (16 modules) + `experiments/` (6 + the
+probe) + `slurm/`/`configs/`/`README.md`. Built foundation-first (hand-verified),
+then fanned out via a multi-agent workflow with an execution-based integration
+gate and an adversarial review (which found + we fixed one real training bug: a
+role-CE `ignore_index` mismatch in `model.py`). Numbers below are reproduced
+locally on CPU with the official scorer.
+
+**Task 3 — anomaly (symbolic oracle).**
+- ID (all 3 families, all 10 rules): accuracy / precision / recall / F1 / AUC /
+  rule-attribution = **1.0000** across the board.
+- OOD (unseen diode/schottky/sic_mosfet, novel-vocab renamed triggers): role-induction
+  lifts novel-violation recall **16/55 → 55/55** with **0 false positives** (stock
+  validator alone: 0.78 recall). This is the §2d blind-spot, closed.
+- On the *real* `eval_input_anomaly.csv`, the oracle returns exactly **600 valid /
+  387 invalid** — matching the documented ground-truth composition exactly, all
+  387 attributed to a rule id.
+
+**Tasks 1 & 2 — PPM role-factored ranker (pure symbolic), leave-one-family-out.**
+- Mean ID→OOD **next-step Top-1 drop ≈ 0.033** (Top-3 ≈ 0.033, Top-5 ≈ 0.027) —
+  vs the pure-neural baseline's **~0.24** drop (0.72→0.48). The OOD curve is flat:
+  the thesis, demonstrated.
+- Task-2 completions: **600/600 rule-valid by construction** on the real eval input.
+
+**Status of the menu (§4):** A (oracle) ✓, B (constrained decode + repair) ✓,
+C (role abstraction in PPM + neural heads) ✓, D-skeleton (semantic loss) ✓ wired,
+E/F partial (repair done; full automaton-compile is upside), G (logic-as-loss)
+available via `sem_w`. The neural ranker (`model.py`) is built and trains on CPU;
+its real ID/OOD numbers come from the Leonardo GPU runs (`slurm/grid_lofo.sbatch`).
+The PPM already carries the headline OOD result with **zero GPU**.

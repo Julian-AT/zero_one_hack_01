@@ -42,5 +42,8 @@ pixi run python "$E/exp03_neural_ranker.py" --holdout none --config "$C/base.yam
 # --- final all-3-family model -> 3 submission CSVs ---------------------------
 pixi run python "$E/exp06_make_submission.py" --config "$C/base.yaml"
 
-echo "[full] done. submissions + metrics in $NSPE_OUT"
+# --- render all charts from whatever results now exist in $NSPE_OUT ----------
+pixi run python "$E/make_charts.py" || echo "[full] charts step skipped"
+
+echo "[full] done. submissions + metrics + charts in $NSPE_OUT"
 ls -la "$NSPE_OUT"/submission_task*.csv 2>/dev/null || echo "[full] (submission CSVs not found — check exp06 output)"
