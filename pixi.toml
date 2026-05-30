@@ -56,13 +56,6 @@ einops = ">=0.7"
 omegaconf = ">=2.3"
 tensorboard = ">=2.16"
 
-# --- Linux-only conda deps ---------------------------------------------------
-# Modern libstdc++ (GLIBCXX_3.4.29+) inside the env so the PyPI torch/numpy
-# wheels don't fall back to Leonardo's older system /lib64/libstdc++.so.6.
-# (No such package on macOS, hence Linux-scoped.)
-[target.linux-64.dependencies]
-libstdcxx-ng = ">=12"
-
 # --- Linux (Leonardo Booster: A100, driver 535.x => CUDA 12.2 ceiling) -------
 # Pin torch to the CUDA 12.1 build: needs driver >= 525, so it runs on 535.
 # Cap at < 2.6 because PyTorch stopped publishing cu121 wheels from 2.6 on.

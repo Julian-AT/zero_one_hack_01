@@ -77,7 +77,7 @@ def make_rope_cache(seq_len: int, head_dim: int, device: torch.device,
 
 class CausalSelfAttention(nn.Module):
     def __init__(self, d_model: int, n_heads: int, dropout: float = 0.0,
-                 max_seq_len: int = 256, use_rope: bool = True):
+                 max_seq_len: int = 768, use_rope: bool = True):
         super().__init__()
         assert d_model % n_heads == 0
         self.d_model = d_model
@@ -163,7 +163,7 @@ class TransformerConfig:
     n_heads: int = 4
     d_ff: int = 1024
     dropout: float = 0.1
-    max_seq_len: int = 256
+    max_seq_len: int = 768
     rope: bool = True
     rmsnorm: bool = True
 

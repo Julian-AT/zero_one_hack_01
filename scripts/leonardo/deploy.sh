@@ -162,6 +162,7 @@ bootstrap_cmd() {
     rsync -az --delete \
           -e "ssh -i ${LEO_KEY} -o BatchMode=yes" \
           --exclude='.venv/' \
+          --exclude='.pixi/' \
           --exclude='__pycache__/' \
           --exclude='.DS_Store' \
           --exclude='extras/checkpoints/' \

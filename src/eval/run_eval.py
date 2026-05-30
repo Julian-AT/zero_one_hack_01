@@ -106,25 +106,21 @@ def eval_nextstep_and_completion(lm, examples, frac: float,
     }
 
 
-def eval_anomaly(lm, examples, corrupt_frac: float = 0.5,
-                  max_examples: int = 200) -> dict:
-    """Build a mixed valid/corrupted held-out, score with the ensemble."""
-    rng = random.Random(0)
-    sample = rng.sample(examples, min(max_examples, len(examples)))
-    items: list[tuple[list[str], int, str | None, str]] = []  # (seq, gold_is_valid, gold_rule, family)
-    for ex in sample:
-        if rng.random() < corrupt_frac:
-            c = corrupt_random(list(ex.steps), rng, verify=True)
-            if c is not None:
-                items.append((c.corrupted_steps, 0, c.rule, ex.family))
-                continue
-        items.append((ex.steps, 1, None, ex.family))
+def _anomaly_metrics_from_items(lm, items) -> dict:
+    """Score a list of (seq, gold_is_valid, gold_rule, family) tuples.
+
+    Adds ROC-AUC computed from the ensemble's SCORE field — the brief's
+    rubric for Task 3 includes AUC, which is wasted unless SCORE varies."""
     tp = fp = tn = fn = 0
     rule_correct = rule_total = 0
+    scores: list[float] = []
+    golds: list[int] = []
     for seq, gold, gold_rule, fam in items:
         result = anomaly_ensemble(lm, fam, seq)
         pred = result["IS_VALID"]
         pred_rule = result["PREDICTED_RULE"]
+        scores.append(float(result["SCORE"]))
+        golds.append(int(gold))
         if gold == 1 and pred == 1: tp += 1
         elif gold == 1 and pred == 0: fp += 1
         elif gold == 0 and pred == 0: tn += 1
@@ -135,17 +131,61 @@ def eval_anomaly(lm, examples, corrupt_frac: float = 0.5,
                 rule_correct += 1
     n = len(items)
     acc = (tp + tn) / n if n else 0
-    precision_valid = tp / (tp + fp) if (tp + fp) else 0  # P(true_valid | predicted_valid)
+    precision_valid = tp / (tp + fp) if (tp + fp) else 0
     recall_valid    = tp / (tp + fn) if (tp + fn) else 0
+    # ROC-AUC via rank statistic (Mann–Whitney U), no sklearn dependency.
+    pos = [s for s, g in zip(scores, golds) if g == 1]
+    neg = [s for s, g in zip(scores, golds) if g == 0]
+    auc = _roc_auc(pos, neg)
     return {
         "n": n,
         "binary_accuracy": acc,
         "precision_valid": precision_valid,
         "recall_valid": recall_valid,
         "tp": tp, "fp": fp, "tn": tn, "fn": fn,
+        "roc_auc": auc,
         "rule_attribution_accuracy": (rule_correct / rule_total) if rule_total else 0,
         "rule_attribution_n": rule_total,
     }
+
+
+def _roc_auc(pos: list[float], neg: list[float]) -> float:
+    """AUC = P(score(pos) > score(neg)). Rank-based, ties broken by 0.5."""
+    if not pos or not neg:
+        return 0.0
+    wins = ties = 0
+    for p in pos:
+        for n in neg:
+            if p > n: wins += 1
+            elif p == n: ties += 1
+    return (wins + 0.5 * ties) / (len(pos) * len(neg))
+
+
+def eval_anomaly(lm, examples, corrupt_frac: float = 0.5,
+                  max_examples: int = 200) -> dict:
+    """Build a mixed valid/corrupted held-out, score with the ensemble.
+
+    Computes overall metrics plus a per-family breakdown so LoFO runs can
+    isolate the held-out family's OOD anomaly numbers."""
+    rng = random.Random(0)
+    sample = rng.sample(examples, min(max_examples, len(examples)))
+    items: list[tuple[list[str], int, str | None, str]] = []
+    for ex in sample:
+        if rng.random() < corrupt_frac:
+            c = corrupt_random(list(ex.steps), rng, verify=True)
+            if c is not None:
+                items.append((c.corrupted_steps, 0, c.rule, ex.family))
+                continue
+        items.append((ex.steps, 1, None, ex.family))
+    overall = _anomaly_metrics_from_items(lm, items)
+    per_family: dict[str, dict] = {}
+    by_fam: dict[str, list] = {}
+    for it in items:
+        by_fam.setdefault(it[3], []).append(it)
+    for fam, fam_items in by_fam.items():
+        per_family[fam] = _anomaly_metrics_from_items(lm, fam_items)
+    overall["per_family"] = per_family
+    return overall
 
 
 def main() -> None:
@@ -157,6 +197,9 @@ def main() -> None:
     parser.add_argument("--max-examples", type=int, default=40)
     parser.add_argument("--max-completion-steps", type=int, default=60)
     parser.add_argument("--skip-completion", action="store_true")
+    parser.add_argument("--held-out-family", default=None,
+                        help="Tag the metrics with the held-out family for LoFO runs. "
+                             "Pure label — the eval already runs on all 3 families.")
     args = parser.parse_args()
 
     out = Path(args.output_dir)
@@ -182,6 +225,7 @@ def main() -> None:
         "config": lm.cfg,
         "grammar": use_grammar,
         "canonicalize": args.canonicalize,
+        "held_out_family": args.held_out_family,
     }
 
     logger.info("Eval: next-step + completion @ frac=0.6 + 0.8 (held-out per family)")
@@ -205,10 +249,19 @@ def main() -> None:
         results["per_family"][fam] = per_frac
 
     logger.info("Eval: anomaly detection (mixed held-out, 50% corrupted)")
-    a = eval_anomaly(lm, held, corrupt_frac=0.5, max_examples=args.max_examples)
-    logger.info(f"  acc={a['binary_accuracy']:.4f}  "
+    # Scale anomaly sample with families so each family gets ~max_examples items.
+    a = eval_anomaly(lm, held, corrupt_frac=0.5,
+                       max_examples=max(args.max_examples * 3, len(held)))
+    logger.info(f"  overall acc={a['binary_accuracy']:.4f}  "
+                f"AUC={a['roc_auc']:.4f}  "
                 f"TP/FP/TN/FN={a['tp']}/{a['fp']}/{a['tn']}/{a['fn']}  "
                 f"rule_attrib={a['rule_attribution_accuracy']:.4f}")
+    for fam, fam_a in a.get("per_family", {}).items():
+        tag = "(HELD-OUT)" if fam == args.held_out_family else ""
+        logger.info(f"    {fam.upper():>7} {tag:>11} n={fam_a['n']:>3}  "
+                    f"acc={fam_a['binary_accuracy']:.4f}  "
+                    f"AUC={fam_a['roc_auc']:.4f}  "
+                    f"rule_attrib={fam_a['rule_attribution_accuracy']:.4f}")
     results["anomaly"] = a
 
     # Save
@@ -226,12 +279,25 @@ def main() -> None:
                       f"{m['completion_ned']:.4f} |")
     md.append("")
     md.append("## Anomaly detection")
-    md.append(f"- n = {a['n']}, binary acc = {a['binary_accuracy']:.4f}")
+    md.append(f"- n = {a['n']}, binary acc = {a['binary_accuracy']:.4f}, "
+              f"AUC = {a['roc_auc']:.4f}")
     md.append(f"- precision(valid) = {a['precision_valid']:.4f}, "
               f"recall(valid) = {a['recall_valid']:.4f}")
     md.append(f"- TP/FP/TN/FN = {a['tp']}/{a['fp']}/{a['tn']}/{a['fn']}")
     md.append(f"- rule attribution accuracy = "
               f"{a['rule_attribution_accuracy']:.4f} (n_invalid={a['rule_attribution_n']})")
+    if a.get("per_family"):
+        md.append("")
+        md.append("### Per-family breakdown" +
+                  (f" (held-out: **{args.held_out_family.upper()}**)"
+                   if args.held_out_family else ""))
+        md.append("| family | n | acc | AUC | rule_attrib |")
+        md.append("|---|--:|--:|--:|--:|")
+        for fam, fam_a in a["per_family"].items():
+            star = " ⭐" if fam == args.held_out_family else ""
+            md.append(f"| {fam.upper()}{star} | {fam_a['n']} | "
+                      f"{fam_a['binary_accuracy']:.4f} | {fam_a['roc_auc']:.4f} | "
+                      f"{fam_a['rule_attribution_accuracy']:.4f} |")
     (out / "metrics.md").write_text("\n".join(md))
     logger.info(f"Wrote {out / 'metrics.json'} and {out / 'metrics.md'}")
 

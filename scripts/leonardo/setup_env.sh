@@ -26,7 +26,10 @@ export PATH="$PIXI_HOME/bin:$PATH"
 
 # 2. resolve + install everything declared in pixi.toml
 #    (PyTorch cu121 on Linux, plus numpy/pandas/tokenizers/the rest)
-echo "[setup] installing dependencies from pixi.toml ..."
+# Login node has no CUDA driver — mock the __cuda virtual package so the
+# resolver picks the CUDA build of pytorch-gpu anyway.
+export CONDA_OVERRIDE_CUDA="${CONDA_OVERRIDE_CUDA:-12.0}"
+echo "[setup] installing dependencies from pixi.toml (CONDA_OVERRIDE_CUDA=$CONDA_OVERRIDE_CUDA) ..."
 pixi install --manifest-path pixi.toml
 if [[ -n "${PIXI_HOME:-}" ]]; then
     echo "[setup] wiring libstdc++ load-order fix ..."

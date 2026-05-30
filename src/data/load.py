@@ -132,7 +132,7 @@ class ProcessSequenceDataset(Dataset):
     """A fixed list of Examples. Used for validation, held-out eval, and LoFO."""
 
     def __init__(self, examples: Iterable[Example], tokenizer: BaseTokenizer,
-                 max_len: int = 256, family_dropout: float = 0.0,
+                 max_len: int = 768, family_dropout: float = 0.0,
                  seed: int = 0) -> None:
         self.examples = list(examples)
         self.tok = tokenizer
@@ -170,7 +170,7 @@ class OnlineGeneratorIterableDataset(IterableDataset):
         self,
         tokenizer: BaseTokenizer,
         families: list[str],
-        max_len: int = 256,
+        max_len: int = 768,
         corrupt_fraction: float = 0.25,
         canonicalize: bool = False,
         family_dropout: float = 0.0,
@@ -217,7 +217,7 @@ def make_static_loader(
     examples: list[Example],
     tokenizer: BaseTokenizer,
     batch_size: int,
-    max_len: int = 256,
+    max_len: int = 768,
     shuffle: bool = True,
     num_workers: int = 0,
     family_dropout: float = 0.0,
@@ -239,7 +239,7 @@ def make_online_loader(
     tokenizer: BaseTokenizer,
     families: list[str],
     batch_size: int,
-    max_len: int = 256,
+    max_len: int = 768,
     corrupt_fraction: float = 0.25,
     canonicalize: bool = False,
     family_dropout: float = 0.0,
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     from src.data.tokenizer import build_tokenizer
     tok = build_tokenizer("step")
     loader = make_online_loader(tok, families=["mosfet", "igbt", "ic"],
-                                  batch_size=4, max_len=256, corrupt_fraction=0.5,
+                                  batch_size=4, max_len=768, corrupt_fraction=0.5,
                                   num_workers=0, seed=0)
     it = iter(loader)
     for i in range(2):

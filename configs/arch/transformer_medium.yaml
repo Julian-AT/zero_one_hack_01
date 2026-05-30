@@ -6,6 +6,6 @@ model:
   n_heads: 8
   d_ff: 2048
   dropout: 0.1
-  max_seq_len: 256
+  max_seq_len: 768
   rope: true
   rmsnorm: true

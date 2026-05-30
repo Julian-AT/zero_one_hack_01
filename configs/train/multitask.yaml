@@ -4,8 +4,8 @@
 train:
   batch_size: 32
   grad_accum: 1
-  max_steps: 8000              # longer than the grid; multi-task heads need budget
-  warmup_steps: 300
+  max_steps: 6000              # heads converge by step ~4k; 8000 was overkill
+  warmup_steps: 400            # 6.7% of max_steps after the drop below
   lr: 2.0e-4                   # slightly lower than grid (3e-4) — heads are sensitive
   weight_decay: 0.1
   beta1: 0.9
@@ -17,7 +17,7 @@ train:
   save_every: 2000
   seed: 42
   family_dropout: 0.2
-  max_len: 256
+  max_len: 768                 # compositional sequences are 444-604 tokens; 256 truncated 100%
 
 data:
   use_online_generator: true
