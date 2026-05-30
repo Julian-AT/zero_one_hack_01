@@ -623,4 +623,149 @@ against `generation_rules.md §5.3`:
 4. Regenerate `completion.csv` with the v2-medium-multitask checkpoint
    (better NED + first non-zero ExactMatch).
 
+---
+
+## 2026-05-30 ~20:30 · Deep-dive audit findings (post-Phase-2 launch)
+
+Re-read everything — track briefings (EN + DE), README, training_data
+README, REPORT_TEMPLATE — and audited the repo for gaps. **Major
+discoveries that change the picture:**
+
+### Found: organizers' eval files were already shipped
+
+`participant_files/` at repo root contains:
+
+- `eval_metrics.py` (23 kB) — the official scoring script
+- `eval_input_valid.csv` (1.0 MB, 600 rows) — real input for Tasks 1+2
+- `eval_input_anomaly.csv` (2.4 MB, 987 rows) — real input for Task 3
+
+We had been running on self-simulated 300-row anomaly inputs. **Pushed
+these to Leonardo and submitted job `43130303` to regenerate the
+submission CSVs against the real eval inputs** using
+`v2-final-transformer-medium-multitask-all3` (the best v2 recipe).
+
+Format compliance verified by reading `eval_metrics.py`:
+
+- Next-step: `EXAMPLE_ID, RANK_1..5` ✓
+- Completion: `EXAMPLE_ID, PREDICTED_SEQUENCE` (pipe-sep) ✓
+- Anomaly: `EXAMPLE_ID, IS_VALID, SCORE, PREDICTED_RULE` ✓ (IS_VALID:
+  0=invalid, 1=valid; invalid is the *positive* class for P/R/F1)
+
+The script's Block-level Accuracy uses a 10-block coarse taxonomy
+(LITHO, ETCH, DOPING_THERMAL, DEPOSITION, PLANARIZATION, VIA,
+PASSIVATION, BACKSIDE, METROLOGY_TEST, LOGISTICS, OTHER). Our pipeline
+doesn't compute this yet — to be added.
+
+### Found: teammate prior work with synthetic OOD families
+
+`tracks/industrial-infineon/scripts/` contains 2902 lines of prior
+work from a teammate:
+
+- `generate_ood_families.py` (544 lines) — generates **DIODE,
+  SCHOTTKY, SIC_MOSFET** as synthetic semi-conductor process families.
+  Crucially, it builds them from the **existing validator vocabulary**
+  so every generated sequence passes the organizers' `validate_sequence`.
+- `train_ssl_process_transformer.py` (840 lines) + `_hybrid_` (1097
+  lines) — full SSL pretraining with family_dropout (p=0.25),
+  input_step_masking (3%), label_smoothing (0.05).
+- `ssl_results/` — measured Original (MOSFET+IGBT+IC) vs Augmented
+  (+DIODE+SCHOTTKY+SIC_MOSFET) on 30-epoch runs. Both converge to
+  test_top1 ≈ 0.812 / top5 ≈ 0.999 / MRR ≈ 0.903 (essentially
+  identical on ID).
+
+**Integrated their approach into our pipeline:**
+
+- New `src/data/ood_generator.py` — refactored from the teammate's
+  script. Three generators `generate_{diode, schottky, sic_mosfet}`
+  + a `generate_ood_sequence(family, rng)` retry wrapper. Smoke test:
+  **50/50 validator-clean** for each family, avg lengths 79/79/128.
+- `OnlineGeneratorIterableDataset` gained an `ood_family_prob`
+  parameter. With probability p, an OOD family is drawn instead of
+  one of the 3 known; the family token is `<FAMILY_UNK>` so the model
+  treats them as "unknown family" examples — encouraging
+  backbone-level learning rather than family-token shortcuts.
+- New Phase-3 grid (`src/experiments/phase3_grid.py`): 8 cells
+  (transformer multitask × {small, medium} × {3 LoFO folds + all3})
+  trained with `ood_family_prob=0.25`. Direct A/B vs Phase-2 (which
+  had the same recipe but `ood_family_prob=0.0`).
+- Launched on Leonardo as job `43130563` (train) + `43130564` (eval,
+  `afterok` chained).
+
+### Pipeline gaps vs official `eval_metrics.py`
+
+| Task | Spec | We compute | Missing |
+|---|---|---|---|
+| 1 | Top-1/3/5 Acc, MRR | ✓ all 4 | — |
+| 2 | EM, NED, **Token Acc**, **Block-level Acc** | EM, NED | **Token Acc, Block-level Acc** |
+| 3 | Binary Acc, Prec, Rec, **F1**, ConfMat, ROC-AUC, Rule Attrib | all except explicit F1 | F1 (have P+R), ConfMat format |
+
+The official eval_metrics.py *computes* all of these from our submission
+CSVs, so we don't strictly *have* to compute them ourselves — but to
+report numbers in REPORT.md we need them. Adding to `run_eval.py` next.
+
+### Things I now know didn't work — collected for the report
+
+These are the "what didn't work" entries the rubric explicitly rewards:
+
+1. **`max_len = 256`** — silently truncated 100% of compositional
+   sequences for the entire Phase-1 grid. Caught during audit, fixed
+   in Phase-2 (+19pp Top-1 held-out). *Lesson*: always smoke-test
+   sequence length distribution vs `max_len` before launching a grid.
+2. **xLSTM** — same LM loss as transformer at same param count,
+   3-4× slower per step. Dropped from Phase-2+.
+3. **Larger models on ID** — 5M / 25M / 100M all converge to LM loss
+   0.106 ± 0.0001. The task carries almost no learnable entropy on ID
+   beyond local 3-grams.
+4. **family_dropout axis** — helps lm_only LoFO by ~4pp but is
+   redundant with multitask heads (which already do the de-biasing).
+   Phase-1 grid was 2× over-explored on this axis.
+5. **Bare anomaly head at threshold 0.5** — phase-2's better-trained
+   head produced 36/100 false positives on held-out valid sequences
+   (OOD shift). Fix: validator-dominant ensemble (only override when
+   P_valid < 0.1).
+6. **Beam search short-step bias** — raw cumulative log-prob favored
+   short candidates. Fix: length-normalize. Also 3.3% rank-1
+   hallucinations (word-combinations not in real vocab) — fix:
+   vocab-restrict at decode.
+7. **`rsync --delete` wiping `.pixi/`** on every bootstrap — added
+   `--exclude='.pixi/'` to deploy.sh. Pixi reinstall was eating 10 min
+   per push.
+8. **`pixi.toml` duplicate `[target.linux-64.dependencies]` block** —
+   merge conflict residue we hit on first bootstrap.
+9. **Cosine LR with 200-step warmup (3.3% of max_steps)** — slightly
+   short for the longer sequences; bumped to 400 in Phase-2.
+10. **`multitask.max_steps = 8000`** — heads converged by step 4k
+    (visible in `heads_loss.png`). Cut to 6000 in Phase-2.
+11. **Greedy completion vs k-NN retrieval** — pre-fix, transformer
+    greedy got NED 0.40-0.65; retrieval got 0.16-0.35. The trained
+    model lost to no-param retrieval on Task 2 because of the
+    truncation bug.
+12. **The Phase-1 LoFO numbers themselves** — under-estimate the true
+    capability of the trained recipes. Treat as a baseline that the
+    Phase-2 / Phase-3 numbers should beat.
+
+### Deliverables still open
+
+| Required deliverable | Status |
+|---|---|
+| nextstep.csv vs real input | Generating (`43130303`) |
+| completion.csv vs real input | Generating (`43130303`) |
+| anomaly.csv vs real input | Generating (`43130303`) |
+| `eval_metrics.py` scores | Pending org's ground-truth release post-deadline |
+| Baseline vs trained side-by-side demo | **Not built** |
+| Demo video (≤2 min) | **Not built** |
+| 10-slide PDF | **Not built** |
+| Token Acc + Block-level Acc | Code update pending |
+
+### What's running on Leonardo at write time
+
+| Job | Cells | Purpose | ETA |
+|---|---:|---|---:|
+| `43095220` Phase-1 eval | 45-63 left | Buggy max_len=256 baseline | ~2-3 h |
+| `43112252` Phase-2 train | last few | max_len=768 fix | ~1 h |
+| `43112265` Phase-2 eval | 16 cells | After Phase-2 train | ~3-4 h |
+| `43130303` v2 submission | 1 job | Real-input submission CSVs | ~30 min |
+| `43130563` Phase-3 train | 8 cells | OOD-aug augmentation A/B test | ~1-2 h |
+| `43130564` Phase-3 eval | 8 cells | After Phase-3 train | ~1 h |
+
 
