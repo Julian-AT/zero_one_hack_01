@@ -1,9 +1,14 @@
-[project]
+[workspace]
 name = "process-logic"
 version = "0.1.0"
 description = "Zero One Hack_01 — Industrial AI (Infineon) track. Process-sequence modeling."
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
+
+# Tell pixi the target system has CUDA 12 available so the resolver can pick
+# CUDA builds of pytorch-gpu when installing from a non-GPU login node.
+[system-requirements]
+cuda = "12"
 
 [tasks]
 # Verify install (prints torch version + CUDA availability)
@@ -30,6 +35,20 @@ tqdm = ">=4.66"
 rich = ">=13.7"
 matplotlib = ">=3.8"
 seaborn = ">=0.13"
+
+# Linux-only deps: modern libstdc++ + a CUDA-12-compatible PyTorch build.
+# Leonardo has CUDA 12.2 driver; conda-forge `pytorch-gpu` meta-package
+# pulls a torch built against a compatible CUDA runtime. Using PyPI torch
+# was selecting cu130 wheels which fail on Leonardo's driver.
+[target.linux-64.dependencies]
+libstdcxx-ng = ">=13"
+pytorch-gpu = ">=2.4,<2.6"
+
+# Make sure the pixi env's libstdc++ is preferred over the system one at
+# runtime. Pixi doesn't always set LD_LIBRARY_PATH from conda activate
+# scripts, so we do it explicitly via activation.env.
+[target.linux-64.activation.env]
+LD_LIBRARY_PATH = "$PIXI_PROJECT_ROOT/.pixi/envs/default/lib"
 
 [pypi-dependencies]
 # Cross-platform pure-Python deps

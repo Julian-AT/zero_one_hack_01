@@ -1,0 +1,126 @@
+{
+  "seed": 42,
+  "id_grammar_topk": {
+    "n": 76438,
+    "top1": 0.7173133781626939,
+    "top3": 0.9805463251262461,
+    "top5": 0.9957220230775269,
+    "mrr": 0.8469282294147266
+  },
+  "truncation": {
+    "0.6": {
+      "mosfet": {
+        "n": 200,
+        "top1_at_cut": 0.875,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.9350000000000002,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.868497228839396
+      },
+      "igbt": {
+        "n": 200,
+        "top1_at_cut": 0.67,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8316666666666669,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.5160358474591102
+      },
+      "ic": {
+        "n": 200,
+        "top1_at_cut": 0.72,
+        "top3_at_cut": 0.975,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8504166666666666,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.880896752729249
+      }
+    },
+    "0.8": {
+      "mosfet": {
+        "n": 200,
+        "top1_at_cut": 0.515,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.7575,
+        "completion_exact_match": 0.025,
+        "completion_normalized_edit_distance": 0.12604664224664225
+      },
+      "igbt": {
+        "n": 200,
+        "top1_at_cut": 0.665,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.8316666666666666,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.2711133868503415
+      },
+      "ic": {
+        "n": 200,
+        "top1_at_cut": 0.52,
+        "top3_at_cut": 1.0,
+        "top5_at_cut": 1.0,
+        "mrr_at_cut": 0.76,
+        "completion_exact_match": 0.0,
+        "completion_normalized_edit_distance": 0.5010945936697812
+      }
+    }
+  },
+  "lofo_truncation": {
+    "mosfet_0.6": {
+      "n": 1000,
+      "top1_at_cut": 0.799,
+      "top3_at_cut": 0.994,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.8963333333333335,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.9028935184007332
+    },
+    "mosfet_0.8": {
+      "n": 1000,
+      "top1_at_cut": 0.562,
+      "top3_at_cut": 1.0,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.781,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.2059964023269192
+    },
+    "igbt_0.6": {
+      "n": 1000,
+      "top1_at_cut": 0.679,
+      "top3_at_cut": 0.95,
+      "top5_at_cut": 0.95,
+      "mrr_at_cut": 0.8145,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.5142295597248056
+    },
+    "igbt_0.8": {
+      "n": 1000,
+      "top1_at_cut": 0.696,
+      "top3_at_cut": 1.0,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.844,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.2711703867250713
+    },
+    "ic_0.6": {
+      "n": 1000,
+      "top1_at_cut": 0.729,
+      "top3_at_cut": 0.924,
+      "top5_at_cut": 0.952,
+      "mrr_at_cut": 0.8296666666666669,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.8906830681598036
+    },
+    "ic_0.8": {
+      "n": 1000,
+      "top1_at_cut": 0.517,
+      "top3_at_cut": 1.0,
+      "top5_at_cut": 1.0,
+      "mrr_at_cut": 0.7585,
+      "completion_exact_match": 0.0,
+      "completion_normalized_edit_distance": 0.5192136406110273
+    }
+  }
+}

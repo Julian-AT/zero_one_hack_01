@@ -28,19 +28,17 @@ export PATH="$PIXI_HOME/bin:$PATH"
 #    (PyTorch cu121 on Linux, plus numpy/pandas/tokenizers/the rest)
 echo "[setup] installing dependencies from pixi.toml ..."
 pixi install --manifest-path pixi.toml
-
-# 3. make PyPI wheels (numpy/torch) load the env's libstdc++ (GLIBCXX_3.4.29+)
-#    instead of the older system /lib64/libstdc++.so.6. Dropped into each env's
-#    conda activate.d so 'pixi run' / 'pixi shell' apply it automatically.
-echo "[setup] wiring libstdc++ load-order fix ..."
-shopt -s nullglob
-for env in "$PIXI_HOME"/envs/*/; do
-    mkdir -p "${env}etc/conda/activate.d"
-    cat > "${env}etc/conda/activate.d/zz_libstdcpp.sh" <<'EOF'
+if [[ -n "${PIXI_HOME:-}" ]]; then
+    echo "[setup] wiring libstdc++ load-order fix ..."
+    shopt -s nullglob
+    for env in "$PIXI_HOME"/envs/*/; do
+        mkdir -p "${env}etc/conda/activate.d"
+        cat > "${env}etc/conda/activate.d/zz_libstdcpp.sh" <<'EOF'
 export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
 EOF
-done
-shopt -u nullglob
+    done
+    shopt -u nullglob
+fi
 
 # 4. smoke test — on a login node there's no GPU, so cuda shows False (expected).
 #    Real GPU check: run 'pixi run smoke' inside an srun/sbatch job.
