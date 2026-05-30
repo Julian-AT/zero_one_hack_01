@@ -11,13 +11,13 @@
 **What:** A three-level n-gram with Katz-style fall-through backoff over the
 provided 3000 sequences (1k per family).
 
-| Setup | Top-1 | Top-3 | Top-5 | MRR |
-|---|--:|--:|--:|--:|
+| Setup                                                     | Top-1 | Top-3 |     Top-5 |   MRR |
+| --------------------------------------------------------- | ----: | ----: | --------: | ----: |
 | Train on all 3000, eval on all (memorization upper bound) | 0.722 | 0.968 | **0.993** | 0.844 |
-| Honest ID held-out (80/20 per family) | 0.717 | 0.968 | **0.993** | 0.842 |
-| LoFO MOSFET (train IGBT+IC) | 0.502 | 0.679 | 0.728 | 0.598 |
-| LoFO IGBT (train MOSFET+IC) | 0.481 | 0.660 | 0.707 | 0.577 |
-| LoFO IC (train MOSFET+IGBT) | 0.432 | 0.624 | 0.644 | 0.528 |
+| Honest ID held-out (80/20 per family)                     | 0.717 | 0.968 | **0.993** | 0.842 |
+| LoFO MOSFET (train IGBT+IC)                               | 0.502 | 0.679 |     0.728 | 0.598 |
+| LoFO IGBT (train MOSFET+IC)                               | 0.481 | 0.660 |     0.707 | 0.577 |
+| LoFO IC (train MOSFET+IGBT)                               | 0.432 | 0.624 |     0.644 | 0.528 |
 
 **Why it matters:**
 
@@ -34,17 +34,17 @@ Artefacts: `extras/results/baselines/trigram_metrics.{json,md}`, two sample subm
 
 **What:** Three Transformer cells of the overnight grid, same data, same training budget (6000 steps, online-generator stream), only model size varies.
 
-| Cell | Params | Tokenization | Final LM loss | Wall time |
-|---|--:|---|--:|--:|
-| 0 — transformer_small | 4.2M | compositional | **0.1062** | 73 s |
-| 1 — transformer_medium | 33.6M | compositional | **0.1061** | 255 s |
-| 2 — transformer_large | 113.4M | compositional | **0.1062** | 576 s |
+| Cell                   | Params | Tokenization  | Final LM loss | Wall time |
+| ---------------------- | -----: | ------------- | ------------: | --------: |
+| 0 — transformer_small  |   4.2M | compositional |    **0.1062** |      73 s |
+| 1 — transformer_medium |  33.6M | compositional |    **0.1061** |     255 s |
+| 2 — transformer_large  | 113.4M | compositional |    **0.1062** |     576 s |
 
 **Why it matters:**
 
 1. **All three sizes converge to within 0.0001 LM loss of each other.** This confirms the trigram finding from a completely different angle: the task has so little inherent entropy that capacity beyond ~5M params is wasted on ID.
 2. **Wall time scales linearly with params** (1× → 4× → 8× compute for ~28× → 226× params). For ID work the smallest model is strictly preferable on the throughput/quality frontier.
-3. **The report's scaling-curve figure now writes itself**: an essentially flat line on ID loss vs params. This is exactly the "honest evaluation — show what worked, show what didn't" the rubric explicitly rewards. The 100M model is not the winner; it is the *demonstration that bigger isn't the answer*.
+3. **The report's scaling-curve figure now writes itself**: an essentially flat line on ID loss vs params. This is exactly the "honest evaluation — show what worked, show what didn't" the rubric explicitly rewards. The 100M model is not the winner; it is the _demonstration that bigger isn't the answer_.
 4. **Implication for compute budget:** Spend remaining Leonardo time on (a) multi-task heads, (b) the contrastive encoder for OOD anomaly, (c) PRM, (d) longer training of one model — NOT on training larger models.
 
 ---
@@ -53,10 +53,10 @@ Artefacts: `extras/results/baselines/trigram_metrics.{json,md}`, two sample subm
 
 **What:** Cell 6 trains transformer_medium with **step-as-token** while cell 1 trains the same arch with **compositional word-tokens**. All else identical.
 
-| Cell | Tokens | Vocab | Final LM loss (per-token CE) | Wall |
-|---|---|--:|--:|--:|
-| 1 — transformer_medium | compositional | 162 | **0.1061** | 255 s |
-| 6 — transformer_medium | step | 208 | **0.3258** | 251 s |
+| Cell                   | Tokens        | Vocab | Final LM loss (per-token CE) |  Wall |
+| ---------------------- | ------------- | ----: | ---------------------------: | ----: |
+| 1 — transformer_medium | compositional |   162 |                   **0.1061** | 255 s |
+| 6 — transformer_medium | step          |   208 |                   **0.3258** | 251 s |
 
 **Why it matters:**
 
@@ -68,7 +68,7 @@ Artefacts: `extras/results/baselines/trigram_metrics.{json,md}`, two sample subm
 
 ## 2026-05-30 ~02:30 · Leonardo / xLSTM JIT compile gotcha
 
-**What:** xLSTM's sLSTM block JIT-compiles a custom CUDA kernel on first use. Leonardo compute nodes have the CUDA *runtime* via the driver but **no `nvcc` / headers / toolkit** on `$PATH` by default. First xLSTM array attempt failed with `compilation terminated. ninja: build stopped: subcommand failed.`
+**What:** xLSTM's sLSTM block JIT-compiles a custom CUDA kernel on first use. Leonardo compute nodes have the CUDA _runtime_ via the driver but **no `nvcc` / headers / toolkit** on `$PATH` by default. First xLSTM array attempt failed with `compilation terminated. ninja: build stopped: subcommand failed.`
 
 **Fix:** add `module load cuda/12.6` to `scripts/slurm/{train,grid}.sbatch`. The available CUDA modules on Leonardo are `cuda/12.2` (default), `12.3`, `12.6`. We picked 12.6 because our PyTorch was conda-forge `pytorch-gpu` 2.5.1 with CUDA-12-anything compatibility.
 
@@ -84,20 +84,20 @@ After the fix, the slstm extension JIT-compiles successfully (~2-5 min one-time 
 
 **ID Task 1 (held-out 80/20):**
 
-| Metric | raw trigram | grammar-trigram | delta |
-|---|--:|--:|--:|
-| Top-1 | 0.7173 | 0.7173 | 0.0 |
-| Top-3 | 0.9675 | **0.9805** | **+1.30pp** |
-| Top-5 | 0.9931 | **0.9957** | +0.26pp |
-| MRR   | 0.8416 | **0.8469** | +0.53pp |
+| Metric | raw trigram | grammar-trigram |       delta |
+| ------ | ----------: | --------------: | ----------: |
+| Top-1  |      0.7173 |          0.7173 |         0.0 |
+| Top-3  |      0.9675 |      **0.9805** | **+1.30pp** |
+| Top-5  |      0.9931 |      **0.9957** |     +0.26pp |
+| MRR    |      0.8416 |      **0.8469** |     +0.53pp |
 
-**Task 2 completion (ID, frac=0.8) — NED *lower is better*:**
+**Task 2 completion (ID, frac=0.8) — NED _lower is better_:**
 
 | family | raw trigram NED | grammar-trigram NED | raw EM | grammar EM |
-|---|--:|--:|--:|--:|
-| MOSFET | 0.9987 | **0.1260** | 0.0000 | **0.0250** |
-| IGBT   | 0.9915 | **0.2711** | 0.0000 | 0.0000 |
-| IC     | 0.9908 | **0.5011** | 0.0000 | 0.0000 |
+| ------ | --------------: | ------------------: | -----: | ---------: |
+| MOSFET |          0.9987 |          **0.1260** | 0.0000 | **0.0250** |
+| IGBT   |          0.9915 |          **0.2711** | 0.0000 |     0.0000 |
+| IC     |          0.9908 |          **0.5011** | 0.0000 |     0.0000 |
 
 Same fix at frac=0.6: NED drops from ~0.97 → 0.51 (IGBT) and ~0.97 → 0.87 (MOSFET/IC).
 
@@ -118,14 +118,14 @@ Artefact: `extras/results/baselines/grammar_decoder_metrics.json`.
 
 **ID completion (held-out 80/20):**
 
-| frac | family | ExactMatch | NED |
-|---|---|--:|--:|
-| 0.6 | MOSFET | 0.0000 | **0.2300** |
-| 0.6 | IGBT   | 0.0000 | **0.2974** |
-| 0.6 | IC     | 0.0000 | **0.3231** |
-| 0.8 | MOSFET | **0.0150** | **0.1598** |
-| 0.8 | IGBT   | 0.0000 | **0.2405** |
-| 0.8 | IC     | 0.0000 | **0.3478** |
+| frac | family | ExactMatch |        NED |
+| ---- | ------ | ---------: | ---------: |
+| 0.6  | MOSFET |     0.0000 | **0.2300** |
+| 0.6  | IGBT   |     0.0000 | **0.2974** |
+| 0.6  | IC     |     0.0000 | **0.3231** |
+| 0.8  | MOSFET | **0.0150** | **0.1598** |
+| 0.8  | IGBT   |     0.0000 | **0.2405** |
+| 0.8  | IC     |     0.0000 | **0.3478** |
 
 Compare against the raw trigram which had NED ~0.96–0.99 everywhere.
 
@@ -145,14 +145,14 @@ Artefact: `extras/results/baselines/retrieval_metrics.json`.
 
 **What:** After the `module load gcc/12.2.0 + cuda/12.6` fix, the xLSTM cells trained successfully. Compositional tokens, same training budget as the transformer cells.
 
-| Cell | Arch | Params | Final LM loss | Wall time |
-|---|---|--:|--:|--:|
-| 0 | transformer_small | 4.2M | 0.1062 | 73 s |
-| 1 | transformer_medium | 33.6M | **0.1061** | 255 s |
-| 2 | transformer_large | 113.4M | 0.1062 | 576 s |
-| 3 | xlstm_small (mLSTM+sLSTM) | ~5M | **0.1192** | ~270 s |
-| 4 | xlstm_medium | ~25M | **0.1093** | ~440 s |
-| 5 | xlstm_large | ~100M | (running) | — |
+| Cell | Arch                      | Params | Final LM loss | Wall time |
+| ---- | ------------------------- | -----: | ------------: | --------: |
+| 0    | transformer_small         |   4.2M |        0.1062 |      73 s |
+| 1    | transformer_medium        |  33.6M |    **0.1061** |     255 s |
+| 2    | transformer_large         | 113.4M |        0.1062 |     576 s |
+| 3    | xlstm_small (mLSTM+sLSTM) |    ~5M |    **0.1192** |    ~270 s |
+| 4    | xlstm_medium              |   ~25M |    **0.1093** |    ~440 s |
+| 5    | xlstm_large               |  ~100M |     (running) |         — |
 
 **Why it matters:**
 
@@ -169,16 +169,16 @@ Artefact: `extras/results/baselines/retrieval_metrics.json`.
 
 **Coverage of each feature across the 136 steps:**
 
-| Feature | % present | Range |
-|---|--:|---|
-| `tool_idx` (categorical) | 100% | 0..9 |
-| `is_wet` / `is_anneal` / `is_implant` | 100% | 0 / 1 |
-| `log_thickness_nm` | 37.5% | -0.7 .. 5.9 |
-| `log_time_s` | 21.3% | 0.7 .. 3.6 |
-| `temp_C` | 20.6% | 25 .. 1100 |
-| `log_pressure_torr` | 8.1% | -2.5 .. 1.6 |
-| `energy_keV` | 5.9% | 30 .. 150 (implants) |
-| `log_dose_per_cm2` | 5.9% | 13.0 .. 15.7 (implants) |
+| Feature                               | % present | Range                   |
+| ------------------------------------- | --------: | ----------------------- |
+| `tool_idx` (categorical)              |      100% | 0..9                    |
+| `is_wet` / `is_anneal` / `is_implant` |      100% | 0 / 1                   |
+| `log_thickness_nm`                    |     37.5% | -0.7 .. 5.9             |
+| `log_time_s`                          |     21.3% | 0.7 .. 3.6              |
+| `temp_C`                              |     20.6% | 25 .. 1100              |
+| `log_pressure_torr`                   |      8.1% | -2.5 .. 1.6             |
+| `energy_keV`                          |      5.9% | 30 .. 150 (implants)    |
+| `log_dose_per_cm2`                    |      5.9% | 13.0 .. 15.7 (implants) |
 
 **Examples:**
 
@@ -199,4 +199,4 @@ Artefact: `data/processed/physics_features.json` (also lists tool taxonomy).
 
 ---
 
-*New findings will be appended below as they happen.*
+_New findings will be appended below as they happen._
