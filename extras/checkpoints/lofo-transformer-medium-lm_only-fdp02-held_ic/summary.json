@@ -1,0 +1,75 @@
+{
+  "run_name": "lofo-transformer-medium-lm_only-fdp02-held_ic",
+  "arch": "transformer",
+  "tokenization": "compositional",
+  "model_params": 33646080,
+  "vocab_size": 162,
+  "max_steps": 6000,
+  "final_step": 6000,
+  "wall_seconds": 255.80972266197205,
+  "device": "cuda",
+  "precision": "bf16",
+  "final_metrics": {
+    "lm_loss": 0.09874889254570007,
+    "total_loss": 0.09874889254570007
+  },
+  "config": {
+    "arch": "transformer",
+    "model": {
+      "d_model": 512,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff": 2048,
+      "dropout": 0.1,
+      "max_seq_len": 256,
+      "rope": true,
+      "rmsnorm": true
+    },
+    "train": {
+      "batch_size": 32,
+      "grad_accum": 1,
+      "max_steps": 6000,
+      "warmup_steps": 200,
+      "lr": 0.0003,
+      "weight_decay": 0.1,
+      "beta1": 0.9,
+      "beta2": 0.95,
+      "grad_clip": 1.0,
+      "precision": "bf16",
+      "log_every": 25,
+      "eval_every": 500,
+      "save_every": 2000,
+      "seed": 42,
+      "family_dropout": 0.2,
+      "max_len": 256
+    },
+    "data": {
+      "use_online_generator": true,
+      "families": [
+        "mosfet",
+        "igbt"
+      ],
+      "corrupt_fraction": 0.25,
+      "canonicalize": false,
+      "num_workers": 2
+    },
+    "loss": {
+      "lm_weight": 1.0,
+      "validity_weight": 0.0,
+      "rule_id_weight": 0.0
+    },
+    "tracking": {
+      "tensorboard_dir": "extras/logs/tb",
+      "wandb_project": "zero-one-process-logic",
+      "wandb_entity": null,
+      "wandb_mode": "opportunistic"
+    },
+    "out": {
+      "checkpoint_dir": "extras/checkpoints"
+    },
+    "tokenization": {
+      "mode": "compositional"
+    },
+    "run_name": "lofo-transformer-medium-lm_only-fdp02-held_ic"
+  }
+}
