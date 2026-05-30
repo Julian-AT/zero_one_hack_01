@@ -1,0 +1,211 @@
+{
+  "config": {
+    "limit": 60,
+    "seed": 20240530,
+    "use_roles": false,
+    "beam": 1,
+    "train_cap": null,
+    "smoke": false,
+    "out_dir": "neurosymbolic-approach/outputs"
+  },
+  "id_run": {
+    "train_families": [
+      "mosfet",
+      "igbt",
+      "ic"
+    ],
+    "n_train_per_family": {
+      "mosfet": 940,
+      "igbt": 940,
+      "ic": 940
+    },
+    "n_eval_per_family": {
+      "mosfet": 60,
+      "igbt": 60,
+      "ic": 60
+    },
+    "next-step": {
+      "top1": 0.7222,
+      "top3": 0.9944,
+      "top5": 0.9972,
+      "mrr": 0.8572
+    },
+    "completion": {
+      "ned": 0.6297,
+      "exact_match": 0.0,
+      "token_acc": 0.3406,
+      "block_acc": 0.5795
+    },
+    "returncode": {
+      "next-step": 0,
+      "completion": 0
+    }
+  },
+  "lofo": {
+    "splits": [
+      {
+        "held_out": "mosfet",
+        "train": [
+          "igbt",
+          "ic"
+        ],
+        "id": {
+          "next-step": {
+            "top1": 0.675,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8319
+          },
+          "completion": {
+            "ned": 0.8286,
+            "exact_match": 0.0,
+            "token_acc": 0.2633,
+            "block_acc": 0.5447
+          }
+        },
+        "ood": {
+          "next-step": {
+            "top1": 0.675,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8375
+          },
+          "completion": {
+            "ned": 0.805,
+            "exact_match": 0.0,
+            "token_acc": 0.2053,
+            "block_acc": 0.6999
+          }
+        },
+        "drop": {
+          "next-step": {
+            "top1": 0.0,
+            "top3": 0.0,
+            "top5": 0.0,
+            "mrr": -0.005600000000000049
+          },
+          "completion": {
+            "ned": 0.023599999999999954,
+            "exact_match": 0.0,
+            "token_acc": 0.05799999999999997,
+            "block_acc": -0.1552
+          }
+        }
+      },
+      {
+        "held_out": "igbt",
+        "train": [
+          "mosfet",
+          "ic"
+        ],
+        "id": {
+          "next-step": {
+            "top1": 0.6667,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8333
+          },
+          "completion": {
+            "ned": 0.4777,
+            "exact_match": 0.0,
+            "token_acc": 0.3672,
+            "block_acc": 0.6124
+          }
+        },
+        "ood": {
+          "next-step": {
+            "top1": 0.6667,
+            "top3": 0.95,
+            "top5": 0.95,
+            "mrr": 0.8028
+          },
+          "completion": {
+            "ned": 0.6261,
+            "exact_match": 0.0,
+            "token_acc": 0.1216,
+            "block_acc": 0.597
+          }
+        },
+        "drop": {
+          "next-step": {
+            "top1": 0.0,
+            "top3": 0.050000000000000044,
+            "top5": 0.050000000000000044,
+            "mrr": 0.030500000000000083
+          },
+          "completion": {
+            "ned": -0.14839999999999998,
+            "exact_match": 0.0,
+            "token_acc": 0.24560000000000004,
+            "block_acc": 0.01540000000000008
+          }
+        }
+      },
+      {
+        "held_out": "ic",
+        "train": [
+          "mosfet",
+          "igbt"
+        ],
+        "id": {
+          "next-step": {
+            "top1": 0.7417,
+            "top3": 1.0,
+            "top5": 1.0,
+            "mrr": 0.8653
+          },
+          "completion": {
+            "ned": 0.5177,
+            "exact_match": 0.0,
+            "token_acc": 0.4206,
+            "block_acc": 0.6319
+          }
+        },
+        "ood": {
+          "next-step": {
+            "top1": 0.6333,
+            "top3": 0.9667,
+            "top5": 0.975,
+            "mrr": 0.7993
+          },
+          "completion": {
+            "ned": 0.9172,
+            "exact_match": 0.0,
+            "token_acc": 0.1501,
+            "block_acc": 0.3921
+          }
+        },
+        "drop": {
+          "next-step": {
+            "top1": 0.10840000000000005,
+            "top3": 0.033299999999999996,
+            "top5": 0.025000000000000022,
+            "mrr": 0.06599999999999995
+          },
+          "completion": {
+            "ned": -0.39949999999999997,
+            "exact_match": 0.0,
+            "token_acc": 0.27049999999999996,
+            "block_acc": 0.2398
+          }
+        }
+      }
+    ],
+    "mean_drop": {
+      "next-step": {
+        "top1": 0.03613333333333335,
+        "top3": 0.02776666666666668,
+        "top5": 0.025000000000000022,
+        "mrr": 0.030299999999999994
+      },
+      "completion": {
+        "ned": -0.17476666666666665,
+        "exact_match": 0.0,
+        "token_acc": 0.19136666666666666,
+        "block_acc": 0.03333333333333336
+      }
+    },
+    "n_per_family": 60,
+    "json_path": "neurosymbolic-approach/outputs/exp02_lofo/lofo.json"
+  }
+}

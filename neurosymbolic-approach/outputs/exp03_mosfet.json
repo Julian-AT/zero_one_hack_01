@@ -1,0 +1,153 @@
+{
+  "experiment": "exp03_neural_ranker",
+  "holdout": "mosfet",
+  "device": "cuda",
+  "smoke": false,
+  "config": {
+    "d_model": 128,
+    "layers": 3,
+    "heads": 4,
+    "steps": 2000,
+    "epochs": 8,
+    "batch": 32,
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "role_w": 0.3,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "max_len": 256,
+    "warmup": 50,
+    "seed": 0
+  },
+  "train_metrics": {
+    "n_params": 679239,
+    "train_families": [
+      "igbt",
+      "ic"
+    ],
+    "holdout": "mosfet",
+    "device": "cuda",
+    "steps_run": 504,
+    "epochs": 8,
+    "n_examples": 2000,
+    "final_loss": 0.4240955412387848,
+    "first_loss": 6.178364276885986,
+    "final_batch_step_acc": 0.8015984892845154,
+    "wall_sec": 7.18,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "config": {
+      "d_model": 128,
+      "layers": 3,
+      "heads": 4,
+      "steps": 2000,
+      "epochs": 8,
+      "batch": 32,
+      "lr": 0.0003,
+      "weight_decay": 0.01,
+      "role_w": 0.3,
+      "sem_w": 0.0,
+      "mask_train": false,
+      "max_len": 256,
+      "seed": 0,
+      "warmup": 50
+    }
+  },
+  "wall_sec": 611.35,
+  "comparison": {
+    "held_out": "mosfet",
+    "train": [
+      "igbt",
+      "ic"
+    ],
+    "n_per_family": 80,
+    "neural": {
+      "id": {
+        "next-step": {
+          "top1": 0.6469,
+          "top3": 0.9969,
+          "top5": 1.0,
+          "mrr": 0.8206
+        },
+        "completion": {
+          "ned": 0.2582,
+          "exact_match": 0.0,
+          "token_acc": 0.4076,
+          "block_acc": 0.6969
+        }
+      },
+      "ood": {
+        "next-step": {
+          "top1": 0.7,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.849
+        },
+        "completion": {
+          "ned": 0.3854,
+          "exact_match": 0.0,
+          "token_acc": 0.2125,
+          "block_acc": 0.6675
+        }
+      },
+      "drop": {
+        "next-step": {
+          "top1": -0.053099999999999925,
+          "top3": -0.0030999999999999917,
+          "top5": 0.0,
+          "mrr": -0.02839999999999998
+        },
+        "completion": {
+          "ned": -0.12720000000000004,
+          "exact_match": 0.0,
+          "token_acc": 0.19510000000000002,
+          "block_acc": 0.02939999999999998
+        }
+      }
+    },
+    "ppm": {
+      "id": {
+        "next-step": {
+          "top1": 0.6719,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.8302
+        },
+        "completion": {
+          "ned": 0.8345,
+          "exact_match": 0.0,
+          "token_acc": 0.2594,
+          "block_acc": 0.5333
+        }
+      },
+      "ood": {
+        "next-step": {
+          "top1": 0.675,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.8375
+        },
+        "completion": {
+          "ned": 0.8052,
+          "exact_match": 0.0,
+          "token_acc": 0.2175,
+          "block_acc": 0.7114
+        }
+      },
+      "drop": {
+        "next-step": {
+          "top1": -0.0030999999999999917,
+          "top3": 0.0,
+          "top5": 0.0,
+          "mrr": -0.007299999999999973
+        },
+        "completion": {
+          "ned": 0.029299999999999993,
+          "exact_match": 0.0,
+          "token_acc": 0.04190000000000002,
+          "block_acc": -0.17810000000000004
+        }
+      }
+    }
+  }
+}

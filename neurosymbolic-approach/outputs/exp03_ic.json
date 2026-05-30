@@ -1,0 +1,153 @@
+{
+  "experiment": "exp03_neural_ranker",
+  "holdout": "ic",
+  "device": "cuda",
+  "smoke": false,
+  "config": {
+    "d_model": 128,
+    "layers": 3,
+    "heads": 4,
+    "steps": 2000,
+    "epochs": 8,
+    "batch": 32,
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "role_w": 0.3,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "max_len": 256,
+    "warmup": 50,
+    "seed": 0
+  },
+  "train_metrics": {
+    "n_params": 676926,
+    "train_families": [
+      "mosfet",
+      "igbt"
+    ],
+    "holdout": "ic",
+    "device": "cuda",
+    "steps_run": 504,
+    "epochs": 8,
+    "n_examples": 2000,
+    "final_loss": 0.39513155817985535,
+    "first_loss": 6.248391151428223,
+    "final_batch_step_acc": 0.8193812370300293,
+    "wall_sec": 7.27,
+    "sem_w": 0.0,
+    "mask_train": false,
+    "config": {
+      "d_model": 128,
+      "layers": 3,
+      "heads": 4,
+      "steps": 2000,
+      "epochs": 8,
+      "batch": 32,
+      "lr": 0.0003,
+      "weight_decay": 0.01,
+      "role_w": 0.3,
+      "sem_w": 0.0,
+      "mask_train": false,
+      "max_len": 256,
+      "seed": 0,
+      "warmup": 50
+    }
+  },
+  "wall_sec": 468.14,
+  "comparison": {
+    "held_out": "ic",
+    "train": [
+      "mosfet",
+      "igbt"
+    ],
+    "n_per_family": 80,
+    "neural": {
+      "id": {
+        "next-step": {
+          "top1": 0.7531,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.876
+        },
+        "completion": {
+          "ned": 0.1851,
+          "exact_match": 0.0125,
+          "token_acc": 0.491,
+          "block_acc": 0.7176
+        }
+      },
+      "ood": {
+        "next-step": {
+          "top1": 0.625,
+          "top3": 0.9437,
+          "top5": 0.9688,
+          "mrr": 0.7896
+        },
+        "completion": {
+          "ned": 0.4638,
+          "exact_match": 0.0,
+          "token_acc": 0.1839,
+          "block_acc": 0.4091
+        }
+      },
+      "drop": {
+        "next-step": {
+          "top1": 0.1281,
+          "top3": 0.05630000000000002,
+          "top5": 0.031200000000000006,
+          "mrr": 0.08640000000000003
+        },
+        "completion": {
+          "ned": -0.2787,
+          "exact_match": 0.0125,
+          "token_acc": 0.3071,
+          "block_acc": 0.3085
+        }
+      }
+    },
+    "ppm": {
+      "id": {
+        "next-step": {
+          "top1": 0.7281,
+          "top3": 1.0,
+          "top5": 1.0,
+          "mrr": 0.8589
+        },
+        "completion": {
+          "ned": 0.5169,
+          "exact_match": 0.0,
+          "token_acc": 0.4204,
+          "block_acc": 0.6317
+        }
+      },
+      "ood": {
+        "next-step": {
+          "top1": 0.625,
+          "top3": 0.9625,
+          "top5": 0.9688,
+          "mrr": 0.7922
+        },
+        "completion": {
+          "ned": 0.9169,
+          "exact_match": 0.0,
+          "token_acc": 0.1529,
+          "block_acc": 0.3983
+        }
+      },
+      "drop": {
+        "next-step": {
+          "top1": 0.10309999999999997,
+          "top3": 0.03749999999999998,
+          "top5": 0.031200000000000006,
+          "mrr": 0.06669999999999998
+        },
+        "completion": {
+          "ned": -0.4,
+          "exact_match": 0.0,
+          "token_acc": 0.26749999999999996,
+          "block_acc": 0.23340000000000005
+        }
+      }
+    }
+  }
+}
