@@ -121,3 +121,8 @@ shared/benchmark/results.csv
 shared/benchmark/RESULTS_auto.md
 shared/benchmark/_smoke_out/
 shared/benchmark/__pycache__/
+shared/benchmark/checkpoints/
+shared/benchmark/_evalset_build/
+shared/benchmark/ssl_checkpoints/
+shared/benchmark/_train_data/
+shared/benchmark/_trainlogs/

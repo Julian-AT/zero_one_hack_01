@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -43,7 +44,17 @@ def cosine_lr(
 def train(cfg: dict[str, Any]) -> dict[str, float]:
     """Train one cell. Returns final-step metrics."""
     set_seed(cfg["train"]["seed"])
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # cuda-first (Leonardo); on Apple silicon fall back to MPS so the benchmark
+    # can be reproduced locally; PROCESS_LOGIC_DEVICE overrides explicitly.
+    _dev = os.environ.get("PROCESS_LOGIC_DEVICE", "").strip()
+    if _dev:
+        device = torch.device(_dev)
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     use_amp = device.type == "cuda" and cfg["train"]["precision"] in ("bf16", "fp16")
     amp_dtype = torch.bfloat16 if cfg["train"]["precision"] == "bf16" else torch.float16
 
@@ -187,21 +198,22 @@ def train(cfg: dict[str, Any]) -> dict[str, float]:
         json.dump(summary, f, indent=2, default=str)
     logger.info(f"summary written → {ckpt_dir / 'summary.json'}")
 
-    # Belt-and-braces redundancy: copy final.pt + summary.json to $HOME so
-    # we still have the checkpoint if $SCRATCH ever has an issue.
-    # $HOME has 50GB; 7 cells × ~600MB max well under quota.
-    try:
-        import os
-        import shutil
+    # Belt-and-braces redundancy on the cluster: copy final.pt + summary.json to
+    # $HOME so we still have the checkpoint if $SCRATCH ever has an issue. Opt-in
+    # via PROCESS_LOGIC_HOME_BACKUP=1 so a clean-checkout run doesn't litter the
+    # reproducer's home directory.
+    if os.environ.get("PROCESS_LOGIC_HOME_BACKUP", "") == "1":
+        try:
+            import shutil
 
-        home_backup = Path(os.path.expanduser("~")) / "zero_one_hack_01_backup" / run_name
-        home_backup.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ckpt_dir / "final.pt", home_backup / "final.pt")
-        shutil.copy2(ckpt_dir / "summary.json", home_backup / "summary.json")
-        logger.info(f"$HOME backup → {home_backup}")
-    except OSError as e:
-        # E.g. quota exceeded; not fatal.
-        logger.warning(f"$HOME backup skipped: {e}")
+            home_backup = Path(os.path.expanduser("~")) / "zero_one_hack_01_backup" / run_name
+            home_backup.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ckpt_dir / "final.pt", home_backup / "final.pt")
+            shutil.copy2(ckpt_dir / "summary.json", home_backup / "summary.json")
+            logger.info(f"$HOME backup → {home_backup}")
+        except OSError as e:
+            # E.g. quota exceeded; not fatal.
+            logger.warning(f"$HOME backup skipped: {e}")
 
     final_metrics = val_metrics
 

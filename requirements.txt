@@ -1,0 +1,31 @@
+# Runtime dependencies for the process-logic models + unified benchmark.
+# Source of truth for the Leonardo cluster is pixi.toml; this file is the
+# portable pip manifest the jury uses to reproduce results from a clean checkout.
+#
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# The unified benchmark (shared/benchmark/) runs CPU-only and needs just:
+#   torch, numpy, pandas, omegaconf, tensorboard, matplotlib  (+ einops for the model).
+
+torch>=2.4
+numpy>=1.26
+pandas>=2.2
+einops>=0.7
+omegaconf>=2.3
+tensorboard>=2.16
+tqdm>=4.66
+rich>=13.7
+
+# Visualization (benchmark figures)
+matplotlib>=3.8
+seaborn>=0.13
+
+# Experiment tracking (optional; training logs to TensorBoard regardless)
+wandb>=0.17
+
+# NOTE: the xLSTM architecture (CUDA/Triton-only `xlstm` package) is intentionally
+# NOT a core dependency — the laptop-reproducible benchmark uses the *transformer*
+# architecture, which needs none of it, so `pip install -r requirements.txt` never
+# fails on a CPU-only or macOS machine. To reproduce the xLSTM rows on a CUDA box
+# (e.g. Leonardo):  pip install "xlstm>=1.0.7"

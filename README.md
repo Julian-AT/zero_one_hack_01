@@ -21,8 +21,34 @@ decoder Transformer (optionally xLSTM) on it, and emits organizer-format predict
 This repo is our team's entry for the **Industrial AI** track. Start here:
 
 - **[`REPORT.md`](./REPORT.md)** — executive summary: approach, results, final files, how to run.
+- **[`submission/UNIFIED_BENCHMARK.md`](./submission/UNIFIED_BENCHMARK.md)** — the three model approaches
+  compared head-to-head on **one common eval set** with the **official metrics** (ID + OOD).
 - **[`models/self-supervised/README.md`](./models/self-supervised/README.md)** — full technical write-up.
 - **[`competition/participant-files/predictions/`](./competition/participant-files/predictions/)** — final submission CSVs.
+
+## Reproduce the unified benchmark — one command, no Leonardo needed
+
+All three approaches (Transformer, SSL-Hybrid, Neurosymbolic) + two reference baselines, scored on
+the **same** held-out data with the **same** official `eval_metrics.py`, in both in-distribution and
+out-of-distribution (leave-one-family-out) regimes — from a clean checkout on any machine:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+./reproduce.sh            # full run: build eval set → train compact models → score → report
+                          #   CPU ~60-75 min · CUDA auto-detected (~10 min) · MPS skipped (unstable)
+./reproduce.sh quick      # <2 min smoke test: baselines + neurosymbolic only (no neural training)
+```
+
+Output → `shared/benchmark/results_summary.csv` and **[`submission/UNIFIED_BENCHMARK.md`](./submission/UNIFIED_BENCHMARK.md)**
+(tables + figures in `submission/benchmark_assets/`). Baselines + neurosymbolic need no training and
+score instantly; the transformer/SSL checkpoints are compact, trained locally for laptop
+reproducibility (≈ production lm-loss; see UNIFIED_BENCHMARK.md §8).
+
+> **Full-scale (optional, Leonardo).** The compact checkpoints above reproduce the *comparison*. For
+> the production-scale numbers (max_len 768, 6k steps, the xLSTM architecture, multiple model sizes)
+> use the SLURM scripts in `shared/scripts/slurm/` per [`docs/leonardo.md`](docs/leonardo.md);
+> `pip install "xlstm>=1.0.7"` on the CUDA node first. This is **not required** to verify the results.
 
 ---
 

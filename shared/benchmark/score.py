@@ -92,7 +92,7 @@ def score_completion(pred_csv, gt_csv, validator=None) -> dict:
     gt = {r["EXAMPLE_ID"]: r for r in _read(gt_csv)}
     pred = {r["EXAMPLE_ID"]: _split_steps(r.get("PREDICTED_SEQUENCE", "")) for r in _read(pred_csv)}
 
-    ned, exact, tok, blk, rule_valid = [], [], [], [], []
+    ned, exact, tok, blk, rule_valid, rule_clean = [], [], [], [], [], []
     matched = 0
     for eid, g in gt.items():
         if eid not in pred:
@@ -107,8 +107,14 @@ def score_completion(pred_csv, gt_csv, validator=None) -> dict:
         tok.append(EM.token_accuracy(p, ref))
         blk.append(EM.block_level_accuracy(p, ref))
         if validator is not None:
+            # validator(seq) -> violation COUNT. rule_valid = completed seq fully valid;
+            # rule_clean = completion introduced NO NEW violation vs the (often truncated)
+            # partial — this isolates the model's contribution from truncation artifacts.
             try:
-                rule_valid.append(bool(validator(partial + p, g.get("FAMILY", ""))))
+                vp = int(validator(partial))
+                vf = int(validator(partial + p))
+                rule_valid.append(vf == 0)
+                rule_clean.append(vf <= vp)
             except Exception:
                 pass
 
@@ -120,6 +126,8 @@ def score_completion(pred_csv, gt_csv, validator=None) -> dict:
                        "token_acc": mean(tok), "block_acc": mean(blk)}}
     if rule_valid:
         out["overall"]["rule_valid_frac"] = mean(rule_valid)
+    if rule_clean:
+        out["overall"]["rule_clean_frac"] = mean(rule_clean)
     return out
 
 

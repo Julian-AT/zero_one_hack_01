@@ -1,5 +1,11 @@
 # Benchmark Results — Cross-Architecture Model Comparison
 
+> ✅ **Stage 2 is now done.** All three approaches + baselines are scored on **one common
+> labeled eval set** with the official metrics, in ID **and** OOD (LoFO) regimes. See the
+> finished, controlled comparison in **[`submission/UNIFIED_BENCHMARK.md`](../../submission/UNIFIED_BENCHMARK.md)**
+> (run `shared/benchmark/make_benchmark.py` + `report.py` to regenerate). The Stage-1 tables
+> below are kept for history but are superseded by that report.
+
 > **Two-stage report.**
 > - **Stage 1 (below, populated now):** best-available numbers compiled from each model's *own*
 >   committed run. These come from different splits/sizes, so they are **indicative, not a
