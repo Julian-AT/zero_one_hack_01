@@ -20,9 +20,41 @@ scored by the organizers' `eval_metrics.py`. The head-to-head results are in
 [`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md); the technical write-up is in
 [`REPORT.md`](REPORT.md).
 
-## Quickstart
+## Run it on Leonardo (GPU)
 
-From a clean clone, on any machine — no GPU and no cluster access required:
+Everything below runs from a **login node** (which has internet) and submits to a GPU node. Use your
+own project account — nothing here is tied to a specific allocation or reservation.
+
+```bash
+# 1. clone into your scratch space
+cd "$SCRATCH"
+git clone <repo-url> zero_one_hack_01
+cd zero_one_hack_01
+
+# 2. one-time: build the pinned environment (pixi + CUDA PyTorch). ~10 min, login node only.
+bash shared/scripts/leonardo/setup_env.sh
+
+# 3. submit the benchmark to a GPU node — substitute YOUR account:
+sbatch --account=<your_account> reproduce.sbatch
+
+# 4. watch it
+squeue --me
+tail -f reproduce-*.out
+```
+
+`reproduce.sbatch` requests one A100 on the `boost_usr_prod` partition, loads `cuda`/`gcc`, and runs
+the full benchmark on the GPU (~15 min). It uses the environment from step 2 directly, so the compute
+node needs no internet. Add `--reservation=<name>` to the `sbatch` line only if your project uses one;
+otherwise the job goes to the normal GPU queue.
+
+Outputs: `shared/benchmark/results_summary.csv` and the report at
+[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md) (figures in
+`submission/benchmark_assets/`). The production-scale training grids (max_len 768, the xLSTM
+architecture, multiple sizes) live in `shared/scripts/slurm/`; see [`docs/leonardo.md`](docs/leonardo.md).
+
+## Run it locally (any machine, CPU is fine)
+
+No GPU or cluster access required:
 
 ```bash
 git clone <repo-url> && cd zero_one_hack_01
@@ -33,36 +65,14 @@ pip install -r requirements.txt
 ./reproduce.sh quick     # ~2-min smoke: baselines + neurosymbolic only, no training
 ```
 
-`reproduce.sh` runs the entire comparison end to end. It auto-detects CUDA when present (≈10 min) and
-otherwise runs on CPU (≈60–75 min; Apple MPS is skipped — its kernels are unstable for this model).
-Everything is seed-pinned and deterministic. Results land in `shared/benchmark/results_summary.csv`,
-the report regenerates at `submission/UNIFIED_BENCHMARK.md`, and figures go to
-`submission/benchmark_assets/`.
-
-## Running on Leonardo
-
-The compact models reproduce the *comparison*. For the production-scale runs (max_len 768, longer
-training, the xLSTM architecture, multiple sizes) use the cluster:
-
-```bash
-# on a login node (internet available)
-cd $SCRATCH && git clone <repo-url> zero_one_hack_01
-bash zero_one_hack_01/shared/scripts/leonardo/setup_env.sh    # installs pixi + the pinned env
-
-cd zero_one_hack_01
-sbatch reproduce.sbatch                                        # same benchmark, one A100 (~15 min)
-tail -f shared/extras/logs/reproduce-*.out
-```
-
-`reproduce.sbatch` requests one GPU on `boost_usr_prod` and runs the identical pipeline. The full
-training grids and eval arrays are in `shared/scripts/slurm/`; see [`docs/leonardo.md`](docs/leonardo.md)
-for authentication, environment, and job submission. The account and reservation in the SLURM headers
-are our allocation — swap in yours.
+`reproduce.sh` runs the same comparison end to end — seed-pinned and deterministic, same outputs as
+the Leonardo run. It auto-detects CUDA (≈10 min) and otherwise runs on CPU (≈60–75 min; Apple MPS is
+skipped — its kernels are unstable for this model).
 
 ## Repository layout
 
 ```
-reproduce.sh / reproduce.sbatch   one-command reproduction (local / Leonardo) — start here
+reproduce.sbatch / reproduce.sh   one-command reproduction (Leonardo / local) — start here
 models/
   transformer_xlstm/   decoder transformer + xLSTM: tokenizers, training, eval (our primary model)
   self-supervised/     SSL-hybrid transformer + retrieval/reranker, metrics, plots
