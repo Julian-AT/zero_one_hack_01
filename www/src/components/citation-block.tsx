@@ -19,7 +19,7 @@ export function CitationBlock({ code }: { code: string }) {
 
   return (
     <div
-      className={`relative my-6 w-full ${PROSE_MAX_WIDTH} overflow-hidden rounded-xl border border-code-border bg-code-bg pl-8 pr-4 pt-8 pb-6`}
+      className={`relative mx-auto my-6 w-full ${PROSE_MAX_WIDTH} overflow-hidden rounded-xl border border-code-border bg-code-bg pl-8 pr-4 pt-8 pb-6`}
     >
       <button
         type="button"
