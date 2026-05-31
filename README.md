@@ -85,7 +85,8 @@ tests/                 pytest suite for tokenizers, validator, metrics, I/O
   one eval set with the official metrics, in-distribution and out-of-distribution (held-out family).
 - [x] **[`competition/participant-files/predictions/`](competition/participant-files/predictions/)** —
   the submission CSVs: `predictions_nextstep.csv`, `predictions_completion.csv`, `predictions_anomaly.csv`.
-- [x] Score them with the organizers' script — e.g. the anomaly task against our labeled eval set:
+- [x] **Scores from `eval_metrics.py`** on all three tasks, with a per-family breakdown — reported in
+  [`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md). Reproduce a single task, e.g. anomaly:
   ```bash
   python competition/participant-files/eval_metrics.py --task anomaly \
       --ground-truth shared/extras/results/eval_inputs/eval_input_anomaly_truth.csv \
