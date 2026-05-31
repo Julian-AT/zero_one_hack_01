@@ -94,6 +94,6 @@ tests/                 pytest suite for tokenizers, validator, metrics, I/O
 - Training artifacts — per-run config and final loss in `shared/extras/checkpoints/*/summary.json`,
   TensorBoard loss curves in `shared/extras/logs/`.
 
-## license
+## License
 
 [`LICENSE`](LICENSE)
