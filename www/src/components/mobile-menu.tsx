@@ -15,7 +15,7 @@ const navItems: { label: string; href: string }[] = [
   { label: "Approach", href: "#approach" },
   { label: "Results", href: "#results" },
   { label: "What worked", href: "#what-worked" },
-  { label: "A note on honesty", href: "#honesty" },
+  { label: "A note on honesty", href: "#a-note-on-honesty" },
 ];
 
 export function MobileMenu({ className }: { className?: string }) {
@@ -27,14 +27,19 @@ export function MobileMenu({ className }: { className?: string }) {
       >
         <MenuIcon className="h-10 w-10 text-ink" />
       </SheetTrigger>
-      <SheetContent side="right" className="w-[280px] bg-cream">
-        <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <nav aria-label="Mobile" className="mt-12 flex flex-col">
+      <SheetContent
+        side="right"
+        className="w-[300px] max-w-[85vw] bg-cream px-6 py-8"
+      >
+        <SheetTitle className="px-1 font-sans text-[13px] font-semibold uppercase tracking-wide text-muted-ink">
+          Navigation
+        </SheetTitle>
+        <nav aria-label="Mobile" className="mt-6 flex flex-col gap-1">
           {navItems.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              className="border-rule border-b py-4 font-sans text-[16px] text-ink-soft transition-opacity hover:opacity-70"
+              className="rounded-lg px-3 py-3 font-sans text-[16px] text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink"
             >
               {item.label}
             </a>
@@ -44,7 +49,7 @@ export function MobileMenu({ className }: { className?: string }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View source on GitHub"
-            className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-ink-soft px-4 font-sans text-[16px] text-ink-soft transition-opacity hover:opacity-90"
+            className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-ink-soft px-4 font-sans text-[16px] text-ink-soft transition-opacity hover:opacity-90"
           >
             <GitHubIcon className="h-5 w-5" />
             GitHub

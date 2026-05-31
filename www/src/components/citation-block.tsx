@@ -30,7 +30,7 @@ export function CitationBlock({ code }: { code: string }) {
         <CopyIcon className="h-[15px] w-[11px]" />
         {copied ? "Copied" : "Copy code"}
       </button>
-      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[16px] leading-[20px] text-ink">
+      <pre className="overflow-x-auto whitespace-pre-wrap [overflow-wrap:anywhere] font-mono text-[16px] leading-[20px] text-ink">
         {code}
       </pre>
     </div>

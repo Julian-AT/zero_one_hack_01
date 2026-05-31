@@ -43,7 +43,7 @@ function MdxLink({
 const components: MDXComponents = {
   p: ({ children }) => (
     <div className={`mx-auto w-full ${PROSE_MAX_WIDTH}`}>
-      <p className="mb-4 font-serif text-[17px] leading-[1.55] text-ink">{children}</p>
+      <p className="mb-4 font-serif text-[17px] leading-[1.55] text-ink [overflow-wrap:anywhere]">{children}</p>
     </div>
   ),
   h2: ({ children, id }) => (
@@ -91,10 +91,10 @@ const components: MDXComponents = {
       </ol>
     </div>
   ),
-  li: ({ children }) => <li className="mb-3">{children}</li>,
+  li: ({ children }) => <li className="mb-3 [overflow-wrap:anywhere]">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
   code: ({ children }) => (
-    <code className="rounded bg-code-bg px-1.5 py-0.5 font-mono text-[15px] text-ink">
+    <code className="rounded bg-code-bg px-1.5 py-0.5 font-mono text-[15px] text-ink [overflow-wrap:anywhere]">
       {children}
     </code>
   ),

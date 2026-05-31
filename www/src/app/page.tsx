@@ -28,7 +28,7 @@ export default function Home() {
       />
       <SiteHeader />
       <main id="main-content">
-        <div className="mx-auto w-full max-w-[1400px] px-8 lg:px-16">
+        <div className="mx-auto w-full max-w-[1400px] px-5 sm:px-8 lg:px-16">
           <ArticleHero />
           <div className="flex">
             <div className="w-0 shrink-0">

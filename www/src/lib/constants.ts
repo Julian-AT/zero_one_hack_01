@@ -5,13 +5,13 @@ export const GITHUB_URL =
   "https://github.com/Julian-AT/zero_one_hack_01";
 
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://zeroone.julianschmidt.cv";
 
 export const ARTICLE_URL =
   "https://github.com/Julian-AT/zero_one_hack_01";
 
 export const ARTICLE = {
-  title: "A Neurosymbolic Stack for Semiconductor Process-Flow Sequence Modeling and OOD Generalization",
+  title: "Learning and Benchmarking Process Logic in Semiconductor Fabrication Routes",
   description:
     "A hybrid neurosymbolic system for modeling semiconductor manufacturing process-flow sequences, developed for the Industrial AI track (Infineon) of Zero One Hack_01. The work combines a symbolic rule validator, a grammar-constrained decoder, k-nearest-neighbor retrieval, and a compositionally-tokenized multi-task decoder-only transformer (RoPE, RMSNorm, SwiGLU) with auxiliary validity and rule-attribution heads. It addresses next-step prediction, sequence completion, and anomaly detection with rule attribution, and targets out-of-distribution generalization to an unseen product family via leave-one-family-out evaluation and parsed physics-parameter features. Models were trained from scratch on the EuroHPC Leonardo cluster (CINECA).",
   datePublished: "2026-05-31",
@@ -33,5 +33,5 @@ export const TOC_SECTIONS = [
   { id: "what-did-not-work", label: "What did not work" },
   { id: "another-36-hours", label: "Another 36 hours" },
   { id: "deliverables", label: "Deliverables" },
-  { id: "honesty", label: "A note on honesty" },
+  { id: "a-note-on-honesty", label: "A note on honesty" },
 ] as const;
