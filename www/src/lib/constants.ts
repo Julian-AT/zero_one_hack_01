@@ -8,7 +8,7 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const ARTICLE_URL =
-  "https://www.anthropic.com/research/economic-index-march-2026-report";
+  "https://github.com/Julian-AT/zero_one_hack_01";
 
 export const ARTICLE = {
   title: "A Neurosymbolic Stack for Semiconductor Process-Flow Sequence Modeling and OOD Generalization",
@@ -24,9 +24,14 @@ export const ARTICLE = {
 } as const;
 
 export const TOC_SECTIONS = [
-  { id: "what-has-changed-since-our-last-report", label: "What has changed since our last report" },
-  { id: "learning-to-use-ai", label: "Learning to use AI" },
-  { id: "discussion", label: "Discussion" },
-  { id: "appendix", label: "Appendix" },
-  { id: "authors-and-acknowledgements", label: "Authors and acknowledgements" },
+  { id: "summary", label: "Summary" },
+  { id: "problem", label: "Problem" },
+  { id: "approach", label: "Approach" },
+  { id: "how-to-run-it", label: "How to run it" },
+  { id: "results", label: "Results" },
+  { id: "what-worked", label: "What worked" },
+  { id: "what-did-not-work", label: "What did not work" },
+  { id: "another-36-hours", label: "Another 36 hours" },
+  { id: "deliverables", label: "Deliverables" },
+  { id: "honesty", label: "A note on honesty" },
 ] as const;

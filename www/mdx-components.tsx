@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { MDXComponents } from "mdx/types";
 import { Figure } from "@/components/figure";
 import { CitationBlock } from "@/components/citation-block";
+import { DataTable } from "@/components/data-table";
 import { PROSE_MAX_WIDTH } from "@/lib/constants";
 
 function Sup({ n }: { n: number }) {
@@ -92,8 +93,14 @@ const components: MDXComponents = {
   ),
   li: ({ children }) => <li className="mb-3">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  code: ({ children }) => (
+    <code className="rounded bg-code-bg px-1.5 py-0.5 font-mono text-[15px] text-ink">
+      {children}
+    </code>
+  ),
   Figure,
   CitationBlock,
+  DataTable,
   Sup,
 };
 

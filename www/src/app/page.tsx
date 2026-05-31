@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { ArticleHero } from "@/components/article-hero";
-import Article from "@/content/learning-curves.mdx";
+import Article from "@/content/report.mdx";
 import { TableOfContents } from "@/components/table-of-contents";
 import { ARTICLE, SITE_URL, TOC_SECTIONS } from "@/lib/constants";
 
@@ -13,7 +14,7 @@ const articleJsonLd = {
   author: ARTICLE.authors.map((name) => ({ "@type": "Person", name })),
   publisher: {
     "@type": "Organization",
-    name: "Anthropic",
+    name: "Attention Seekers",
   },
   mainEntityOfPage: SITE_URL,
 };
@@ -39,6 +40,7 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

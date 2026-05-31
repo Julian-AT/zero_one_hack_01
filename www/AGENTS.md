@@ -4,17 +4,18 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Economic Index — Learning Curves
+# Attention Seekers, Industrial AI submission site
 
-A faithful rebuild of the Anthropic Economic Index report "Learning curves" as a
-self-contained Next.js site. Article content lives in Markdown MDX so future interactive
-charts drop straight into the prose.
+A self-contained Next.js site presenting the team's submission report for the
+Industrial AI track (Infineon) of Zero One Hack_01. Article content lives in
+Markdown MDX (`src/content/report.mdx`) so figures, tables, and code blocks drop
+straight into the prose.
 
 ## Tech Stack
 - **Framework:** Next.js 16 (App Router, React 19, TypeScript strict)
-- **Content:** MDX via `@next/mdx` (`src/content/*.mdx`)
-- **UI:** shadcn/ui primitives styled to the Anthropic palette, Tailwind CSS v4
-- **Fonts:** self-hosted AnthropicSans / Serif / Mono (`public/fonts/`)
+- **Content:** MDX via `@next/mdx` (`src/content/*.mdx`), `rehype-slug` for anchors
+- **UI:** shadcn/ui primitives, Tailwind CSS v4
+- **Fonts:** Geist Sans / Mono
 
 ## Commands
 - `bun run dev` — Start dev server
@@ -34,11 +35,11 @@ charts drop straight into the prose.
 ## Project Structure
 ```
 src/
-  app/            # layout, page, globals.css
-  content/        # article MDX (markdown)
+  app/            # layout, page, globals.css, sitemap, robots
+  content/        # report.mdx (the report source)
   components/     # kebab-case component files
-  lib/            # cn() utility + constants
+  lib/            # cn() utility + site constants
 mdx-components.tsx
 public/
-  fonts/  images/  seo/
+  images/  zeroone.png
 ```

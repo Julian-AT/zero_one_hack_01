@@ -1,12 +1,7 @@
 import Link from "next/link";
-import {
-  AnthropicWordmark,
-  AnthropicLogomark,
-  GitHubIcon,
-} from "@/components/icons";
+import { Logomark, GitHubIcon } from "@/components/icons";
 import { MobileMenu } from "@/components/mobile-menu";
 import { GITHUB_URL } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
 export function SiteHeader() {
@@ -26,13 +21,15 @@ export function SiteHeader() {
       </a>
 
       <div className="flex h-full w-full items-center justify-between px-5 lg:px-8">
-        <Link href="/" aria-label="Anthropic home">
-          <AnthropicWordmark
-            className={cn("hidden h-4 w-auto text-ink-soft sm:block")}
-          />
-          <AnthropicLogomark
-            className={cn("h-8 w-auto text-ink-soft sm:hidden")}
-          />
+        <Link
+          href="/"
+          aria-label="Attention Seekers home"
+          className="flex items-center gap-2.5 text-ink"
+        >
+          <Logomark className="h-7 w-7" />
+          <span className="font-sans text-[16px] font-semibold tracking-tight">
+            Attention Seekers
+          </span>
         </Link>
 
         <div className="hidden items-center lg:flex">

@@ -1,8 +1,8 @@
 {
-  "name": "economic-index-learning-curves",
+  "name": "process-logic-benchmark-site",
   "version": "1.0.0",
   "private": true,
-  "description": "Anthropic Economic Index report: Learning curves",
+  "description": "Attention Seekers, Industrial AI submission report and cross-model benchmark for semiconductor process-flow sequence modeling.",
   "license": "MIT",
   "engines": {
     "node": ">=24"

@@ -1,10 +1,6 @@
 import Link from "next/link";
-import {
-  AnthropicWordmark,
-  LinkedInIcon,
-  TwitterIcon,
-  YouTubeIcon,
-} from "@/components/icons";
+import { Logomark, GitHubIcon } from "@/components/icons";
+import { GITHUB_URL } from "@/lib/constants";
 
 type FooterColumn = {
   heading: string;
@@ -13,52 +9,31 @@ type FooterColumn = {
 
 const columns: FooterColumn[] = [
   {
-    heading: "Product",
+    heading: "Report",
     links: [
-      { label: "Claude", href: "https://claude.com/product/overview" },
-      { label: "Claude Code", href: "https://claude.com/product/claude-code" },
-      { label: "Claude Developer Platform", href: "https://claude.com/platform/api" },
-      { label: "Pricing", href: "https://claude.com/pricing" },
-      { label: "Download app", href: "https://claude.ai/download" },
+      { label: "Summary", href: "#summary" },
+      { label: "Results", href: "#results" },
+      { label: "What worked", href: "#what-worked" },
+      { label: "A note on honesty", href: "#honesty" },
     ],
   },
   {
-    heading: "Research",
+    heading: "Systems",
     links: [
-      { label: "Economic Index", href: "https://www.anthropic.com/economic-index" },
-      { label: "Research overview", href: "https://www.anthropic.com/research" },
-      { label: "Economic Futures", href: "https://www.anthropic.com/economic-futures" },
-      { label: "News", href: "https://www.anthropic.com/news" },
+      { label: "Transformer xLSTM", href: "#approach" },
+      { label: "Self supervised hybrid", href: "#approach" },
+      { label: "Neurosymbolic engine", href: "#approach" },
+      { label: "Benchmark", href: "#results" },
     ],
   },
   {
-    heading: "Company",
+    heading: "Project",
     links: [
-      { label: "About", href: "https://www.anthropic.com/company" },
-      { label: "Careers", href: "https://www.anthropic.com/careers" },
-      { label: "Transparency", href: "https://www.anthropic.com/transparency" },
-      { label: "Security and compliance", href: "https://trust.anthropic.com/" },
+      { label: "GitHub repository", href: GITHUB_URL },
+      { label: "How to run it", href: "#how-to-run-it" },
+      { label: "Deliverables", href: "#deliverables" },
     ],
   },
-  {
-    heading: "Terms and policies",
-    links: [
-      { label: "Privacy policy", href: "https://www.anthropic.com/legal/privacy" },
-      { label: "Usage policy", href: "https://www.anthropic.com/legal/aup" },
-      { label: "Terms of service", href: "https://www.anthropic.com/legal/consumer-terms" },
-      { label: "Responsible disclosure", href: "https://www.anthropic.com/responsible-disclosure-policy" },
-    ],
-  },
-];
-
-const socials = [
-  {
-    href: "https://www.linkedin.com/company/anthropicresearch",
-    label: "LinkedIn",
-    Icon: LinkedInIcon,
-  },
-  { href: "https://x.com/AnthropicAI", label: "X (formerly Twitter)", Icon: TwitterIcon },
-  { href: "https://www.youtube.com/@anthropic-ai", label: "YouTube", Icon: YouTubeIcon },
 ];
 
 export function SiteFooter() {
@@ -67,27 +42,38 @@ export function SiteFooter() {
       <div className="mx-auto w-full max-w-[1400px] px-8 py-16 lg:px-16">
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between">
           <div className="flex flex-col gap-6">
-            <Link href="/" aria-label="Anthropic home" className="inline-block">
-              <AnthropicWordmark className="h-4 w-auto" />
+            <Link
+              href="/"
+              aria-label="Attention Seekers home"
+              className="inline-flex items-center gap-2.5"
+            >
+              <Logomark className="h-7 w-7" />
+              <span className="text-[16px] font-semibold tracking-tight">
+                Attention Seekers
+              </span>
             </Link>
-            <div className="flex items-center gap-4">
-              {socials.map(({ href, label, Icon }) => (
-                <a
-                  key={href}
-                  href={href}
-                  aria-label={label}
-                  className="text-cream/70 transition-colors hover:text-cream"
-                >
-                  <Icon className="h-5 w-5" />
-                </a>
-              ))}
-            </div>
-            <p className="mt-auto text-[13px] text-cream/60">&copy; 2026 Anthropic PBC</p>
+            <p className="max-w-xs text-[14px] leading-relaxed text-cream/70">
+              Learning and benchmarking process logic in semiconductor
+              fabrication routes. Industrial AI track, Zero One Hack_01.
+            </p>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View source on GitHub"
+              className="inline-flex w-fit items-center gap-2 text-cream/70 transition-colors hover:text-cream"
+            >
+              <GitHubIcon className="h-5 w-5" />
+              <span className="text-[14px]">Source on GitHub</span>
+            </a>
+            <p className="mt-auto text-[13px] text-cream/60">
+              &copy; 2026 Team Attention Seekers
+            </p>
           </div>
 
           <nav
             aria-label="Footer"
-            className="grid grid-cols-2 gap-x-12 gap-y-10 sm:grid-cols-4 lg:gap-x-16"
+            className="grid grid-cols-2 gap-x-12 gap-y-10 sm:grid-cols-3 lg:gap-x-16"
           >
             {columns.map((col) => (
               <div key={col.heading}>
@@ -96,7 +82,7 @@ export function SiteFooter() {
                 </h3>
                 <ul className="space-y-3">
                   {col.links.map((link) => (
-                    <li key={link.href}>
+                    <li key={`${col.heading}-${link.label}`}>
                       <a
                         href={link.href}
                         className="text-[14px] text-cream/90 transition-colors hover:text-cream hover:underline"

@@ -6,14 +6,14 @@ export function ArticleHero() {
     <header className="flex flex-col items-center gap-8 text-center mt-12">
       <div className="flex flex-col items-center gap-8 text-center">
         <p className="font-sans text-[15px] font-bold leading-[21px] text-ink">
-          Economic Research
+          Industrial AI (Infineon) · Zero One Hack_01
         </p>
         <h1 className="font-sans text-[32px] font-bold leading-[1.1] text-ink lg:text-[52px] lg:leading-[57.2px] max-w-3xl">
-          Anthropic Economic Index report: Learning curves
+          Learning and Benchmarking Process Logic in Semiconductor Fabrication Routes
         </h1>
         <div>
           <span className="font-sans text-[15px] leading-[21px] text-ink">
-            Mar 24, 2026
+            Team Attention Seekers · May 31, 2026
           </span>
         </div>
       </div>

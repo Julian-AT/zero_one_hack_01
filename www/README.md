@@ -1,53 +1,54 @@
-# Anthropic Economic Index — Learning Curves
+# Attention Seekers, Industrial AI submission site
 
-A faithful, self-contained Next.js rebuild of the [Anthropic Economic Index report: Learning curves](https://www.anthropic.com/research/economic-index-march-2026-report) research article.
+A self-contained Next.js site that presents the team's submission report for the
+Industrial AI track (Infineon) of Zero One Hack_01: learning and benchmarking
+process logic in semiconductor fabrication routes.
 
-The article body is authored in **Markdown MDX** so prose stays readable and future interactive charts drop straight into the content. Layout, typography, and color match the source page.
+The report body is authored in **Markdown MDX** (`src/content/report.mdx`) so the
+prose stays readable and figures, tables, and code blocks drop straight into the
+content. It is a replica of the repository's `SUBMISSION.md`, with every
+illustration included; the figures are produced by `shared/benchmark/report.py`
+from the official scorer output.
 
-## Tech Stack
+## Tech stack
 
-- **Next.js 16** — App Router, React 19, TypeScript strict
-- **MDX** (`@next/mdx`) — article content as markdown with embedded components
-- **shadcn/ui** — Button, Sheet on Tailwind v4 + the `cn()` utility
-- **Tailwind CSS v4** — CSS-first config with an Anthropic-brand token palette
-- Self-hosted Anthropic Sans / Serif / Mono woff2 fonts
+- **Next.js 16** with the App Router, React 19, TypeScript strict
+- **MDX** (`@next/mdx`) for the article content, with `rehype-slug` for heading anchors
+- **Tailwind CSS v4** with a small custom token palette
+- **Geist Sans / Mono** fonts
 
 ## Commands
 
-### useful
-
 ```bash
-bun run dev        # Start dev server
-bun run build      # Production build
+bun install        # or: npm install
+bun run dev        # start the dev server
+bun run build      # production build
 bun run lint       # ESLint
 bun run typecheck  # TypeScript
 bun run check      # lint + typecheck + build
 ```
 
-## Project Structure
+## Project structure
 
 ```
 src/
-  app/              # layout, page, globals.css
-  content/          # learning-curves.mdx (article source)
+  app/              # layout, page, globals.css, sitemap, robots
+  content/          # report.mdx (the report source)
   components/       # kebab-case component files
     article-hero.tsx
-    citation-block.tsx
-    figure.tsx
-    footnotes.tsx
-    mobile-menu.tsx
-    related-content.tsx
-    site-footer.tsx
+    citation-block.tsx   # code blocks
+    data-table.tsx       # result tables
+    figure.tsx           # figures with captions
     site-header.tsx
+    site-footer.tsx
     table-of-contents.tsx
     icons.tsx
-    ui/             # shadcn primitives
-  lib/              # cn(), constants
+    ui/                  # shadcn primitives
+  lib/              # cn() utility + site constants
 mdx-components.tsx  # maps markdown elements to styled reading-column primitives
 public/
-  images/           # figures and tables
-  fonts/            # Anthropic woff2 files
-  seo/              # favicons
+  images/           # benchmark figures (fig1..fig7)
+  zeroone.png       # hero image
 ```
 
 ## License

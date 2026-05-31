@@ -6,8 +6,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: `${ARTICLE.title} \\ Anthropic`,
+  title: `${ARTICLE.title} \\ Attention Seekers`,
   description: ARTICLE.description,
+  icons: {
+    icon: "/zeroone.png",
+  },
   alternates: {
     canonical: "/",
   },

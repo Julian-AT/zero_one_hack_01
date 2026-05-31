@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Semiconductor Manufacturing — Slides</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #0f0f14; }
+  body { display: flex; align-items: center; justify-content: center; }
+
+  .slide-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slide-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: opacity 0.25s ease;
+  }
+
+  .slide-container img.hidden { display: none; }
+
+  .progress {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: #3b82f6;
+    transition: width 0.3s ease;
+    z-index: 10;
+  }
+
+  .counter {
+    position: fixed;
+    bottom: 12px;
+    right: 20px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 13px;
+    color: #4a4a5a;
+    z-index: 10;
+  }
+
+  .hint {
+    position: fixed;
+    bottom: 12px;
+    left: 20px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 12px;
+    color: #3a3a4a;
+    transition: opacity 1s ease;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+
+<div class="slide-container" id="viewer"></div>
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+<div class="hint" id="hint">← → arrow keys to navigate</div>
+
+<script>
+const slides = [
+  "01_title.png",
+  "02_nextstep.png",
+  "03_completion.png",
+  "04_rulevalid.png",
+  "05_anomaly.png",
+  "06_why.png",
+  "07_summary.png"
+];
+
+let current = 0;
+const viewer = document.getElementById("viewer");
+const progress = document.getElementById("progress");
+const counter = document.getElementById("counter");
+const hint = document.getElementById("hint");
+
+const imgs = slides.map((src, i) => {
+  const img = document.createElement("img");
+  img.src = src;
+  img.className = i === 0 ? "" : "hidden";
+  viewer.appendChild(img);
+  return img;
+});
+
+function show(idx) {
+  imgs[current].classList.add("hidden");
+  current = idx;
+  imgs[current].classList.remove("hidden");
+  progress.style.width = ((current + 1) / slides.length * 100) + "%";
+  counter.textContent = (current + 1) + " / " + slides.length;
+}
+
+document.addEventListener("keydown", (e) => {
+  hint.style.opacity = "0";
+  if (e.key === "ArrowRight" || e.key === " ") {
+    e.preventDefault();
+    if (current < slides.length - 1) show(current + 1);
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    if (current > 0) show(current - 1);
+  } else if (e.key === "Home") {
+    show(0);
+  } else if (e.key === "End") {
+    show(slides.length - 1);
+  }
+});
+
+viewer.addEventListener("click", (e) => {
+  const x = e.clientX / window.innerWidth;
+  if (x > 0.5 && current < slides.length - 1) show(current + 1);
+  else if (x <= 0.5 && current > 0) show(current - 1);
+});
+
+show(0);
+setTimeout(() => { hint.style.opacity = "0"; }, 4000);
+</script>
+</body>
+</html>

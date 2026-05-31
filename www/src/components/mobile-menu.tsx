@@ -11,11 +11,11 @@ import { GITHUB_URL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const navItems: { label: string; href: string }[] = [
-  { label: "Research", href: "https://www.anthropic.com/research" },
-  { label: "Economic Futures", href: "https://www.anthropic.com/economic-futures" },
-  { label: "Commitments", href: "https://www.anthropic.com/commitments" },
-  { label: "Learn", href: "https://www.anthropic.com/learn" },
-  { label: "News", href: "https://www.anthropic.com/news" },
+  { label: "Summary", href: "#summary" },
+  { label: "Approach", href: "#approach" },
+  { label: "Results", href: "#results" },
+  { label: "What worked", href: "#what-worked" },
+  { label: "A note on honesty", href: "#honesty" },
 ];
 
 export function MobileMenu({ className }: { className?: string }) {
