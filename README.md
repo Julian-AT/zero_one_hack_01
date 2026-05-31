@@ -1,143 +1,104 @@
-# Process-Logic — Semiconductor Process-Sequence Modeling
+# Process-Logic
 
-Learning the *grammar* of semiconductor fabrication flows: given partial MOSFET/IGBT/IC
-process sequences, predict the next step, complete the sequence, and flag sequences that
-violate process rules. Built for the Industrial AI (Infineon) track of Zero One Hack_01.
+Semiconductor fab routes are long, ordered sequences of process steps whose validity depends on that
+order. For the **Industrial AI (Infineon)** track we asked one question: can a model learn the
+*grammar* of those routes — predict the next step, complete a partial route, and flag rule
+violations — or does it only memorize? To answer it honestly we generate synthetic routes from a
+rule-based simulator, train on them, and test generalization by holding out an entire product family.
 
-The core question: does a model learn real process logic, or just memorize? The pipeline
-generates its own synthetic training data from a rule-based process simulator, trains a
-decoder Transformer (optionally xLSTM) on it, and emits organizer-format predictions.
+We built and compared **three approaches** on a single shared benchmark:
 
-## The four tasks
+- **Transformer** — `models/transformer_xlstm/`. A decoder transformer (optionally xLSTM) with a
+  compositional tokenizer and multitask validity/rule heads. Our most mature model.
+- **SSL-Hybrid** — `models/self-supervised/`. A self-supervised transformer with semantic-feature
+  and family embeddings, plus retrieval/rerank.
+- **Neurosymbolic** — `models/neurosymbolic/`. A symbolic grammar and 10-rule oracle with role
+  induction, ranked by a zero-parameter PPM.
 
-1. **Next-step prediction** — given a partial sequence, rank the 5 most likely next steps.
-2. **Sequence completion** — given a partial sequence, generate the remaining suffix.
-3. **Anomaly detection** — given a full sequence, classify valid vs. invalid.
-4. **Rule attribution** — given an invalid sequence, identify which of the 10 process
-   rules was violated.
+The three submission tasks — next-step prediction, sequence completion, anomaly detection — are
+scored by the organizers' `eval_metrics.py`. The head-to-head results are in
+[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md); the technical write-up is in
+[`REPORT.md`](REPORT.md).
 
-## 👉 Our submission — Industrial AI (Infineon)
+## Quickstart
 
-This repo is our team's entry for the **Industrial AI** track. Start here:
-
-- **[`REPORT.md`](./REPORT.md)** — executive summary: approach, results, final files, how to run.
-- **[`submission/UNIFIED_BENCHMARK.md`](./submission/UNIFIED_BENCHMARK.md)** — the three model approaches
-  compared head-to-head on **one common eval set** with the **official metrics** (ID + OOD).
-- **[`models/self-supervised/README.md`](./models/self-supervised/README.md)** — full technical write-up.
-- **[`competition/participant-files/predictions/`](./competition/participant-files/predictions/)** — final submission CSVs.
-
-## Reproduce the unified benchmark — one command, no Leonardo needed
-
-All three approaches (Transformer, SSL-Hybrid, Neurosymbolic) + two reference baselines, scored on
-the **same** held-out data with the **same** official `eval_metrics.py`, in both in-distribution and
-out-of-distribution (leave-one-family-out) regimes — from a clean checkout on any machine:
+From a clean clone, on any machine — no GPU and no cluster access required:
 
 ```bash
+git clone <repo-url> && cd zero_one_hack_01
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-./reproduce.sh            # full run: build eval set → train compact models → score → report
-                          #   CPU ~60-75 min · CUDA auto-detected (~10 min) · MPS skipped (unstable)
-./reproduce.sh quick      # <2 min smoke test: baselines + neurosymbolic only (no neural training)
+
+./reproduce.sh           # build eval set → train compact models → score → write the report
+./reproduce.sh quick     # ~2-min smoke: baselines + neurosymbolic only, no training
 ```
 
-Output → `shared/benchmark/results_summary.csv` and **[`submission/UNIFIED_BENCHMARK.md`](./submission/UNIFIED_BENCHMARK.md)**
-(tables + figures in `submission/benchmark_assets/`). Baselines + neurosymbolic need no training and
-score instantly; the transformer/SSL checkpoints are compact, trained locally for laptop
-reproducibility (≈ production lm-loss; see UNIFIED_BENCHMARK.md §8).
+`reproduce.sh` runs the entire comparison end to end. It auto-detects CUDA when present (≈10 min) and
+otherwise runs on CPU (≈60–75 min; Apple MPS is skipped — its kernels are unstable for this model).
+Everything is seed-pinned and deterministic. Results land in `shared/benchmark/results_summary.csv`,
+the report regenerates at `submission/UNIFIED_BENCHMARK.md`, and figures go to
+`submission/benchmark_assets/`.
 
-> **Full-scale (optional, Leonardo).** The compact checkpoints above reproduce the *comparison*. For
-> the production-scale numbers (max_len 768, 6k steps, the xLSTM architecture, multiple model sizes)
-> use the SLURM scripts in `shared/scripts/slurm/` per [`docs/leonardo.md`](docs/leonardo.md);
-> `pip install "xlstm>=1.0.7"` on the CUDA node first. This is **not required** to verify the results.
+## Running on Leonardo
 
----
+The compact models reproduce the *comparison*. For the production-scale runs (max_len 768, longer
+training, the xLSTM architecture, multiple sizes) use the cluster:
+
+```bash
+# on a login node (internet available)
+cd $SCRATCH && git clone <repo-url> zero_one_hack_01
+bash zero_one_hack_01/shared/scripts/leonardo/setup_env.sh    # installs pixi + the pinned env
+
+cd zero_one_hack_01
+sbatch reproduce.sbatch                                        # same benchmark, one A100 (~15 min)
+tail -f shared/extras/logs/reproduce-*.out
+```
+
+`reproduce.sbatch` requests one GPU on `boost_usr_prod` and runs the identical pipeline. The full
+training grids and eval arrays are in `shared/scripts/slurm/`; see [`docs/leonardo.md`](docs/leonardo.md)
+for authentication, environment, and job submission. The account and reservation in the SLURM headers
+are our allocation — swap in yours.
 
 ## Repository layout
 
-```text
-models/transformer_xlstm/                    # the library — clean, typed, tested
-  data/                 #   tokenizers, validator adapter, corrupters, CSV/sequence I/O
-  model/                #   decoder Transformer, xLSTM, heads, build_model registry
-  train/                #   launch CLI, training loop, losses, tracking
-  eval/                 #   predict, run_eval CLI, metrics, submission writer
-  utils/                #   paths, seeding
-configs/                # OmegaConf YAML: arch/ token/ train/ (nothing hardcoded)
-tests/                  # pure-logic pytest suite (tokenizer, validator, corrupt, metrics, io)
-baselines (shared/extras/)     # trigram, grammar-decoder, retrieval reference baselines
-competition/participant-files/      # competition submission pipeline (hybrid model + rerankers)
-competition/track-details/   # organizer data + the canonical generate_sequences.py grammar
-docs/                   # results.md (full results narrative), leonardo.md (HPC guide)
+```
+reproduce.sh / reproduce.sbatch   one-command reproduction (local / Leonardo) — start here
+models/
+  transformer_xlstm/   decoder transformer + xLSTM: tokenizers, training, eval (our primary model)
+  self-supervised/     SSL-hybrid transformer + retrieval/reranker, metrics, plots
+  neurosymbolic/       grammar, 10-rule oracle, role induction, PPM ranker (0 trained parameters)
+competition/
+  track-details/       the brief, the rule-based sequence generator, and the validation rules
+  participant-files/   the official scorer (eval_metrics.py) and our submission CSVs
+shared/
+  benchmark/           the unified benchmark: eval-set builder, per-model adapters, scorer, report
+  scripts/             SLURM jobs + Leonardo setup
+  extras/              checkpoint summaries, training logs, loss curves, baselines, raw results
+configs/               OmegaConf YAML for architecture / tokenizer / training (nothing hardcoded)
+submission/            REPORT material and the cross-model benchmark report + figures
+docs/                  full results narrative and the Leonardo operations guide
+tests/                 pytest suite for tokenizers, validator, metrics, I/O
 ```
 
-## Setup
+## Results and deliverables
 
-The environment is managed with [pixi](https://pixi.sh). It pins the platform-specific
-install — conda `pytorch-gpu` on Linux (Leonardo's CUDA-12 driver), CPU/MPS torch on
-macOS — and is the source of truth for the cluster environment.
+- **[`REPORT.md`](REPORT.md)** — approach, headline numbers, what worked and what didn't.
+- **[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md)** — all three approaches on
+  one eval set with the official metrics, in-distribution and out-of-distribution (held-out family).
+- **[`competition/participant-files/predictions/`](competition/participant-files/predictions/)** —
+  the submission CSVs: `predictions_nextstep.csv`, `predictions_completion.csv`, `predictions_anomaly.csv`.
+- Score them with the organizers' script — e.g. the anomaly task against our labeled eval set:
+  ```bash
+  python competition/participant-files/eval_metrics.py --task anomaly \
+      --ground-truth shared/extras/results/eval_inputs/eval_input_anomaly_truth.csv \
+      --predictions  competition/participant-files/predictions/predictions_anomaly.csv
+  ```
+- Training artifacts — per-run config and final loss in `shared/extras/checkpoints/*/summary.json`,
+  TensorBoard loss curves in `shared/extras/logs/`.
 
-```bash
-pixi install
-pixi run smoke        # prints torch version + CUDA availability
-```
+## Requirements & license
 
-For a plain virtualenv (CPU, no cluster specifics), the abstract dependencies are also
-declared in `pyproject.toml`:
-
-```bash
-pip install -e .          # runtime deps
-pip install -e ".[dev]"   # + pytest, ruff
-```
-
-## Train
-
-Training streams freshly generated sequences from the rule-based simulator (with on-the-fly
-corruption); no static training CSV is loaded. Configs are merged at launch via OmegaConf.
-
-```bash
-python -m transformer_xlstm.train.launch \
-    --arch-config  configs/arch/transformer_small.yaml \
-    --train-config configs/train/default.yaml \
-    --token-config configs/token/compositional.yaml \
-    --run-name     my-run-001
-```
-
-Override any config value inline:
-
-```bash
-python -m transformer_xlstm.train.launch ... --override train.max_steps=100 train.batch_size=16
-```
-
-Checkpoints are written to `shared/extras/checkpoints/<run-name>/` (gitignored; only `summary.json`
-is committed). On Leonardo, submit via `shared/scripts/slurm/train.sbatch`.
-
-## Evaluate
-
-Run the internal metric suite against a checkpoint (next-step top-k / MRR, completion
-EM / normalized edit distance, anomaly precision/recall):
-
-```bash
-python -m transformer_xlstm.eval.run_eval \
-    --checkpoint shared/extras/checkpoints/my-run-001/final.pt \
-    --output-dir shared/extras/results/eval/my-run-001
-```
-
-This writes `metrics.json` + `metrics.md`. The official organizer eval inputs are
-unlabeled, so final official accuracy can only be computed by the organizers — we generate
-official-format prediction CSVs from them.
-
-## Develop
-
-```bash
-pixi run lint          # ruff check .
-pixi run format        # ruff format .
-pixi run test          # pytest
-```
-
-## Further reading
-
-- [`docs/results.md`](docs/results.md) — full pipeline writeup, model comparison, and an
-  honest account of what the results can and cannot claim.
-- [`docs/leonardo.md`](docs/leonardo.md) — authenticating, environment setup, and SLURM job
-  submission on the Leonardo cluster.
-- [`competition/track-details/`](competition/track-details/) — the organizer briefing,
-  reference data, and `generate_sequences.py` (the canonical grammar and validator).
+Python ≥ 3.10 and the packages in [`requirements.txt`](requirements.txt) (PyTorch, NumPy, pandas,
+OmegaConf, matplotlib). The benchmark is CPU-only; the xLSTM architecture additionally needs CUDA
+(`pip install "xlstm>=1.0.7"` on a GPU node). On Leonardo the pinned environment is managed by pixi
+(`pixi.toml`). Released under the MIT License — see [`LICENSE`](LICENSE).

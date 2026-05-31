@@ -207,7 +207,7 @@ trigram,ID,next-step,top1,0.7212,226
 trigram,ID,next-step,top3,0.9823,226
 trigram,ID,next-step,top5,1.0,226
 trigram,ID,next-step,mrr,0.8555,226
-trigram,ID,completion,ned,0.6289,90
+trigram,ID,completion,ned,0.606,90
 trigram,ID,completion,exact_match,0.0,90
 trigram,ID,completion,token_acc,0.2141,90
 trigram,ID,completion,block_acc,0.5399,90
@@ -217,7 +217,7 @@ trigram,LoFO_mosfet,next-step,top1,0.7717,92
 trigram,LoFO_mosfet,next-step,top3,1.0,92
 trigram,LoFO_mosfet,next-step,top5,1.0,92
 trigram,LoFO_mosfet,next-step,mrr,0.8859,92
-trigram,LoFO_mosfet,completion,ned,0.5868,30
+trigram,LoFO_mosfet,completion,ned,0.5668,30
 trigram,LoFO_mosfet,completion,exact_match,0.0,30
 trigram,LoFO_mosfet,completion,token_acc,0.1562,30
 trigram,LoFO_mosfet,completion,block_acc,0.6734,30
@@ -227,7 +227,7 @@ trigram,LoFO_igbt,next-step,top1,0.6452,62
 trigram,LoFO_igbt,next-step,top3,0.9355,62
 trigram,LoFO_igbt,next-step,top5,0.9355,62
 trigram,LoFO_igbt,next-step,mrr,0.7903,62
-trigram,LoFO_igbt,completion,ned,0.6129,30
+trigram,LoFO_igbt,completion,ned,0.5957,30
 trigram,LoFO_igbt,completion,exact_match,0.0,30
 trigram,LoFO_igbt,completion,token_acc,0.1269,30
 trigram,LoFO_igbt,completion,block_acc,0.5899,30
@@ -237,7 +237,7 @@ trigram,LoFO_ic,next-step,top1,0.5417,72
 trigram,LoFO_ic,next-step,top3,0.8472,72
 trigram,LoFO_ic,next-step,top5,0.8472,72
 trigram,LoFO_ic,next-step,mrr,0.6921,72
-trigram,LoFO_ic,completion,ned,0.7443,30
+trigram,LoFO_ic,completion,ned,0.7242,30
 trigram,LoFO_ic,completion,exact_match,0.0,30
 trigram,LoFO_ic,completion,token_acc,0.1213,30
 trigram,LoFO_ic,completion,block_acc,0.3472,30
@@ -247,7 +247,7 @@ grammar,ID,next-step,top1,0.7212,226
 grammar,ID,next-step,top3,0.9956,226
 grammar,ID,next-step,top5,1.0,226
 grammar,ID,next-step,mrr,0.8595,226
-grammar,ID,completion,ned,0.563,90
+grammar,ID,completion,ned,0.5473,90
 grammar,ID,completion,exact_match,0.0,90
 grammar,ID,completion,token_acc,0.2161,90
 grammar,ID,completion,block_acc,0.5103,90
@@ -257,7 +257,7 @@ grammar,LoFO_mosfet,next-step,top1,0.7717,92
 grammar,LoFO_mosfet,next-step,top3,1.0,92
 grammar,LoFO_mosfet,next-step,top5,1.0,92
 grammar,LoFO_mosfet,next-step,mrr,0.8859,92
-grammar,LoFO_mosfet,completion,ned,0.5876,30
+grammar,LoFO_mosfet,completion,ned,0.5706,30
 grammar,LoFO_mosfet,completion,exact_match,0.0,30
 grammar,LoFO_mosfet,completion,token_acc,0.1562,30
 grammar,LoFO_mosfet,completion,block_acc,0.6446,30
@@ -277,7 +277,7 @@ grammar,LoFO_ic,next-step,top1,0.5417,72
 grammar,LoFO_ic,next-step,top3,0.8472,72
 grammar,LoFO_ic,next-step,top5,0.8472,72
 grammar,LoFO_ic,next-step,mrr,0.6921,72
-grammar,LoFO_ic,completion,ned,0.7424,30
+grammar,LoFO_ic,completion,ned,0.7217,30
 grammar,LoFO_ic,completion,exact_match,0.0,30
 grammar,LoFO_ic,completion,token_acc,0.122,30
 grammar,LoFO_ic,completion,block_acc,0.3371,30

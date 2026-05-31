@@ -19,9 +19,9 @@ neurosymbolic,anomaly,f1,1.000,1.000,0.000
 neurosymbolic,anomaly,auc,1.000,1.000,0.000
 grammar,next-step,top1,0.721,0.653,0.068
 grammar,next-step,mrr,0.860,0.789,0.070
-grammar,completion,ned,0.563,0.581,-0.018
+grammar,completion,ned,0.547,0.568,-0.021
 grammar,completion,block_acc,0.510,0.527,-0.017
 trigram,next-step,top1,0.721,0.653,0.068
 trigram,next-step,mrr,0.856,0.789,0.066
-trigram,completion,ned,0.629,0.648,-0.019
+trigram,completion,ned,0.606,0.629,-0.023
 trigram,completion,block_acc,0.540,0.537,0.003
