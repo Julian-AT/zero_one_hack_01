@@ -29,6 +29,8 @@ Before training anything we computed a trigram with backoff. It reaches Top 5 of
 
 ## How to run it
 
+**Locally (CPU or CUDA).** Reproduces the whole comparison from a clean checkout with no cluster access.
+
 ```bash
 git clone https://github.com/Julian-AT/zero_one_hack_01
 cd zero_one_hack_01
@@ -39,7 +41,30 @@ pip install -r requirements.txt
 ./reproduce.sh quick    # smoke test under 2 min: baselines and neurosymbolic only
 ```
 
-`reproduce.sh` runs five stages under `shared/benchmark/`: build the frozen eval set with deterministic seeds (`make_eval_set.py`), generate training data (`make_train_data.py`), train the compact checkpoints (`train_txl.sh`, `train_ssl.sh`), run every system and score with the official metrics (`make_benchmark.py`), then aggregate tables and figures (`report.py`). It auto detects CUDA and otherwise runs on CPU; the Apple MPS backend is skipped because its embedding gather kernel is unstable for this model. Score one task directly:
+`reproduce.sh` runs five stages under `shared/benchmark/`: build the frozen eval set with deterministic seeds (`make_eval_set.py`), generate training data (`make_train_data.py`), train the compact checkpoints (`train_txl.sh`, `train_ssl.sh`), run every system and score with the official metrics (`make_benchmark.py`), then aggregate tables and figures (`report.py`). It auto detects CUDA and otherwise runs on CPU; the Apple MPS backend is skipped because its embedding gather kernel is unstable for this model.
+
+**On Leonardo (GPU).** The same pipeline on one A100, about 15 minutes. Run from a login node; it submits to a GPU node and needs no internet on the compute node.
+
+```bash
+# 1. clone into scratch space
+cd "$SCRATCH"
+git clone https://github.com/Julian-AT/zero_one_hack_01 zero_one_hack_01
+cd zero_one_hack_01
+
+# 2. build the environment (login node)
+bash shared/scripts/leonardo/setup_env.sh
+
+# 3. submit to a GPU node with your account
+sbatch --account=<your_account> reproduce.sbatch
+
+# 4. watch the job
+squeue --me
+tail -f reproduce-*.out
+```
+
+`reproduce.sbatch` requests one A100 on the `boost_usr_prod` partition, loads the `cuda` and `gcc` modules, and runs `reproduce.sh` on the GPU using the environment from step 2. Add `--reservation=<name>` only if your project uses one. Outputs match the local run: `shared/benchmark/results_summary.csv` and `submission/UNIFIED_BENCHMARK.md`. The full scale training grids (context window 768, the xLSTM architecture, multiple sizes) are in `shared/scripts/slurm/`.
+
+Score one task directly with the official scorer, in either environment:
 
 ```bash
 python shared/benchmark/score.py --task anomaly \
