@@ -2,15 +2,17 @@
 # One-shot, location-agnostic training setup: pixi + all Python/PyTorch deps.
 #
 #   git clone https://github.com/Julian-AT/zero_one_hack_01.git
-#   bash zero_one_hack_01/scripts/leonardo/setup_env.sh
+#   bash zero_one_hack_01/shared/scripts/leonardo/setup_env.sh
 #
 # On Leonardo: clone into $SCRATCH and run from a login node (internet works there).
 # Re-running is safe and idempotent.
 set -euo pipefail
 
 # --- resolve repo root from this script's own location -----------------------
+# This script lives at <repo>/shared/scripts/leonardo/, so the repo root is three
+# levels up (leonardo -> scripts -> shared -> repo).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 cd "$REPO_ROOT"
 
 # --- keep pixi + envs inside the repo (no dependence on $HOME or $SCRATCH) ----

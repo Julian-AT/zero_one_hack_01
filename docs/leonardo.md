@@ -1,9 +1,4 @@
-# LEONARDO Supercomputer — Agent Operations Guide
-
-> Purpose: a single, self-contained reference for an AI agent that must (1) authenticate and log in to the LEONARDO supercomputer, (2) navigate login and compute (training) nodes, and (3) submit and monitor GPU model-training jobs via SLURM.
-> Context: AI Factory Austria (AI:AT) hackathon access to LEONARDO at CINECA. Hackathon-specific values are flagged with **[HACKATHON]**.
-
----
+# LEONARDO Supercomputer — Operations Guide
 
 ## 0. TL;DR — Minimal path to a running training job
 
@@ -20,19 +15,6 @@ Key constants for LEONARDO Booster (GPU) nodes — **fair-share rule of thumb**:
 - `--cpus-per-task` ≈ `8 × gpus-per-task`
 - `--gpus-per-task` up to 4; `--ntasks-per-node=1` (best practice on GPU nodes).
 - Max walltime on the production GPU QoS examples here: `24:00:00`; debug QoS: `00:30:00`.
-
----
-
-> **Credentials / config live in `.env`.** Read connection details and tokens from the project `.env` rather than hardcoding them. Relevant variables:
-> - `LEONARDO_SUPERCOMPUTER_SSH_USERNAME` — your CINECA/LEONARDO username (part before the `@`)
-> - `LEONARDO_SUPERCOMPUTER_SSH_PASSWORD` — identity-provider password used during `step ssh login` (hackathon: no 2FA code needed)
-> - `LEONARDO_SUPERCOMPUTER_SSH_HOST` — login node, e.g. `login05-ext.leonardo.cineca.it` (also valid: `login01/02/07-ext`)
-> - `GITHUB_PERSONAL_TOKEN` — token for cloning/pulling the repo (run git on a **login node**; compute nodes have no internet)
-> - `GITHUB_PROJECT_URL` — the project repo, e.g. `https://github.com/Julian-AT/zero_one_hack_01`
->
-> Copy `.env.example` → `.env` and fill in the blanks. Build the SSH target in code as `"${LEONARDO_SUPERCOMPUTER_SSH_USERNAME}@${LEONARDO_SUPERCOMPUTER_SSH_HOST}"` and use it as `ssh "<that>"`.
-
----
 
 ## 1. System Overview
 
