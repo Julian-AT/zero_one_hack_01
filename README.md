@@ -15,6 +15,7 @@ The three submission tasks (next-step prediction, sequence completion, anomaly d
 scored with `eval_metrics.py`. Results are in
 [`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md). The technical write-up is in
 [`REPORT.md`](REPORT.md).
+Our Report can also be viewed here: https://zeroone.julianschmidt.cv/
 
 ## Run it on Leonardo (GPU)
 
