@@ -1,19 +1,19 @@
-# Team Attention Seeker - Track 1 (Industry) Submission
+# Team Attention Seeker: Track 1 (Industry) Submission
 
-We test whether a model can actually learn the grammar of semiconductor fab routes or just memorize them. It learns to predict the next step, complete partial routes, and flag rule violations from synthetic data, and we check real generalization by holding out an entire product family at test time.
+We test whether a model can learn the grammar of semiconductor fab routes or only memorize them. It learns to predict the next step, complete partial routes, and flag rule violations from synthetic data. We measure generalization by holding out an entire product family at test time.
 
 We built and compared **three approaches** on a single shared benchmark:
 
-- **Transformer** — `models/transformer_xlstm/`. A decoder transformer (optionally xLSTM) with a
+- **Transformer** (`models/transformer_xlstm/`): a decoder transformer (optionally xLSTM) with a
   compositional tokenizer and multitask validity/rule heads. Our most mature model.
-- **SSL-Hybrid** — `models/self-supervised/`. A self-supervised transformer with semantic-feature
+- **SSL-Hybrid** (`models/self-supervised/`): a self-supervised transformer with semantic-feature
   and family embeddings, plus retrieval/rerank.
-- **Neurosymbolic** — `models/neurosymbolic/`. A symbolic grammar and 10-rule oracle with role
+- **Neurosymbolic** (`models/neurosymbolic/`): a symbolic grammar and 10-rule oracle with role
   induction, ranked by a zero-parameter PPM.
 
 The three submission tasks (next-step prediction, sequence completion, anomaly detection) are
-scored via `eval_metrics.py`. The results can be found here:
-[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md); the technical write-up is in
+scored with `eval_metrics.py`. Results are in
+[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md). The technical write-up is in
 [`REPORT.md`](REPORT.md).
 
 ## Run it on Leonardo (GPU)
@@ -52,10 +52,10 @@ git clone <repo-url> && cd zero_one_hack_01
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-./reproduce.sh           # build eval set → train compact models → score → write the report
+./reproduce.sh           # build eval set, train compact models, score, write the report
 ```
 
-`reproduce.sh` runs the same comparison end to end. It auto-detects CUDA (≈10 min) and otherwise runs on CPU (≈60–75 min).
+`reproduce.sh` runs the same comparison end to end. It auto-detects CUDA (≈10 min) and otherwise runs on CPU (≈60 to 75 min).
 
 ## Repository layout
 
@@ -80,19 +80,19 @@ tests/                 pytest suite for tokenizers, validator, metrics, I/O
 
 ## Deliverables
 
-- [x] **[`REPORT.md`](REPORT.md)** — the technical report.
-- [x] **[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md)** — all three approaches on
+- [x] **[`REPORT.md`](REPORT.md)**: the technical report.
+- [x] **[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md)**: all three approaches on
   one eval set with the official metrics, in-distribution and out-of-distribution (held-out family).
-- [x] **[`competition/participant-files/predictions/`](competition/participant-files/predictions/)** —
+- [x] **[`competition/participant-files/predictions/`](competition/participant-files/predictions/)** holds
   the submission CSVs: `predictions_nextstep.csv`, `predictions_completion.csv`, `predictions_anomaly.csv`.
-- [x] **Scores from `eval_metrics.py`** on all three tasks, with a per-family breakdown — reported in
+- [x] **Scores from `eval_metrics.py`** on all three tasks, with a per-family breakdown, reported in
   [`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md). Reproduce a single task, e.g. anomaly:
   ```bash
   python competition/participant-files/eval_metrics.py --task anomaly \
       --ground-truth shared/extras/results/eval_inputs/eval_input_anomaly_truth.csv \
       --predictions  competition/participant-files/predictions/predictions_anomaly.csv
   ```
-- [x] Training artifacts — per-run config and final loss in `shared/extras/checkpoints/*/summary.json`,
+- [x] **Training artifacts**: per-run config and final loss in `shared/extras/checkpoints/*/summary.json`,
   TensorBoard loss curves in `shared/extras/logs/`.
 
 ## License
