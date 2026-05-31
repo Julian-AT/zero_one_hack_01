@@ -1,554 +1,208 @@
-# REPORT — Industrial AI (Infineon): Learning Semiconductor Process Logic
-
-> **Front door for the jury and for colleagues writing the final report/slides.**
-> This is the concise spine. The full technical write-up lives in
-> [`models/self-supervised/README.md`](./models/self-supervised/README.md). Detailed sub-reports are linked inline.
-
----
-
-## TL;DR
-
-We built an end-to-end **synthetic process-logic data engine + sequence-modeling pipeline** for
-semiconductor fabrication routes (MOSFET / IGBT / IC). A hybrid self-supervised Transformer learns
-the valid process grammar, and we ship organizer-format predictions for all three eval tasks.
-Internal held-out next-step accuracy is **~80% Top-1 / ~99% Top-3 / ~100% Top-5**; the correct next
-step is almost always in the model's Top-5, so our final gains come from **reranking**, not bigger models.
-
-The **main contribution is the data-generation, validation, and evaluation workflow** — the model is
-one component in a broader process-logic learning system.
-
-> **Caveat (read once):** the organizer eval inputs are **unlabeled**. We can produce
-> official-format prediction files and internal held-out metrics, but **only the organizers can
-> compute official accuracy** (see [Why official accuracy is unavailable](#why-official-accuracy-is-unavailable-locally)).
-
----
-
-## Problem
-
-Given synthetic semiconductor fabrication sequences, learn real *process logic* (not surface
-memorization) and support four tasks: **next-step prediction**, **sequence completion**,
-**anomaly detection**, and **rule attribution**. Sequences are ordered process steps; ~120-token
-vocabulary; 10 documented forbidden patterns define validity.
-
-## Approach (what we built)
-
-1. **Data engine** — rule-based valid generation → **coverage-guided** valid generation (targets rare
-   steps/transitions/trigrams/blocks/rule-boundaries) → **easy invalid** (obvious violations) →
-   **hard invalid** near-misses → **task datasets** (next-step / completion / anomaly / rule-attribution).
-2. **Models** — a compact SSL step-token Transformer, ablated across +families and +semantic features,
-   culminating in the **hybrid coverage-guided** model used for submission.
-3. **Eval pipeline** — official-format prediction generation, then three ranking/decoding strategies on
-   top: rule-aware reranking, retrieval augmentation, and a **learned contrastive reranker**.
-4. **Diagnostics** — row-count checks and prediction-distribution plots (no labels required).
-
-## Which approach produced which result — and what is final
-
-| # | Approach | Code | Result / report | Status |
-|---|---|---|---|---|
-| 1 | Original SSL | `competition/track-details/scripts/train_ssl_process_transformer.py` | `models/self-supervised/original_metrics.csv` | baseline |
-| 2 | Augmented SSL | same script (more families) | `models/self-supervised/augmented_metrics.csv` | ablation |
-| 3 | Hybrid SSL (semantic features) | `competition/track-details/scripts/train_ssl_hybrid_process_transformer.py` | `models/self-supervised/hybrid_augmented_metrics.csv` | ablation |
-| 4 | **Coverage-guided hybrid** | hybrid script + `data/generate_coverage_guided.py` | `models/self-supervised/hybrid_coverage_guided_metrics.csv` | ✅ **final submission model** (`runs/ssl_hybrid_new_coverage_guided_v1`) |
-| 5 | Rule-aware reranking | `competition/participant-files/rerank_nextstep_with_rules.py` | `competition/participant-files/predictions/rerank_nextstep_report.md` | superseded by #7 |
-| 6 | Retrieval augmentation | `competition/participant-files/retrieval_augmented_eval.py` | `competition/participant-files/predictions/retrieval_augmented_report.md` | ⚠️ exploratory — **0% prefix match, discarded** |
-| 7 | **Learned contrastive reranker** | `competition/participant-files/train_learned_contrastive_reranker.py` | `competition/participant-files/predictions/learned_reranker_report.md` | ✅ **applied to final next-step** |
-| 8 | Validator-based anomaly | inside `competition/participant-files/make_eval_predictions.py` | `predictions_anomaly.csv` | ✅ final anomaly output |
-| 9 | Easy/hard invalid generation | `data/generate_invalid_sequences.py`, `generate_hard_invalid_sequences.py` | (generated data, gitignored) | ✅ supports anomaly/attribution/reranking |
-
-## Results (internal held-out)
-
-| Model | Test loss | Top-1 | Top-3 | Top-5 | MRR |
-|---|---:|---:|---:|---:|---:|
-| Original step-token | 0.7631 | 0.8125 | 0.9955 | 0.9999 | 0.9034 |
-| Augmented step-token | 0.7606 | 0.8117 | 0.9960 | 0.9999 | 0.9029 |
-| Hybrid semantic-feature augmented | 0.7607 | 0.8116 | 0.9960 | 0.9999 | 0.9029 |
-| **Hybrid coverage-guided (final base model)** | 0.7829 | 0.8031 | 0.9932 | 0.9997 | 0.8976 |
-
-**Final next-step ranking (learned contrastive reranker, internal):** Top-1 0.7993 → **0.8044**
-(+0.0052), MRR 0.8947 → **0.8979** (+0.0033) on the held-out test split — consistent on validation
-too, so it was adopted as the active `predictions_nextstep.csv`.
-
-**Final submission files** (formats validated against `competition/participant-files/eval_metrics.py`):
-
-| File | Rows incl. header | Content |
-|---|---:|---|
-| `competition/participant-files/predictions/predictions_nextstep.csv` | 601 | learned-reranked Top-5 |
-| `competition/participant-files/predictions/predictions_completion.csv` | 601 | model greedy completion |
-| `competition/participant-files/predictions/predictions_anomaly.csv` | 988 | validator-based validity + rule |
-
-## Why official accuracy is unavailable locally
-
-The eval inputs ship **without labels** (`NEXT_STEP`, `FULL_SEQUENCE`, `IS_VALID`, `VIOLATION_RULE`
-are hidden). So locally we have **internal held-out accuracy** + **prediction distribution
-diagnostics** only; **official Top-1/F1/AUC are organizer-computed**. We never report a fabricated
-official score. Diagnostics: [`competition/participant-files/eval_plots/eval_prediction_report.md`](./competition/participant-files/eval_plots/eval_prediction_report.md).
-
-## What worked / what was exploratory
-
-- **Worked / used:** coverage-guided data engine (#1–4, #9), the hybrid coverage-guided model (#4),
-  the learned contrastive reranker (#7, real Top-1/MRR gain), validator-based anomaly (#8).
-- **Exploratory / not in deliverable:** retrieval augmentation (#6 — 0% prefix overlap with the eval
-  bank, so it changed nothing and was discarded); rule-aware heuristic reranker (#5 — only ≈+0.0004
-  Top-1, superseded by the learned reranker).
-- **Not fully done (honest):** a true multi-task neural model with anomaly/rule-attribution *heads* —
-  invalid data was used for reranking/validation features, not direct neural multi-task training.
-
-## How to run it
-
-Training and prediction require the **Leonardo GPU cluster** and the trained checkpoint at
-`competition/track-details/runs/ssl_hybrid_new_coverage_guided_v1/checkpoint_best.pt`
-(large; gitignored). High level:
-
-```bash
-# 1. (Leonardo) generate data
-python competition/track-details/data/generate_coverage_guided.py
-python competition/track-details/data/generate_invalid_sequences.py
-python competition/track-details/data/generate_hard_invalid_sequences.py
-python competition/track-details/data/build_task_datasets.py
-
-# 2. (Leonardo GPU) train the final hybrid model
-sbatch competition/track-details/scripts/run_train_ssl_hybrid_newdata_normal_gpu.slurm
-
-# 3. generate official-format predictions (uses the trained checkpoint)
-python competition/participant-files/make_eval_predictions.py
-
-# 4. (optional) apply the learned contrastive reranker to next-step
-sbatch competition/participant-files/run_learned_contrastive_reranker.slurm
-
-# 5. local-only diagnostics (no GPU, no labels needed)
-python competition/participant-files/plot_eval_predictions.py
-```
-
-Build the submission archive (PowerShell, Windows):
-
-```powershell
-Compress-Archive -Path participant_files\predictions\predictions_nextstep.csv,participant_files\predictions\predictions_completion.csv,participant_files\predictions\predictions_anomaly.csv -DestinationPath submission_predictions.zip -Force
-```
-
-## What we'd do with another 36 hours
-
-Multi-task Transformer with next-step + validity + rule-attribution heads; train directly on the
-invalid data; pairwise ranking with harder negatives; held-out family/branch OOD evaluation; beam
-search + validator pruning for completion; error-driven regeneration around failure modes.
-
-## Credits & dependencies
-
-Python, PyTorch, pandas, matplotlib. Compute: CINECA Leonardo (A100). Synthetic data and scoring
-script (`eval_metrics.py`) provided by the organizers. See `requirements.txt` and `pyproject.toml`.
-
----
-
-### Document map
-
-- Deep technical write-up: [`models/self-supervised/README.md`](./models/self-supervised/README.md)
-- Track briefing & data: [`competition/track-details/README.md`](./competition/track-details/README.md), [`competition/track-details/training_data/README.md`](./competition/track-details/training_data/README.md)
-- Final predictions: [`competition/participant-files/predictions/README.md`](./competition/participant-files/predictions/README.md)
-- Eval diagnostics: [`competition/participant-files/eval_plots/eval_prediction_report.md`](./competition/participant-files/eval_plots/eval_prediction_report.md)
-- **Cross-model comparison:** [`shared/benchmark/RESULTS.md`](./benchmark/RESULTS.md) (plan: [`shared/benchmark/benchmark_plan.md`](./benchmark/benchmark_plan.md), harness: [`shared/benchmark/README.md`](./benchmark/README.md))
-
-
----
-
-# abb — Industrial AI (Infineon)
+# Attention Seekers, Industrial AI (Infineon)
 
 ## Team
 
-- **abb** — ML / infra / writing
+* **Kyrillus Mehanni:** Senior Software Engineer - Symbolic Approach & DevOps
+* **Julian Schmidt:** AI Engineer - Model Training
+* **Emil Kascper:** AI Engineer - Model Training
+* **Abdul Basit Banbhan:** AI Researcher & Engineer - Direction of AI Research, Model Training
 
 **Track:** Industrial AI (Infineon)
 
----
-
 ## TL;DR
 
-A trigram-with-backoff already scores Top-5 = 0.993 in-distribution on this task, so we did not try to beat it with raw model size. Instead we built a hybrid stack: symbolic validator + grammar-constrained decoder + k-NN retrieval + a compositionally-tokenized multi-task transformer with validity and rule-attribution heads. The Task 3 ensemble (validator first, learned heads as fallback) gets **100% binary accuracy and 100% rule attribution** on a held-out mix of valid and corrupted sequences. Compositional word-tokenization plus parsed physics features from the `longdescription_parameters` CSVs are positioned as the OOD lever for the hidden 4th family.
-
----
+We built three process logic systems for semiconductor fabrication routes (a decoder transformer, a self supervised hybrid, and a zero parameter neurosymbolic engine) and scored all three, plus two baselines, on one shared labeled eval set with the official `eval_metrics.py`, both in distribution and on a held out product family. The central finding is that in distribution accuracy is a trap: a 50 line trigram already reaches Top 5 of about 0.99, so it does not separate approaches, and bigger models do not help either (three transformer sizes converge to within 0.0001 language model loss). What separates memorization from process logic is generalization to an unseen family and whether completions respect the rules: the trigram introduces a new rule violation in 50 percent of its completions, while every structure aware system stays at zero new violations. Our single largest improvement was not a bigger model but fixing a context window bug that was truncating the process backbone, which raised held out next step accuracy by 29 points.
 
 ## Problem
 
-Three submission tasks plus a post-submission OOD evaluation on a hidden 4th product family:
+Semiconductor routes are ordered sequences of roughly 110 to 150 steps over a vocabulary of about 120 step strings, where validity is defined by ten documented forbidden patterns (for example, a deposition requires a prior clean, and electrical tests must follow passivation).
 
-1. **Next-step prediction** (Top-1/3/5, MRR)
-2. **Sequence completion** at 60% and 80% truncation (Exact Match, NED, Token Acc, Block Acc)
-3. **Anomaly detection** (Binary Acc, F1, Rule Attribution)
-4. **OOD generalization** (post-hoc, organizer-scored)
-
-We treated task 4 as the actual competition. Tasks 1 and 2 are largely saturated by an n-gram on the provided data — the real differentiator is how the system behaves on a family it never saw during training.
-
----
+Before training anything we computed a trigram with backoff. It reaches Top 5 of about 0.99 in distribution, identical to the memorization upper bound, and its in distribution accuracy is unchanged on a held out split. The provided task therefore carries almost no model relevant entropy in distribution. The same trigram collapses out of distribution: under a leave one family out split its next step accuracy drops sharply, which quantifies the real gap. So the problem we chose is not raw in distribution accuracy but two harder questions: does a system generalize its process understanding to a product family it never saw in training, and does it complete and validate routes in a way that respects process logic rather than reproducing memorized strings. The work targets the three scored tasks (next step prediction, sequence completion, anomaly detection with rule attribution) and the organizer evaluated fourth task, out of distribution generalization to a hidden family, approximated here by a leave one family out protocol.
 
 ## Approach
 
-**EDA-first reframing.** Before training anything, we computed a trigram-with-backoff baseline. Top-5 hit 0.993 on a held-out 80/20 split, identical to the memorization upper bound. That said the task has so little entropy on ID that we should not throw GPUs at it. The leave-one-family-out (LoFO) drop to ~0.50 Top-1 quantified the OOD gap we needed to close.
-
-**Hybrid stack, picked tool-per-task:**
-
-- **N-gram + grammar mask + k-NN retrieval** — three cheap baselines that already lift completion NED on MOSFET frac=0.8 from 0.999 (drift) to 0.126 (grammar-trigram) and 0.160 (retrieval).
-- **Compositional word-tokenization** — instead of treating each step string as one token (vocab ~200), we split into word tokens (vocab ~70 + delimiters). A new step in a hidden family that shares words with seen steps is no longer fully OOD.
-- **Multi-task transformer** — decoder-only with RoPE + RMSNorm + SwiGLU + SDPA causal attention. Three heads: next-token LM, binary validity on `<EOS>`, 11-way rule-ID. Trained on infinite online-generated data with 40% of sequences carrying an injected rule violation labeled by the validator.
-- **Symbolic validator as anomaly oracle** — the organizers' `validate_sequence` directly catches the 10 documented rule violations; we put it first in the anomaly ensemble.
-- **Physics features lookup** — parsed `*_longdescription_parameters.csv` into a 10-dim feature vector per step (temp, log_time, log_thickness, log_pressure, energy_keV, log_dose, tool category, is_wet, is_anneal, is_implant). 136 unique steps covered. Positioned as a learnable input projection for the hidden family.
-
-**Training infrastructure:** Leonardo cluster, 4 A100s/team, reservation `s_tra_ncc`, account `euhpc_d30_031`. Pixi-managed env with torch 2.5.1 (cu121), conda-forge `libstdcxx-ng`. xLSTM CUDA kernels JIT-compile on first use — required `module load gcc/12.2.0 cuda/12.6` in the SLURM script.
-
-**Scaling grid (7 cells):**
-
-| Architecture | Sizes | Tokenization | Goal |
-|---|---|---|---|
-| Transformer | 5M / 25M / 100M | compositional | scaling curve |
-| xLSTM-mixed (mLSTM + sLSTM) | 5M / 25M / 100M | compositional | non-Transformer arch comparison |
-| Transformer | 25M | step-as-token | tokenization ablation |
-
----
+* **One eval set, one official scorer, five systems, two regimes.** Every system is scored on the same frozen labeled eval set with `eval_metrics.py`, in distribution (all three families in training) and leave one family out (train on two families, score the held out third). This makes the comparison like for like, which the earlier per model reports did not.
+* **Decoder transformer with an xLSTM variant (the submission model).** Rotary position embeddings, RMSNorm, multitask validity and rule heads, trained on an online generator stream with 40 percent of sequences carrying a labeled rule violation. A compositional tokenizer splits each step string into word tokens, so a new step in an unseen family that shares words is not fully out of distribution. The dominant quality lever is the context window, because a short window truncates the long route.
+* **Self supervised hybrid with retrieval.** A self supervised causal model with semantic step features and product family embeddings, plus a learned contrastive reranker over its Top 5 candidates.
+* **Neurosymbolic engine with zero trained parameters.** An induced grammar and the ten rule oracle define which next steps are legal at each prefix; a role factored Prediction by Partial Matching ranker orders the legal candidates. Correctness is owned by the symbolic spine, so it transfers to an unseen family with almost no drop.
+* **Two baselines.** A trigram with backoff (the memorization floor) and the same trigram under a grammar mask. The full benchmark runs from a clean checkout on CPU or CUDA; production grids run on the Leonardo cluster (NVIDIA A100).
 
 ## How to run it
 
+**Locally (CPU or CUDA).** Reproduces the whole comparison from a clean checkout with no cluster access.
+
 ```bash
-# 1. Clone
-git clone https://github.com/Julian-AT/zero_one_hack_01.git
+git clone https://github.com/Julian-AT/zero_one_hack_01
 cd zero_one_hack_01
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 
-# 2. Environment (Leonardo or any CUDA host)
-bash shared/scripts/leonardo/setup_env.sh
-
-# 3. Trigram baseline (no GPU, ~3 s)
-.pixi/bin/pixi run trigram
-
-# 4. Single training cell
-sbatch --export=ALL,CONFIG=configs/arch/transformer_small.yaml shared/scripts/slurm/train.sbatch
-
-# 5. Full 7-cell scaling grid
-sbatch shared/scripts/slurm/grid.sbatch
-
-# 6. Multi-task training (validity + rule-ID heads)
-sbatch shared/scripts/slurm/multitask.sbatch
-
-# 7. Eval (Top-K, completion, anomaly) on a checkpoint
-sbatch --export=ALL,CKPT=shared/extras/checkpoints/multitask-transformer_medium-.../final.pt,OUT=shared/extras/results/eval/foo shared/scripts/slurm/eval.sbatch
-
-# 8. Generate the three submission CSVs
-sbatch --export=ALL,CKPT=shared/extras/checkpoints/multitask-transformer_medium-.../final.pt shared/scripts/slurm/submission.sbatch
+./reproduce.sh          # full run: CPU about 60 to 75 min, CUDA about 10 min
+./reproduce.sh quick    # smoke test under 2 min: baselines and neurosymbolic only
 ```
 
-Outputs land under `shared/extras/{checkpoints,logs,results}/`.
+`reproduce.sh` runs five stages under `shared/benchmark/`: build the frozen eval set with deterministic seeds (`make_eval_set.py`), generate training data (`make_train_data.py`), train the compact checkpoints (`train_txl.sh`, `train_ssl.sh`), run every system and score with the official metrics (`make_benchmark.py`), then aggregate tables and figures (`report.py`). It auto detects CUDA and otherwise runs on CPU; the Apple MPS backend is skipped because its embedding gather kernel is unstable for this model.
 
----
+**On Leonardo (GPU).** The same pipeline on one A100, about 15 minutes. Run from a login node; it submits to a GPU node and needs no internet on the compute node.
+
+```bash
+# 1. clone into scratch space
+cd "$SCRATCH"
+git clone https://github.com/Julian-AT/zero_one_hack_01 zero_one_hack_01
+cd zero_one_hack_01
+
+# 2. build the environment (login node)
+bash shared/scripts/leonardo/setup_env.sh
+
+# 3. submit to a GPU node with your account
+sbatch --account=<your_account> reproduce.sbatch
+
+# 4. watch the job
+squeue --me
+tail -f reproduce-*.out
+```
+
+`reproduce.sbatch` requests one A100 on the `boost_usr_prod` partition, loads the `cuda` and `gcc` modules, and runs `reproduce.sh` on the GPU using the environment from step 2. Add `--reservation=<name>` only if your project uses one. Outputs match the local run: `shared/benchmark/results_summary.csv` and `submission/UNIFIED_BENCHMARK.md`. The full scale training grids (context window 768, the xLSTM architecture, multiple sizes) are in `shared/scripts/slurm/`.
+
+Score one task directly with the official scorer, in either environment:
+
+```bash
+python shared/benchmark/score.py --task anomaly \
+  --predictions  shared/benchmark/predictions/ID/neurosymbolic/predictions_anomaly.csv \
+  --ground-truth shared/benchmark/eval_set_v1/ground_truth/anomaly_gt.csv
+```
 
 ## Results
 
-### Trigram baseline (no learning)
+**Eval set.** Built by `make_eval_set.py` with benchmark only seeds (90001, 90002, 90003 valid; 90010, 90011 invalid), disjoint from training. Next step is scored at the organizer 60 percent and 80 percent truncation points.
 
-| Setup | Top-1 | Top-3 | Top-5 | MRR |
-|---|--:|--:|--:|--:|
-| Memorization upper bound | 0.722 | 0.968 | **0.993** | 0.844 |
-| Honest 80/20 held-out | 0.717 | 0.968 | **0.993** | 0.842 |
-| LoFO MOSFET (train IGBT+IC) | 0.502 | 0.679 | 0.728 | 0.598 |
-| LoFO IGBT  | 0.481 | 0.660 | 0.707 | 0.577 |
-| LoFO IC    | 0.432 | 0.624 | 0.644 | 0.528 |
+<table>
+<tr><th>Task</th><th>Examples</th><th>MOSFET</th><th>IGBT</th><th>IC</th></tr>
+<tr><td>Next step at 60 and 80 percent cut</td><td>226</td><td>92</td><td>62</td><td>72</td></tr>
+<tr><td>Completion</td><td>90</td><td>30</td><td>30</td><td>30</td></tr>
+<tr><td>Anomaly (146 invalid, 113 valid)</td><td>259</td><td>98</td><td>68</td><td>93</td></tr>
+</table>
 
-ID Top-5 = 0.993 with no parameters. Held-out is identical to in-sample — the task carries almost no model-relevant entropy on ID. LoFO drops 25pp on Top-1 → this is the OOD gap we are competing on.
+**Headline metric.** In distribution next step Top 1: the transformer leads at 0.779. The neurosymbolic engine reaches 0.761 with zero trained parameters. The trigram floor is 0.721.
 
-### Grammar mask on top of trigram
+**Baseline comparison, Task 1 (next step).** Drop is the in distribution value minus the leave one family out value.
 
-| Metric | trigram | + grammar | delta |
-|---|--:|--:|--:|
-| ID Top-3 | 0.9675 | 0.9805 | **+1.3pp** |
-| ID Top-5 | 0.9930 | 0.9957 | +0.3pp |
-| MOSFET completion NED @ frac=0.8 | 0.999 | **0.126** | −87% |
-| MOSFET completion ExactMatch @ frac=0.8 | 0.000 | **0.025** | first non-zero |
+<table>
+<tr><th>System</th><th>Top 1 (ID)</th><th>Top 3</th><th>Top 5</th><th>MRR</th><th>Top 1 (LoFO)</th><th>Drop</th></tr>
+<tr><td><b>Transformer xLSTM</b></td><td><b>0.779</b></td><td>0.996</td><td>1.000</td><td><b>0.888</b></td><td>0.704</td><td>0.075</td></tr>
+<tr><td>Self supervised hybrid</td><td>0.765</td><td>1.000</td><td>1.000</td><td>0.883</td><td><b>0.721</b></td><td><b>0.045</b></td></tr>
+<tr><td>Neurosymbolic</td><td>0.761</td><td>0.996</td><td>1.000</td><td>0.879</td><td>0.660</td><td>0.101</td></tr>
+<tr><td>Grammar baseline</td><td>0.721</td><td>0.996</td><td>1.000</td><td>0.860</td><td>0.653</td><td>0.068</td></tr>
+<tr><td>Trigram baseline</td><td>0.721</td><td>0.982</td><td>1.000</td><td>0.856</td><td>0.653</td><td>0.068</td></tr>
+</table>
 
-Pure-inference gain via the organizers' `validate_sequence`.
+The trigram already reaches Top 5 of 1.000 in distribution, and every learned system lands within about six points on Top 1. In distribution next step does not separate approaches. The drops are small for all systems under this protocol because the 60 and 80 percent cut points fall in the process back end (metallization, passivation, test, ship), which is shared across families; an all position protocol that also probes family specific front end positions drives the trigram down toward 0.47.
 
-### k-NN retrieval (no parameters)
+**Task 2 (completion).** Edit distance is lower is better. Rule clean is the fraction of completions that introduce no new rule violation beyond the prefix.
 
-| frac | family | ExactMatch | NED |
-|---|---|--:|--:|
-| 0.6 | MOSFET | 0.000 | **0.230** |
-| 0.6 | IGBT   | 0.000 | 0.297 |
-| 0.6 | IC     | 0.000 | 0.323 |
-| 0.8 | MOSFET | **0.015** | 0.160 |
-| 0.8 | IGBT   | 0.000 | 0.241 |
-| 0.8 | IC     | 0.000 | 0.348 |
+<table>
+<tr><th>System</th><th>Edit distance (ID)</th><th>Block acc</th><th>Rule clean (ID)</th><th>Edit distance (LoFO)</th><th>Rule clean (LoFO)</th></tr>
+<tr><td><b>Transformer xLSTM</b></td><td><b>0.242</b></td><td><b>0.700</b></td><td>1.000</td><td><b>0.368</b></td><td>1.000</td></tr>
+<tr><td>Self supervised hybrid</td><td>0.318</td><td>0.645</td><td>1.000</td><td>0.384</td><td>0.833</td></tr>
+<tr><td>Neurosymbolic</td><td>0.706</td><td>0.576</td><td>1.000</td><td>0.748</td><td>1.000</td></tr>
+<tr><td>Grammar baseline</td><td>0.547</td><td>0.510</td><td>1.000</td><td>0.568</td><td>1.000</td></tr>
+<tr><td>Trigram baseline</td><td>0.606</td><td>0.540</td><td><b>0.500</b></td><td>0.629</td><td>0.511</td></tr>
+</table>
 
-Memory beats greedy generation; both stack well with the trigram.
+The transformer is closest to the reference (edit distance 0.242). The decisive column is rule clean: the trigram violates a process rule in half of its completions (0.500), while every structure aware system stays at 1.000 in distribution. The neurosymbolic edit distance is high (0.706) by design, because it emits a guaranteed rule valid but length divergent completion. Exact match is 0.000 for all systems and is not the right yardstick for a 30 to 60 step suffix.
 
-### Scaling grid — bigger is not better on ID
+**Task 3 (anomaly and rule attribution).** Baselines have no anomaly capability and are omitted.
 
-| Cell | Arch | Params | Tokenization | Final LM loss | Wall time |
-|---|---|--:|---|--:|--:|
-| 0 | transformer | 4.2M  | compositional | 0.1062 | 73 s |
-| 1 | transformer | 33.6M | compositional | **0.1061** | 255 s |
-| 2 | transformer | 113.4M | compositional | 0.1062 | 576 s |
-| 3 | xLSTM-mixed | 1.7M  | compositional | 0.1192 | 201 s |
-| 4 | xLSTM-mixed | 12.0M | compositional | 0.1093 | 529 s |
-| 5 | xLSTM-mixed | 38.8M | compositional | **0.1077** | 1033 s |
-| 6 | transformer | 33.7M | **step-as-token** (ablation) | 0.3258 | 251 s |
+<table>
+<tr><th>System</th><th>F1 (ID)</th><th>Precision</th><th>Recall</th><th>ROC AUC</th><th>Rule attribution</th><th>F1 (LoFO)</th></tr>
+<tr><td>Transformer xLSTM</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.980</td><td>1.000</td></tr>
+<tr><td>Self supervised hybrid</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.980</td><td>1.000</td></tr>
+<tr><td><b>Neurosymbolic</b></td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td><b>1.000</b></td><td>1.000</td></tr>
+</table>
 
-Three Transformer sizes collapse to within 0.0001 LM loss. xLSTM closes the gap with scale but never beats. Compositional vs step-as-token loss is not directly comparable (different per-token entropy) — the comparison that matters is OOD, evaluated post-submission.
+All three reach F1 of 1.000 in distribution because they share the same symbolic validator, which is exact on the ten rules. The differentiator is rule attribution (neurosymbolic 1.000) and that all three hold F1 of 1.000 out of distribution. The honest reading of this 1.000 is in the honesty note below.
 
-### Multi-task training (validity + rule-ID)
+**Scaling: bigger is not better on this task.** A seven cell grid varies architecture, size, and tokenization. Three transformer sizes spanning 4 M to 113 M parameters converge to within 0.0001 language model loss, so capacity is not the bottleneck. The xLSTM variant closes the gap only with scale, never beats the transformer, and runs three to four times slower per step. Step as token and compositional losses are not directly comparable because their per token entropy differs.
 
-```
-LM loss      0.1069   (≈ baseline 0.1061 — heads don't hurt LM)
-Validity BCE 0.1137
-Rule-ID  CE  0.1150   (11-way: 10 rules + valid)
-```
+<table>
+<tr><th>Architecture</th><th>Parameters</th><th>Tokenization</th><th>Final LM loss</th><th>Wall time</th></tr>
+<tr><td>Transformer</td><td>4.2 M</td><td>compositional</td><td>0.1062</td><td>73 s</td></tr>
+<tr><td>Transformer</td><td>33.6 M</td><td>compositional</td><td>0.1061</td><td>255 s</td></tr>
+<tr><td>Transformer</td><td>113.4 M</td><td>compositional</td><td>0.1062</td><td>576 s</td></tr>
+<tr><td>xLSTM mixed</td><td>1.7 M</td><td>compositional</td><td>0.1192</td><td>201 s</td></tr>
+<tr><td>xLSTM mixed</td><td>12.0 M</td><td>compositional</td><td>0.1093</td><td>529 s</td></tr>
+<tr><td>xLSTM mixed</td><td>38.8 M</td><td>compositional</td><td>0.1077</td><td>1033 s</td></tr>
+<tr><td>Transformer</td><td>33.7 M</td><td>step as token</td><td>0.3258</td><td>251 s</td></tr>
+</table>
 
-### End-to-end eval on a trained checkpoint
+**Efficiency.**
 
-Held-out 40/family, completion capped at 60 steps, grammar mask on, mixed valid+corrupted (50%) for anomaly:
+<table>
+<tr><th>System</th><th>Trainable parameters</th></tr>
+<tr><td>Transformer xLSTM</td><td>4.37 M</td></tr>
+<tr><td>Self supervised hybrid</td><td>0.67 M</td></tr>
+<tr><td>Neurosymbolic (PPM)</td><td>0 (about 0.68 M optional neural ranker)</td></tr>
+<tr><td>Trigram and Grammar</td><td>0</td></tr>
+</table>
 
-| Model | Top-1@cut (avg) | Top-5@cut (avg) | Anomaly acc | Rule attribution |
-|---|--:|--:|--:|--:|
-| transformer_medium (baseline) | 0.61 | 0.996 | **1.000** | **1.000** |
-| transformer_medium (multi-task) | 0.59 | 0.954 | **1.000** | **1.000** |
+**Per family breakdown.** The leave one family out columns above are the out of distribution view; per family next step, drop, completion, and anomaly figures are in `submission/benchmark_assets/` (`fig6_lofo_per_family.png`, `fig1_nextstep_id_vs_lofo.png`, `fig2_nextstep_drop.png`, `fig3_completion_ned.png`, `fig5_anomaly_f1.png`, `fig7_completion_ruleclean.png`).
 
-The validator + learned-head ensemble achieves perfect anomaly detection on ID. Top-1 is below the trigram (0.72) because the compositional model emits step strings by beam-searching word tokens, which is harder than direct step-token argmax — the trigram remains the right baseline for Top-1, the transformer is for OOD + completion structure.
-
-### Submission CSVs
-
-Three files in the documented format, generated on Leonardo from the multi-task checkpoint, validated against `eval_input_*.csv` schema (Section 5 of `generation_rules.md`):
-
-| File | Rows | Schema |
-|---|--:|---|
-| `shared/extras/results/submission/nextstep.csv`   | 600 | `EXAMPLE_ID, RANK_1, RANK_2, RANK_3, RANK_4, RANK_5` |
-| `shared/extras/results/submission/completion.csv` | 600 | `EXAMPLE_ID, PREDICTED_SEQUENCE` |
-| `shared/extras/results/submission/anomaly.csv`    | 300 | `EXAMPLE_ID, IS_VALID, SCORE, PREDICTED_RULE` |
-
-These are produced from our locally-simulated `eval_input_valid.csv` and `eval_input_anomaly.csv`. When organizers ship the real eval inputs, the same `make_submission.py` swaps them in (CLI flag).
-
----
+**Where the data came from.** Every value in the task tables is produced by the official scorer through `shared/benchmark/score.py`, aggregated by `report.py` into `shared/benchmark/results_summary.csv` and `submission/benchmark_assets/tables.md`, and rendered in `submission/UNIFIED_BENCHMARK.md`. The scaling and context window numbers come from the production transformer grids logged under `shared/extras/`. Raw predictions are under `shared/benchmark/predictions/<regime>/<system>/`.
 
 ## What worked
 
-1. **Building a 50-line trigram before any GPU training.** The Top-5 = 0.993 finding reframed the whole hackathon away from a leaderboard chase.
-2. **Symbolic validator at inference time.** Three uses, three wins: grammar mask gives the trigram its first non-zero exact-match; ensemble anomaly hits 100% on ID; per-step `Violation.step_index` is the foundation for a future PRM.
-3. **Compositional tokenizer + multi-task training trained without instability** on the online-generator stream with 40% corruption rate. Validity and rule-ID heads both converged to ~0.114 loss.
-4. **Storage discipline.** Checkpoints land on `$SCRATCH` (shared FS, survives job end) with a `$HOME` backup, plus a lightweight `summary.json` committed to git as the official scaling-grid record.
-5. **One-command rebuild of any cell.** `pixi run` + `sbatch` + the rsync-based bootstrap let us redeploy in ~2 minutes per iteration.
+* **Finding and fixing the context window bug.** An audit found `max_len` set to 256 while compositional sequences run 444 to 604 tokens, so the full training set was being truncated, hiding the prefix, clean, prep, and cycle backbone the model was meant to learn. Raising the window from 256 to 768 was the single largest improvement of the project.
 
----
+<table>
+<tr><th>Metric (MOSFET held out)</th><th>Window 256</th><th>Window 768</th></tr>
+<tr><td>Held out Top 1 at 60 percent cut</td><td>0.625</td><td>0.917</td></tr>
+<tr><td>Held out Top 1 average</td><td>0.520</td><td>0.708</td></tr>
+<tr><td>Held out edit distance at 60 percent cut</td><td>0.55</td><td>0.27</td></tr>
+<tr><td>Validation LM loss</td><td>0.111</td><td>0.089</td></tr>
+</table>
+
+* **The controlled benchmark.** One frozen labeled eval set and one official scorer turned five incomparable per model claims into a defensible head to head result in both regimes.
+* **Rule clean as the discriminator.** Standard metrics saturate and hide the real question. Rule clean exposes it: the memorizing trigram violates a rule in half of its completions (0.500); every structure aware system stays at 1.000.
+* **A zero parameter system that competes.** The neurosymbolic engine reaches 0.761 next step Top 1, perfect anomaly and rule attribution, and almost no out of distribution drop, with no trained weights.
 
 ## What didn't work
 
-1. **First attempt at xLSTM cells** failed during JIT compilation — Leonardo's compute nodes have CUDA driver but no `nvcc`/g++. Fix: `module load gcc/12.2.0 cuda/12.6` in every SLURM script. Documented for the next team.
-2. **First attempt at conda-forge `pytorch-gpu`** failed because the resolver couldn't see `__cuda` on the GPU-less login node. Fix: explicit `[system-requirements] cuda = "12"` + `CONDA_OVERRIDE_CUDA="12.0"`, then later cleaner switch to PyPI torch with the cu121 index URL.
-3. **First eval run timed out** because compositional beam search at beam=12, max_words=8 took ~660 s per family×frac. Cut to beam=5, max_words=6, max_examples=40 to fit within the 30-min SLURM ceiling. Numbers in this report are from the faster eval; statistical noise on n=40 is visible (e.g. IGBT@0.6 Top-5 dropped from 0.975 baseline to 0.775 multi-task — likely a single noisy example).
-4. **Step-as-token cell looked dramatically worse on raw CE loss** (0.326 vs 0.106) but the comparison is not apples-to-apples (different sequence length, different vocab). The honest comparison is the OOD eval (post-submission) — flagged in the report rather than spun.
+* **Retrieval augmentation.** The prefix overlap between the retrieval bank and the eval prefixes was 0 percent, so it changed nothing and was discarded.
+* **The heuristic reranker.** Reordering the Top 5 with validator and trigram penalties moved Top 1 by about 0.0004 and was superseded by a learned contrastive reranker, which gave a real internal gain (Top 1 from 0.7993 to 0.8044).
+* **The validity head as a standalone anomaly detector.** Out of distribution it was badly miscalibrated: on held out valid MOSFET sequences it produced 36 false positives in 100, and its ROC AUC fell from 1.00 to 0.31. The fix was to make the symbolic validator dominant and only let the head override it at high confidence. The earlier 1.00 figure was misleading because the head was undertrained.
+* **xLSTM and cluster setup.** xLSTM cells failed at first because the compute nodes have a CUDA driver but no compiler for the just in time kernels, fixed by loading gcc and cuda modules in every job script; the conda CUDA resolver also failed on the GPU free login node and was replaced by a pinned PyPI build. xLSTM was then dropped from later grids because it is three to four times slower at identical loss.
 
----
+## What you'd do with another 36 hours
 
-## What we'd do with another 36 hours
+* Run the production scale checkpoints (context window 768, six thousand steps, A100) through this benchmark, so the learned models are compared against the neurosymbolic engine at full strength rather than at the compact reproducible budget.
+* Use the neurosymbolic oracle as a reranker and validity filter over the learned model Top 5 lists, where Top 5 of 1.000 leaves headroom to raise Top 1.
+* Wire the parsed physics features (temperature, time, thickness, pressure, energy, dose per step) into the token embedding; they are parsed but not yet injected, and are the largest unexplored out of distribution lever.
+* Train a process reward model that predicts, at each prefix, the probability of completing to a valid route, and use it inside beam search to lift completion exact match.
+* Add multi seed confidence intervals and a harder out of distribution probe at family specific front end positions; the benchmark currently uses a single seed and a small eval slice.
 
-1. **PRM** (Process Reward Model) — train a per-prefix `P(completable to valid)` head from validator `step_index` labels. Use as a re-ranker inside beam search; expected to lift completion ExactMatch.
-2. **Wire physics features into the embedding** — currently parsed and saved as a lookup; not yet injected into the model. The path is `Linear(10, d_model)` added to the token embedding, with a missingness mask.
-3. **Train a contrastive sequence encoder** on (valid, corrupted) pairs across families with InfoNCE — to backstop the validator on Task 4 if the hidden family has unseen rule variants.
-4. **Proper LoFO train + eval** — at present we only do LoFO with the trigram. Re-train one transformer cell with one family held out, measure ID→OOD drop, report.
-5. **A small Streamlit dashboard** — baseline vs trained on identical inputs + anomaly attribution + scaling curve, for the demo video.
+## Track specific deliverables
 
----
-
-## Track-specific deliverables
-
-- [x] `shared/extras/results/submission/nextstep.csv` (regenerate from v2 checkpoint at submission)
-- [x] `shared/extras/results/submission/completion.csv` (regenerate from v2)
-- [x] `shared/extras/results/submission/anomaly.csv` (regenerate from v2; swap to real 987-row input when organizers ship)
-- [x] Training artifacts: **80 checkpoints** (10 legacy + 48 LoFO + 16 final + 6 Phase-2 v2) in `shared/extras/checkpoints/`, full TB logs in `shared/extras/logs/tb/`, per-cell `summary.json` files
-- [x] Scores from our own eval pipeline against `eval_metrics.py`-compatible schema (real `eval_metrics.py` will reproduce these once the organizers ship it)
-- [x] Per-family breakdown in this report, `shared/extras/results/lofo_ablation.{csv,md}`, and `shared/extras/results/eval/*/metrics.md`
-- [x] **LoFO ablation table** (held-out-family OOD measurement; Task-4 proxy)
-- [x] **Training-progress plots** (6 PNGs in `shared/extras/plots/training/`)
-- [ ] Demo video showing baseline vs trained on identical inputs *(to be recorded)*
-- [ ] 10-slide PDF deck *(to be produced)*
-
----
-
-## Update — Phase 2 (LoFO ablation grid + max_len bug fix)
-
-After the initial scaling grid, we built a proper OOD measurement layer
-because the *hidden 4th product family* (Task 4) is judged by organizers
-post-submission and is the actual competition. Leave-one-family-out
-(LoFO) on the 3 known families is the only honest proxy.
-
-### LoFO experimental design
-
-`models/transformer_xlstm/experiments/lofo_grid.py` enumerates a 64-cell deterministic grid:
-
-```
-arch     ∈ {transformer, xlstm}
-size     ∈ {small ~5M, medium ~25M}
-heads    ∈ {lm_only, multitask (validity + rule-ID)}
-fdp      ∈ {0.0, 0.2}                       # family-token dropout
-fold     ∈ {held_mosfet, held_igbt, held_ic, all3}
-```
-
-= 48 LoFO cells + 16 final all-3 cells. Each LoFO cell trains on two
-families and is evaluated on the held-out family. All cells use
-compositional tokenization (the only mode with an OOD story for unseen
-step strings).
-
-Launch infrastructure: `shared/scripts/slurm/lofo_grid.sbatch` + `lofo_eval_grid.sbatch`,
-both SLURM array jobs with `--array=0-63%4` keeping all 4 reservation
-A100s saturated.
-
-### Findings from the Phase-1 grid (all 64 cells trained)
-
-Per-recipe averages across the 3 LoFO folds (transformer-small only;
-medium + xLSTM evaluation was running at write time):
-
-| arch · size · heads · fdp | Top1_held | top1_drop | anom AUC |
-|---|--:|--:|--:|
-| transformer · small · multitask · 0.0 | 0.595 | **−0.030** | 1.000 |
-| transformer · small · multitask · 0.2 | 0.598 | +0.023 | 1.000 |
-| transformer · small · lm_only   · 0.2 | 0.582 | +0.018 | 1.000 |
-| transformer · small · lm_only   · 0.0 | 0.540 | +0.068 | 1.000 |
-
-Negative `top1_drop` = held-out family is *easier* than the trained
-families. Multitask heads alone lift held-out Top-1 by 5.5pp; family-
-token dropout is redundant with multitask heads.
-
-### The critical bug — and the fix
-
-Auditing the pipeline revealed `max_len = 256` in the train configs.
-Compositional sequences are 444–604 tokens (median ~470). **100% of
-training sequences were being left-truncated**, hiding the
-PREFIX → CLEAN → PREP → CYCLES backbone — exactly the structural prior
-we wanted the model to learn.
-
-Fix: `max_len: 256 → 768` in `configs/train/*.yaml`, `max_seq_len: 256
-→ 768` in all `configs/arch/*.yaml` (RoPE cache), plus 13 function-default
-updates in `models/transformer_xlstm/{data,eval,model}/*.py` to make 768 the safe default
-throughout the codebase.
-
-Smoke result on the same recipe (`transformer-small-multitask`, MOSFET
-held out):
-
-| Metric | Phase-1 (max_len=256) | Phase-2 (max_len=768) | Δ |
-|---|--:|--:|--:|
-| MOSFET held Top-1 @ frac=0.6 | 0.625 | **0.917** | **+29 pp** |
-| MOSFET held Top-1 average | 0.520 | **0.708** | **+19 pp** |
-| NED held @ frac=0.6 | 0.55 | **0.27** | **−51 %** |
-| First non-zero ExactMatch | 0/600 | IC@0.8 = 0.017 | first 🎉 |
-| Train val LM loss | 0.111 | **0.089** | −20 % |
-
-This is the largest single improvement of the project. All Phase-1
-LoFO numbers are now known under-estimates of the recipe's true
-capability.
-
-### Other Phase-2 changes
-
-- **Multitask `max_steps` 8000 → 6000** (heads converge by step ~4k;
-  saves ~30% wall time per multitask cell with no quality loss).
-- **`warmup_steps` 200 → 400** (longer sequences benefit from slower
-  warm-up).
-- **`vocab_restrict=True` in `topk_next_step`** — filters beam-search
-  hallucinations (the documented 3.3% rank-1 word-combinations that
-  aren't real vocab).
-- **Length-normalized beam scoring** — `_compositional_topk` divides
-  cumulative log-prob by word count; fixes the systematic short-step
-  bias in Top-1 ordering.
-- **Validator-dominant anomaly ensemble** — the better-trained
-  validity head produced 36/100 false positives on held-out valid
-  MOSFET (AUC dropped from 1.00 → 0.31). Threshold lowered to require
-  `P_valid < 0.1` to override the validator; phase-1's AUC=1.00 was
-  misleading because the head was undertrained.
-- **xLSTM dropped from Phase-2 grids** — 3-4× slower per step at same
-  param count as transformer, with identical LM loss convergence.
-  Reported anyway in the architecture-comparison section.
-
-### Phase-2 grid status
-
-`models/transformer_xlstm/experiments/phase2_grid.py` defines a 16-cell transformer-only
-follow-up (size × heads × fold), launched as job `43112252` on
-Leonardo. Eval array `43112265` chained `afterok`. Both running at
-write time alongside the still-completing Phase-1 eval.
-
-### Training-progress plots
-
-`shared/scripts/plot_training.py` produces six PNGs from all 73 TB event
-streams under `shared/extras/plots/training/`:
-
-- `train_lm_loss_by_arch.png`, `val_lm_loss_by_arch.png` — faceted by
-  arch × size, colored by held-out family
-- `heads_loss.png` — validity-BCE + rule-ID-CE curves (multitask only)
-- `throughput.png` — median steps/sec per cell (transformer vs xLSTM)
-- `scaling_curve.png` — final LM loss vs param count
-- `per_fold_overlay.png` — val curves grouped by held-out family
-
-### Aggregator
-
-`shared/scripts/aggregate_lofo.py` walks `shared/extras/checkpoints/{lofo,final}-*/summary.json`
-and `shared/extras/results/eval/{lofo,final}-*/metrics.json`, joins on cell id,
-and emits `shared/extras/results/lofo_ablation.{csv,md}` — the recipe-selection
-table sorted by held-out-family Top-1, with `top1_drop` and
-`anom_AUC_held` columns.
-
-### Hyperparameter audit
-
-Confirmed the LR schedule (cosine + 400-step warmup), AdamW betas
-(0.9/0.95), weight decay (0.1), grad clip (1.0), batch size (32) are
-all standard and not contributing to the OOD gap. The `max_len` bug
-was the only material defect; everything else was already tuned
-correctly.
-
-### Submission format check
-
-`shared/extras/results/submission/{nextstep,completion,anomaly}.csv` schemas
-all match `generation_rules.md §5.3`. Row counts: nextstep=600 ✓,
-completion=600 ✓, anomaly=300 (self-simulated; real spec wants 987 —
-`make_submission.py` will accept the organizers' file via CLI flag).
-
-**Action items at submission time**: regenerate all 3 CSVs from the
-winning v2 checkpoint with the new `predict.py` (vocab-restrict +
-length-norm + validator-dominant ensemble). Run organizers'
-`eval_metrics.py` against them for official numbers.
-
----
-
-## What we'd do with another 36 hours — UPDATED
-
-Striking through what's now done; new items at the bottom.
-
-1. ~~**PRM**~~ — still highest-EV next step; addresses NED on Task 2
-   (still ~0.27 even at max_len=768).
-2. ~~**Wire physics features into the embedding**~~ — still parsed but
-   not injected. Biggest unexplored OOD lever.
-3. **Train a contrastive sequence encoder** on (valid, corrupted) pairs.
-4. ~~**Proper LoFO train + eval**~~ ✅ Done (48 cells phase-1 + 16
-   cells phase-2 + 8 cells final).
-5. ~~**A small Streamlit dashboard**~~ — replaceable by a side-by-side
-   CLI tool that compares trigram / transformer / grammar-trigram on
-   identical prefixes. Still needed for the demo video.
-6. **Synonym-randomized data augmentation** in `OnlineGeneratorIterableDataset`
-   — first-line attack on Task 2 ExactMatch.
-7. **Hybrid-family ("Frankenstein") sequences** — interleave blocks
-   across families to teach the backbone explicitly. Targets Task 4.
-8. **Block-position auxiliary head** — 12-way classification over the
-   backbone blocks from `generation_rules.md §2`. Cheap structural
-   prior that transfers losslessly to family 4.
-
----
+### ⚙️ Industrial AI (Infineon)
+* [x] Eval submission files in organizer format: `predictions_nextstep.csv`, `predictions_completion.csv`, `predictions_anomaly.csv` under `competition/participant-files/predictions/`, plus per regime and per system files under `shared/benchmark/predictions/`
+* [x] Training artifacts: per run config and final loss in `shared/benchmark/checkpoints/*/summary.json` with `final.pt`, self supervised checkpoints in `shared/benchmark/ssl_checkpoints/`, production checkpoints and TensorBoard loss curves under `shared/extras/`
+* [x] Scores from `eval_metrics.py` on all three tasks with per family breakdown, in `submission/UNIFIED_BENCHMARK.md`, `shared/benchmark/results_summary.csv`, and `submission/benchmark_assets/`
+* [x] Demo shows baseline versus trained output on identical inputs: before and after examples plus a dashboard under `www/`
 
 ## Credits & dependencies
 
-- **Compute:** EuroHPC Leonardo cluster (CINECA, Italy), reservation `s_tra_ncc` under account `euhpc_d30_031`
-- **Open-source libraries:** PyTorch 2.5.1 (cu121), NX-AI/xlstm 1.0.7+, einops, OmegaConf, TensorBoard, pandas, NumPy, Matplotlib, Seaborn, Pixi for env management
-- **Pre-trained models used:** none — everything trained from scratch on the provided + generator-produced sequences
-- **External APIs:** none
-- **Datasets:** the three `*_variants.csv` (1 000 sequences/family) shipped in `competition/track-details/training_data/`, plus the `*_longdescription_parameters.csv` reference tables for the physics-feature lookup
-- **AI coding assistants used during the hackathon:** Claude Code
-
----
+* **Open source libraries:** Python, PyTorch (cu121), NX AI xlstm, einops, OmegaConf, TensorBoard, pandas, NumPy, matplotlib; Pixi managed environment (versions pinned in `requirements.txt` and `pyproject.toml`)
+* **Pre trained models:** none. The transformer and self supervised hybrid train from scratch; the neurosymbolic ranker has zero trained parameters
+* **External APIs:** none
+* **AI coding assistants used during the hackathon:** Claude Code
+* **Datasets:** synthetic semiconductor sequences for MOSFET, IGBT, and IC, provided by the organizers with the scoring script `eval_metrics.py`; further valid and invalid sequences generated by the committed rule based generator and validator
 
 ## A note on honesty
 
-The anomaly 100% accuracy is real but unsurprising — the symbolic validator is the organizers' own code and is the oracle for the 10 documented rule violations on ID. The differentiator on Task 4 (post-submission, hidden family) is whether the learned heads generalize when the validator's rule set may not. We have not tested that directly because the hidden family is, by design, not available to us.
+* **The two eval paths disagree on transformer versus trigram.** The unified benchmark adapter scores the transformer above the trigram (0.779 against 0.721) in distribution. A separate production decode that assembles step strings by beam searching word tokens scores the trained transformer below the trigram (about 0.60 against 0.72), because beam assembly of multi token steps is less reliable than a direct argmax. We did not reconcile the two paths. The unified benchmark is the controlled like for like comparison; the compositional beam search reflects the heavier production path whose value is out of distribution coverage, not in distribution Top 1.
+* **Anomaly 1.000 rests on a shared validator, not on a learned model.** The validator is the organizers' own code and is an oracle for the ten documented rules in distribution, so every validator backed system scores about 1.0. The learned validity head on its own does not generalize (see the miscalibration above). The honest differentiator is rule attribution and out of distribution behavior, where the symbolic role induction is strongest.
+* **Compact versus production checkpoints.** The benchmark checkpoints are trained at a reduced budget on CPU so the comparison reproduces on a laptop (the transformer is the small config at 4.37 M, context window 512). They are not the full Leonardo checkpoints (context window 768, six thousand steps, A100). The purpose here is the controlled comparison, not peak accuracy; because of the context window bug above, earlier numbers are known underestimates.
+* **Completion edit distance versus validity.** Edit distance measures similarity to one reference, so a fully rule valid completion can still diverge from it. Both are reported.
+* **Small eval and single seed.** The shared eval set is intentionally small per family and uses a single seed, so a few percentage points of noise are visible. Multi seed intervals are future work.
+* **Official accuracy is organizer computed.** The organizer eval inputs are unlabeled, so official accuracy can only be computed by the organizers. The numbers here are internal held out scores on our labeled eval set, built from the same generator and protocol. Some submission files were first generated against self simulated eval inputs and will be regenerated against the organizer files at submission. No official score is fabricated.
 
-The Top-1 next-step numbers from the trained transformer are below the trigram's 0.717 because of how compositional tokenization expresses a step as multiple word-tokens — beam search assembles step strings less reliably than a direct argmax over step-tokens. The compositional model's value is OOD coverage, not ID Top-1. The grammar-constrained trigram is the system we would ship for Task 1 if the eval were ID-only.
-
-We did not implement PRM, the contrastive encoder, or physics-feature injection. They are in `plan.md` as future work and named explicitly in "What we'd do with another 36 hours" above.
-
----
-
-*Submitted by team abb for Zero One Hack_01, 2026-05-31.*
+*Submitted by team Attention Seekers for Zero One Hack_01, 31 May 2026.*
