@@ -78,20 +78,20 @@ docs/                  documentations of specific project details
 tests/                 pytest suite for tokenizers, validator, metrics, I/O
 ```
 
-## Results and deliverables
+## Deliverables
 
-- **[`REPORT.md`](REPORT.md)** — approach, headline numbers, what worked and what didn't.
-- **[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md)** — all three approaches on
+- [x] **[`REPORT.md`](REPORT.md)** — the technical report.
+- [x] **[`submission/UNIFIED_BENCHMARK.md`](submission/UNIFIED_BENCHMARK.md)** — all three approaches on
   one eval set with the official metrics, in-distribution and out-of-distribution (held-out family).
-- **[`competition/participant-files/predictions/`](competition/participant-files/predictions/)** —
+- [x] **[`competition/participant-files/predictions/`](competition/participant-files/predictions/)** —
   the submission CSVs: `predictions_nextstep.csv`, `predictions_completion.csv`, `predictions_anomaly.csv`.
-- Score them with the organizers' script — e.g. the anomaly task against our labeled eval set:
+- [x] Score them with the organizers' script — e.g. the anomaly task against our labeled eval set:
   ```bash
   python competition/participant-files/eval_metrics.py --task anomaly \
       --ground-truth shared/extras/results/eval_inputs/eval_input_anomaly_truth.csv \
       --predictions  competition/participant-files/predictions/predictions_anomaly.csv
   ```
-- Training artifacts — per-run config and final loss in `shared/extras/checkpoints/*/summary.json`,
+- [x] Training artifacts — per-run config and final loss in `shared/extras/checkpoints/*/summary.json`,
   TensorBoard loss curves in `shared/extras/logs/`.
 
 ## License
