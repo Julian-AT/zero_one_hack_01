@@ -14,6 +14,8 @@ The article body is authored in **Markdown MDX** so prose stays readable and fut
 
 ## Commands
 
+### useful
+
 ```bash
 bun run dev        # Start dev server
 bun run build      # Production build
