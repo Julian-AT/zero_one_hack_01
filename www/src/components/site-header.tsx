@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Logomark, GitHubIcon } from "@/components/icons";
 import { MobileMenu } from "@/components/mobile-menu";
 import { GITHUB_URL } from "@/lib/constants";
@@ -26,8 +27,16 @@ export function SiteHeader() {
           aria-label="Attention Seekers home"
           className="flex items-center gap-2.5 text-ink"
         >
-          <Logomark className="h-7 w-7" />
-          <span className="font-sans text-[16px] font-semibold tracking-tight">
+          <Image
+            src="/attention-seekers-wordmark.png"
+            alt="Attention Seekers"
+            width={2324}
+            height={194}
+            priority
+            className="hidden h-5 w-auto lg:block"
+          />
+          <Logomark className="h-7 w-7 lg:hidden" />
+          <span className="font-sans text-[16px] font-semibold tracking-tight lg:hidden">
             Attention Seekers
           </span>
         </Link>
